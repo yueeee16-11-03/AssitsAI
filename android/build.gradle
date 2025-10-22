@@ -1,0 +1,35 @@
+// android/build.gradle
+
+buildscript {
+    ext {
+        buildToolsVersion = "36.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 36
+        targetSdkVersion = 36
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.1.20"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Dependencies mặc định của React Native và Android Gradle Plugin
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        
+        // CẤU HÌNH FIREBASE: Thêm plugin Google Services vào CLASSPATH
+        // Điều này khắc phục lỗi "Plugin was not found"
+        classpath 'com.google.gms:google-services:4.4.4' 
+    }
+}
+
+// =========================================================
+// KHỐI PLUGINS HỢP LỆ (Chỉ chứa plugin React Native)
+// =========================================================
+plugins {
+    // Plugin React Native
+    id "com.facebook.react.rootproject" 
+}
+

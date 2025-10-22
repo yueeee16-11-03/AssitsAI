@@ -1,0 +1,90 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+// THÊM PLUGIN GOOGLE SERVICES Ở ĐÂY (Cú pháp Groovy cũ)
+// Đây là cú pháp phổ biến trong các file React Native build.gradle
+apply plugin: 'com.google.gms.google-services'
+
+
+/**
+ * This is the configuration block to customize your React Native Android app.
+ * By default you don't need to apply any configuration, just uncomment the lines you need.
+ */
+react {
+    // ... Khối cấu hình react {} giữ nguyên
+    autolinkLibrariesWithApp()
+}
+
+/**
+ * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+ */
+def enableProguardInReleaseBuilds = false
+
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace "com.assist"
+    defaultConfig {
+        applicationId "com.assist"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+    }
+    // ... Các khối signingConfigs và buildTypes giữ nguyên
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+// =========================================================
+// KHỐI DEPENDENCIES HỢP NHẤT:
+// Đây là nơi kết hợp dependencies mặc định và dependencies Firebase.
+// =========================================================
+dependencies {
+    // Dependencies mặc định của React Native
+    implementation("com.facebook.react:react-android")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+
+    // --- CẤU HÌNH FIREBASE ---
+    
+    // 1. Import the Firebase BoM (Bill of Materials)
+    implementation platform('com.google.firebase:firebase-bom:34.4.0')
+
+    // 2. Thêm các dependencies Firebase cần thiết cho dự án:
+    implementation 'com.google.firebase:firebase-auth'      // Cần thiết cho Đăng nhập/Đăng xuất
+    implementation 'com.google.firebase:firebase-firestore' // Cần thiết cho Lưu trữ Giao dịch/Thói quen
+    implementation 'com.google.firebase:firebase-analytics' // Như ví dụ bạn cung cấp
+}
+
+// =========================================================
+// KHỐI PLUGINS:
+// Trong cấu hình này, khối plugins {} bị dư và không cần thiết vì
+// các plugin đã được áp dụng bằng cú pháp 'apply plugin:' ở đầu file.
+// Khối này được loại bỏ để tránh lỗi cú pháp Gradle.
+// =========================================================
