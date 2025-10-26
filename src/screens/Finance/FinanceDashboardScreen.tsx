@@ -6,15 +6,40 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  ActivityIndicator,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+import transactionApi from "../../api/transactionApi";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FinanceDashboard">;
 
 export default function FinanceDashboardScreen({ navigation }: Props) {
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+
+  // Load transactions when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      loadRecentTransactions();
+    }, [])
+  );
+
+  const loadRecentTransactions = async () => {
+    setTransactionsLoading(true);
+    try {
+      const data = await transactionApi.getTransactions();
+      // Get last 5 transactions
+      setRecentTransactions(data.slice(0, 5));
+    } catch (error) {
+      console.error("Error loading transactions:", error);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -44,6 +69,24 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
   const totalExpense = 12900000;
   const balance = totalIncome - totalExpense;
   const savingRate = ((balance / totalIncome) * 100).toFixed(1);
+
+  const getCategoryEmoji = (categoryId: string) => {
+    const emojiMap: { [key: string]: string } = {
+      "1": "🍔", // Ăn uống
+      "2": "🚗", // Di chuyển
+      "3": "🛍️", // Mua sắm
+      "4": "🎮", // Giải trí
+      "5": "💊", // Sức khỏe
+      "6": "📚", // Giáo dục
+      "7": "🏠", // Nhà cửa
+      "8": "📦", // Khác (expense)
+      "9": "💼", // Lương
+      "10": "🎁", // Thưởng
+      "11": "📈", // Đầu tư
+      "12": "💰", // Khác (income)
+    };
+    return emojiMap[categoryId] || "💳";
+  };
 
   return (
     <View style={styles.container}>
@@ -128,13 +171,13 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                   <Text style={styles.chartValue}>
                     {(item.value / 1000000).toFixed(0)}M
                   </Text>
-                  <View
+                <View
                     style={[
                       styles.chartBar,
                       {
                         height: `${item.percent}%`,
                         backgroundColor: item.percent >= 100 ? "#10B981" : "#6366F1",
-                      },
+                      } as any,
                     ]}
                   />
                   <Text style={styles.chartLabel}>{item.month}</Text>
@@ -240,11 +283,67 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                 <Text style={styles.actionIcon}>🎯</Text>
                 <Text style={styles.actionText}>Gợi ý tiết kiệm</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionCard}>
-                <Text style={styles.actionIcon}>📄</Text>
-                <Text style={styles.actionText}>Xuất báo cáo</Text>
+                <TouchableOpacity
+                  style={styles.actionCard}
+                  onPress={() => navigation.navigate("AddTransaction")}
+                >
+                  <Text style={styles.actionIcon}>📄</Text>
+                  <Text style={styles.actionText}>Xuất báo cáo</Text>
+                </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Recent Transactions */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>📋 Giao dịch gần đây</Text>
+              <TouchableOpacity onPress={() => navigation.push("TransactionHistory", { newTransaction: undefined })}>
+                <Text style={styles.viewAllLink}>Xem tất cả →</Text>
               </TouchableOpacity>
             </View>
+            {transactionsLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#6366F1" />
+                <Text style={styles.loadingText}>Đang tải...</Text>
+              </View>
+            ) : recentTransactions.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Chưa có giao dịch nào</Text>
+              </View>
+            ) : (
+              <View>
+                {recentTransactions.map((transaction, index) => (
+                  <TouchableOpacity
+                    key={`transaction-${index}-${transaction.id}`}
+                    style={styles.recentTransactionItem}
+                    onPress={() => navigation.push("EditTransaction", { transaction })}
+                  >
+                    <View style={styles.transactionLeft}>
+                      <Text style={styles.transactionEmoji}>
+                        {getCategoryEmoji(transaction.categoryId)}
+                      </Text>
+                      <View style={styles.transactionInfo}>
+                        <Text style={styles.transactionCategory}>{transaction.category}</Text>
+                        <Text style={styles.transactionDescription}>
+                          {transaction.description}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        transaction.type === "expense"
+                          ? styles.amountExpense
+                          : styles.amountIncome,
+                      ]}
+                    >
+                      {transaction.type === "expense" ? "-" : "+"} ₫
+                      {Math.abs(transaction.amount).toLocaleString("vi-VN")}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </Animated.View>
       </ScrollView>
@@ -414,4 +513,60 @@ const styles = StyleSheet.create({
   },
   actionIcon: { fontSize: 28, marginBottom: 8 },
   actionText: { fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: "600", textAlign: "center" },
+  loadingContainer: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  loadingText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  recentTransactionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  transactionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  transactionEmoji: { fontSize: 24, marginRight: 12 },
+  transactionInfo: { flex: 1 },
+  transactionCategory: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 2,
+  },
+  transactionDescription: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+  },
+  transactionAmount: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  amountExpense: { color: "#EF4444" },
+  amountIncome: { color: "#10B981" },
 });

@@ -15,6 +15,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { loginWithEmail, onGoogleButtonPress } from "../../services/AuthService";
+import GoogleLoginButton from "../../components/GoogleLoginButton";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -188,17 +189,7 @@ export default function LoginScreen({ navigation }: Props) {
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity 
-              style={styles.googleButton}
-              onPress={handleGoogleLogin}
-              disabled={loading}
-              activeOpacity={0.9}
-            >
-              <View style={styles.googleIconContainer}>
-                <Text style={styles.googleIcon}>G</Text>
-              </View>
-              <Text style={styles.googleButtonText}>Google</Text>
-            </TouchableOpacity>
+            <GoogleLoginButton onPress={handleGoogleLogin} disabled={loading} />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Chưa có tài khoản? </Text>

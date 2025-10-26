@@ -12,6 +12,8 @@ export type RootStackParamList = {
   AISetting: undefined;
   FinanceDashboard: undefined;
   AddTransaction: undefined;
+  EditTransaction: { transaction: any };
+  TransactionHistory: { newTransaction?: any };
   BudgetPlanner: undefined;
   GoalTracking: undefined;
   HabitDashboard: undefined;
