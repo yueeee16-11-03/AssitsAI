@@ -8,24 +8,30 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+import { useHabitStore } from "../../store/habitStore";
+import { useFocusEffect } from "@react-navigation/native";
 
 type Props = NativeStackScreenProps<RootStackParamList, "HabitDashboard">;
 
-interface Habit {
-  id: string;
-  name: string;
-  icon: string;
-  target: number;
-  current: number;
-  unit: string;
-  color: string;
-  streak: number;
-  completed: boolean;
-}
-
 export default function HabitDashboardScreen({ navigation }: Props) {
+  const habits = useHabitStore((state) => state.habits);
+  const fetchHabits = useHabitStore((state) => state.fetchHabits);
+  const toggleHabitToday = useHabitStore.getState().deleteHabit ? 
+    ((id: string) => {
+      // Will implement toggleHabitToday properly
+      console.log("Toggle habit:", id);
+    }) : null;
+
   const [fadeAnim] = useState(new Animated.Value(0));
+
+  // Fetch habits khi screen focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("📄 [HABIT-DASHBOARD] Screen focused - fetching habits");
+      fetchHabits();
+    }, [])
+  );
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -35,18 +41,15 @@ export default function HabitDashboardScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const [habits, setHabits] = useState<Habit[]>([
-    { id: "1", name: "Uống nước", icon: "💧", target: 8, current: 6, unit: "cốc", color: "#3B82F6", streak: 12, completed: false },
-    { id: "2", name: "Đi bộ", icon: "🚶", target: 8000, current: 5200, unit: "bước", color: "#10B981", streak: 7, completed: false },
-    { id: "3", name: "Đọc sách", icon: "📚", target: 30, current: 30, unit: "phút", color: "#8B5CF6", streak: 5, completed: true },
-    { id: "4", name: "Thiền", icon: "🧘", target: 15, current: 0, unit: "phút", color: "#EC4899", streak: 0, completed: false },
-    { id: "5", name: "Tập thể dục", icon: "💪", target: 45, current: 45, unit: "phút", color: "#F59E0B", streak: 14, completed: true },
-  ]);
+  // Tính toán stats
+  const completedCount = habits.filter(h => {
+    const today = new Date().toDateString();
+    return h.completedDates?.includes(today);
+  }).length;
 
-  const completedCount = habits.filter(h => h.completed).length;
-  const completionRate = (completedCount / habits.length) * 100;
-  const totalStreak = habits.reduce((sum, h) => sum + h.streak, 0);
-  const avgStreak = totalStreak / habits.length;
+  const completionRate = habits.length > 0 ? (completedCount / habits.length) * 100 : 0;
+  const totalStreak = habits.reduce((sum, h) => sum + (h.currentStreak || 0), 0);
+  const avgStreak = habits.length > 0 ? totalStreak / habits.length : 0;
   const disciplineScore = Math.round((completionRate * 0.5) + (avgStreak * 2) + (completedCount * 5));
 
   const getDisciplineLevel = (score: number) => {
@@ -64,12 +67,6 @@ export default function HabitDashboardScreen({ navigation }: Props) {
     { day: "T6", completed: 3, total: 5 }, { day: "T7", completed: 2, total: 5 },
     { day: "CN", completed: 2, total: 5 },
   ];
-
-  const handleToggleHabit = (id: string) => {
-    setHabits(prev => prev.map(habit =>
-      habit.id === id ? { ...habit, completed: !habit.completed, current: habit.completed ? 0 : habit.target } : habit
-    ));
-  };
 
   return (
     <View style={styles.container}>
@@ -155,42 +152,71 @@ export default function HabitDashboardScreen({ navigation }: Props) {
           {/* Habits List */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Thói quen hôm nay</Text>
-            {habits.map((habit) => {
-              const progress = (habit.current / habit.target) * 100;
-              return (
+            {habits.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>📭</Text>
+                <Text style={styles.emptyText}>Bạn chưa có thói quen nào</Text>
                 <TouchableOpacity
-                  key={habit.id}
-                  style={[styles.habitCard, habit.completed && styles.habitCardCompleted]}
-                  onPress={() => handleToggleHabit(habit.id)}
-                  activeOpacity={0.8}
+                  style={styles.addFirstHabitButton}
+                  onPress={() => navigation.navigate("AddHabit")}
                 >
-                  <View style={styles.habitHeader}>
-                    <View style={styles.habitInfo}>
-                      <View style={[styles.habitIconContainer, { backgroundColor: `${habit.color}22` }]}>
-                        <Text style={styles.habitIcon}>{habit.icon}</Text>
-                      </View>
-                      <View style={styles.habitDetails}>
-                        <Text style={styles.habitName}>{habit.name}</Text>
-                        <Text style={styles.habitTarget}>{habit.current}/{habit.target} {habit.unit}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.habitRight}>
-                      {habit.streak > 0 && (
-                        <View style={styles.streakBadge}>
-                          <Text style={styles.streakText}>🔥 {habit.streak}</Text>
-                        </View>
-                      )}
-                      <View style={[styles.checkbox, habit.completed && styles.checkboxCompleted, { borderColor: habit.color }]}>
-                        {habit.completed && <Text style={styles.checkmark}>✓</Text>}
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: habit.color }]} />
-                  </View>
+                  <Text style={styles.addFirstHabitText}>+ Thêm thói quen đầu tiên</Text>
                 </TouchableOpacity>
-              );
-            })}
+              </View>
+            ) : (
+              habits.map((habit) => {
+                const today = new Date().toDateString();
+                const isCompletedToday = habit.completedDates?.includes(today);
+                const completedCount = habit.completedDates?.length || 0;
+
+                return (
+                  <TouchableOpacity
+                    key={habit.id}
+                    style={[styles.habitCard, isCompletedToday && styles.habitCardCompleted]}
+                    onPress={() => navigation.navigate("EditHabit", { habitId: habit.id })}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.habitHeader}>
+                      <View style={styles.habitInfo}>
+                        <View style={[styles.habitIconContainer, { backgroundColor: `${habit.color}22` }]}>
+                          <Text style={styles.habitIcon}>{habit.icon}</Text>
+                        </View>
+                        <View style={styles.habitDetails}>
+                          <Text style={styles.habitName}>{habit.name}</Text>
+                          <Text style={styles.habitTarget}>{habit.target} {habit.unit}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.habitRight}>
+                        {(habit.currentStreak || 0) > 0 && (
+                          <View style={styles.streakBadge}>
+                            <Text style={styles.streakText}>🔥 {habit.currentStreak}</Text>
+                          </View>
+                        )}
+                        <View style={[styles.checkbox, isCompletedToday && styles.checkboxCompleted, { borderColor: habit.color }]}>
+                          {isCompletedToday && <Text style={styles.checkmark}>✓</Text>}
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Progress */}
+                    <View style={styles.progressContainer}>
+                      <View style={styles.progressBar}>
+                        <View 
+                          style={[
+                            styles.progressFill, 
+                            { 
+                              width: `${Math.min((completedCount / 30) * 100, 100)}%`,
+                              backgroundColor: habit.color 
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <Text style={styles.progressText}>{completedCount} lần</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
 
           {/* Quick Actions */}
@@ -248,13 +274,18 @@ const styles = StyleSheet.create({
   aiHighlight: { color: "#8B5CF6", fontWeight: "900" },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: "800", color: "#fff", marginBottom: 16 },
+  emptyState: { alignItems: "center", paddingVertical: 40 },
+  emptyIcon: { fontSize: 48, marginBottom: 12 },
+  emptyText: { fontSize: 16, color: "rgba(255,255,255,0.6)", marginBottom: 16, fontWeight: "600" },
+  addFirstHabitButton: { paddingHorizontal: 24, paddingVertical: 12, backgroundColor: "#6366F1", borderRadius: 12 },
+  addFirstHabitText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   weekChart: { flexDirection: "row", justifyContent: "space-around", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: 16, padding: 16, height: 150 },
   dayColumn: { flex: 1, alignItems: "center" },
   barContainer: { flex: 1, width: "60%", justifyContent: "flex-end", marginBottom: 8 },
   bar: { width: "100%", borderRadius: 4 },
   dayLabel: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: "700", marginBottom: 2 },
   dayCount: { fontSize: 10, color: "rgba(255,255,255,0.5)" },
-  habitCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 16, marginBottom: 12 },
+  habitCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   habitCardCompleted: { backgroundColor: "rgba(16,185,129,0.08)", borderWidth: 1, borderColor: "rgba(16,185,129,0.2)" },
   habitHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   habitInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
@@ -269,8 +300,10 @@ const styles = StyleSheet.create({
   checkbox: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   checkboxCompleted: { backgroundColor: "rgba(16,185,129,0.2)" },
   checkmark: { fontSize: 18, fontWeight: "900", color: "#10B981" },
-  progressBar: { height: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" },
+  progressContainer: { flexDirection: "row", alignItems: "center", gap: 12 },
+  progressBar: { flex: 1, height: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 3 },
+  progressText: { fontSize: 12, color: "rgba(255,255,255,0.6)", fontWeight: "700", minWidth: 40 },
   actionsGrid: { flexDirection: "row", gap: 12 },
   actionCard: { flex: 1, backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
   actionIcon: { fontSize: 32, marginBottom: 8 },

@@ -11,13 +11,14 @@ export type RootStackParamList = {
   AIRecommendation: undefined;
   AISetting: undefined;
   FinanceDashboard: undefined;
-  AddTransaction: undefined;
+  AddTransaction: { defaultType?: 'income' | 'expense' };
   EditTransaction: { transaction: any };
   TransactionHistory: { newTransaction?: any };
   BudgetPlanner: undefined;
   GoalTracking: undefined;
   HabitDashboard: undefined;
   AddHabit: undefined;
+  EditHabit: { habitId: string };
   DailyCheckIn: undefined;
   AIHabitCoach: undefined;
   HabitReport: undefined;

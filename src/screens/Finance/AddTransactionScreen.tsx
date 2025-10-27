@@ -16,10 +16,8 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
-import firestore from "@react-native-firebase/firestore";
-import auth from "@react-native-firebase/auth";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
-import transactionApi from "../../api/transactionApi";
+import TransactionService from "../../services/TransactionService";
 import { useTransactionStore } from "../../store/transactionStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddTransaction">;
@@ -33,8 +31,11 @@ interface Category {
   type: TransactionType;
 }
 
-export default function AddTransactionScreen({ navigation }: Props) {
-  const [type, setType] = useState<TransactionType>("expense");
+export default function AddTransactionScreen({ navigation, route }: Props) {
+  // route.params may be untyped in RootStackParamList; cast safely to avoid TS errors
+  const params = (route?.params ?? {}) as { defaultType?: TransactionType };
+  const defaultTypeFromRoute = params.defaultType;
+  const [type, setType] = useState<TransactionType>(defaultTypeFromRoute ?? "expense");
   const [amount, setAmount] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [note, setNote] = useState("");
@@ -121,74 +122,53 @@ export default function AddTransactionScreen({ navigation }: Props) {
     setIsLoading(true);
 
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        Alert.alert("Lỗi", "Vui lòng đăng nhập");
-        setIsLoading(false);
-        return;
-      }
-
-      // Get category name
-      const allCategories =
-        type === "expense"
-          ? expenseCategories
-          : incomeCategories;
-      const selectedCategoryObj = allCategories.find(
-        (cat) => cat.id === selectedCategory
-      );
+      // Get category name from local array
+      const allCategories = type === "expense" ? expenseCategories : incomeCategories;
+      const selectedCategoryObj = allCategories.find(cat => cat.id === selectedCategory);
       const categoryName = selectedCategoryObj?.name || "Khác";
 
-      // Create transaction object with current date and time
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-
-      const transaction = {
+      // Create transaction object using Service
+      const formData = {
         type,
-        amount: parseInt(amount, 10),
-        description: note,
-        category: categoryName,
+        amount,
         categoryId: selectedCategory,
-        date: firestore.Timestamp.fromDate(now),
-        time: `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
-        billImageUri: billImage || null,
+        categoryName,
+        description: note,
+        billImageUri: billImage,
       };
 
-      // Sử dụng Transaction API để lưu giao dịch
-      // API sẽ tự động lưu vào cache (AsyncStorage) và server (Firestore)
-      const newTransaction = await transactionApi.addTransaction(transaction);
+      const transactionObj = TransactionService.createTransactionObject(formData);
+      
+      console.log('💾 [SCREEN] Saving transaction:', transactionObj);
 
-      // Cập nhật store Zustand
-      await useTransactionStore.getState().addTransaction(newTransaction);
+      // Use Store to add transaction (which uses Service internally)
+      const addTransaction = useTransactionStore.getState().addTransaction;
+      await addTransaction(transactionObj);
 
       Alert.alert("Thành công", "Đã lưu giao dịch", [
         {
           text: "OK",
           onPress: () => {
+            // Reset form
             setAmount("");
             setSelectedCategory("");
             setNote("");
             setBillImage(null);
-            // Go back to FinanceDashboard to show updated transaction list
+            // Go back to FinanceDashboard
             navigation.goBack();
           },
         },
       ]);
     } catch (error) {
-      console.error("Error saving transaction:", error);
-      Alert.alert("Lỗi", "Không thể lưu giao dịch. Vui lòng thử lại");
-      setIsLoading(false);
+      console.error("❌ Error saving transaction:", error);
+      Alert.alert("Lỗi", error instanceof Error ? error.message : "Không thể lưu giao dịch. Vui lòng thử lại");
     } finally {
       setIsLoading(false);
     }
   };
 
   const formatAmount = (text: string) => {
-    const cleaned = text.replace(/[^0-9]/g, "");
-    if (cleaned) {
-      return parseInt(cleaned, 10).toLocaleString("vi-VN");
-    }
-    return "";
+    return TransactionService.formatAmount(text);
   };
 
   const handleAmountChange = (text: string) => {

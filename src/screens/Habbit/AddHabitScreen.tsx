@@ -10,9 +10,11 @@ import {
   Platform,
   Alert,
   Animated,
+  Modal,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+import { useHabitStore } from "../../store/habitStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddHabit">;
 
@@ -27,13 +29,29 @@ interface HabitSuggestion {
   benefits: string;
 }
 
+interface ScheduleItem {
+  id: string;
+  time: string; // HH:mm format
+  daysOfWeek: number[]; // 0-6, 0=Sunday
+  reminder: boolean;
+}
+
 export default function AddHabitScreen({ navigation }: Props) {
+  const addHabit = useHabitStore((state) => state.addHabit);
+  const isLoading = useHabitStore((state) => state.isLoading);
+
   const [habitName, setHabitName] = useState("");
   const [target, setTarget] = useState("");
   const [unit, setUnit] = useState("");
   const [selectedIcon, setSelectedIcon] = useState("⭐");
   const [selectedColor, setSelectedColor] = useState("#6366F1");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([
+    { id: "1", time: "06:00", daysOfWeek: [1, 2, 3, 4, 5, 6, 0], reminder: true },
+  ]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [tempTime, setTempTime] = useState("06:00");
   const [fadeAnim] = useState(new Animated.Value(0));
 
   React.useEffect(() => {
@@ -125,15 +143,72 @@ export default function AddHabitScreen({ navigation }: Props) {
     setSelectedCategory(suggestion.category);
   };
 
-  const handleSave = () => {
-    if (!habitName.trim() || !target || !unit.trim()) {
+  const daysOfWeekName = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+  const toggleDayOfWeek = (dayIndex: number, scheduleId: string) => {
+    setSchedule(
+      schedule.map((s) => {
+        if (s.id !== scheduleId) return s;
+        const newDays = s.daysOfWeek.includes(dayIndex)
+          ? s.daysOfWeek.filter((d) => d !== dayIndex)
+          : [...s.daysOfWeek, dayIndex];
+        return { ...s, daysOfWeek: newDays.sort() };
+      })
+    );
+  };
+
+  const addSchedule = () => {
+    const newSchedule: ScheduleItem = {
+      id: Date.now().toString(),
+      time: "06:00",
+      daysOfWeek: [1, 2, 3, 4, 5, 6, 0],
+      reminder: true,
+    };
+    setSchedule([...schedule, newSchedule]);
+  };
+
+  const removeSchedule = (scheduleId: string) => {
+    setSchedule(schedule.filter((s) => s.id !== scheduleId));
+  };
+
+  const handleSaveSchedule = (scheduleId: string) => {
+    setSchedule(
+      schedule.map((s) =>
+        s.id === scheduleId ? { ...s, time: tempTime } : s
+      )
+    );
+    setEditingScheduleId(null);
+  };
+
+  const handleSave = async () => {
+    if (!habitName.trim() || !target || !unit.trim() || !selectedCategory) {
       Alert.alert("Thông báo", "Vui lòng điền đầy đủ thông tin");
       return;
     }
 
-    Alert.alert("Thành công", "Đã thêm thói quen mới!", [
-      { text: "OK", onPress: () => navigation.goBack() }
-    ]);
+    if (schedule.length === 0) {
+      Alert.alert("Thông báo", "Vui lòng thêm ít nhất một lịch trình");
+      return;
+    }
+
+    try {
+      await addHabit({
+        name: habitName,
+        icon: selectedIcon,
+        color: selectedColor,
+        category: selectedCategory,
+        target: parseInt(target, 10),
+        unit,
+        schedule,
+        description: "",
+      });
+
+      Alert.alert("Thành công", "Đã thêm thói quen mới!", [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
+    } catch (error) {
+      Alert.alert("Lỗi", error instanceof Error ? error.message : "Có lỗi xảy ra");
+    }
   };
 
   return (
@@ -282,6 +357,91 @@ export default function AddHabitScreen({ navigation }: Props) {
                 ))}
               </View>
             </View>
+
+            {/* Schedule Section */}
+            <View style={styles.inputContainer}>
+              <View style={styles.scheduleHeader}>
+                <Text style={styles.label}>Lịch trình sinh hoạt</Text>
+                <TouchableOpacity
+                  style={styles.addScheduleButton}
+                  onPress={addSchedule}
+                >
+                  <Text style={styles.addScheduleText}>+ Thêm</Text>
+                </TouchableOpacity>
+              </View>
+
+              {schedule.length === 0 ? (
+                <Text style={styles.emptyText}>Chưa có lịch trình. Hãy thêm một.</Text>
+              ) : (
+                schedule.map((item) => (
+                  <View key={item.id} style={styles.scheduleCard}>
+                    {/* Time */}
+                    <View style={styles.scheduleTimeRow}>
+                      <TouchableOpacity
+                        style={styles.timeDisplay}
+                        onPress={() => {
+                          setEditingScheduleId(item.id);
+                          setTempTime(item.time);
+                          setShowScheduleModal(true);
+                        }}
+                      >
+                        <Text style={styles.timeText}>⏰ {item.time}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.deleteScheduleButton}
+                        onPress={() => removeSchedule(item.id)}
+                      >
+                        <Text style={styles.deleteScheduleText}>🗑️</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Days of Week */}
+                    <View style={styles.daysGrid}>
+                      {daysOfWeekName.map((dayName, dayIndex) => (
+                        <TouchableOpacity
+                          key={dayIndex}
+                          style={[
+                            styles.dayButton,
+                            item.daysOfWeek.includes(dayIndex) &&
+                              styles.dayButtonActive,
+                          ]}
+                          onPress={() => toggleDayOfWeek(dayIndex, item.id)}
+                        >
+                          <Text
+                            style={[
+                              styles.dayText,
+                              item.daysOfWeek.includes(dayIndex) &&
+                                styles.dayTextActive,
+                            ]}
+                          >
+                            {dayName}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Reminder */}
+                    <TouchableOpacity
+                      style={styles.reminderToggle}
+                      onPress={() =>
+                        setSchedule(
+                          schedule.map((s) =>
+                            s.id === item.id
+                              ? { ...s, reminder: !s.reminder }
+                              : s
+                          )
+                        )
+                      }
+                    >
+                      <Text style={styles.reminderText}>
+                        {item.reminder ? "🔔" : "🔕"} Nhắc nhở
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
           </View>
 
           {/* Preview */}
@@ -302,15 +462,93 @@ export default function AddHabitScreen({ navigation }: Props) {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: selectedColor }]}
+            style={[styles.createButton, { backgroundColor: selectedColor, opacity: isLoading ? 0.6 : 1 }]}
             onPress={handleSave}
             activeOpacity={0.9}
+            disabled={isLoading}
           >
-            <Text style={styles.createButtonText}>Tạo thói quen</Text>
+            <Text style={styles.createButtonText}>
+              {isLoading ? "Đang lưu..." : "Tạo thói quen"}
+            </Text>
             <Text style={styles.createButtonIcon}>✓</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={showScheduleModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowScheduleModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Chọn giờ</Text>
+
+            <View style={styles.timePickerContainer}>
+              <View style={styles.timeInput}>
+                <Text style={styles.timeLabel}>Giờ</Text>
+                <TextInput
+                  style={styles.timeInputField}
+                  placeholder="00"
+                  placeholderTextColor="#999"
+                  maxLength={2}
+                  keyboardType="number-pad"
+                  value={tempTime.split(":")[0]}
+                  onChangeText={(value) => {
+                    const minutes = tempTime.split(":")[1];
+                    const hour = value.padStart(2, "0");
+                    if (parseInt(hour, 10) <= 23) {
+                      setTempTime(`${hour}:${minutes}`);
+                    }
+                  }}
+                />
+              </View>
+
+              <Text style={styles.timeSeparator}>:</Text>
+
+              <View style={styles.timeInput}>
+                <Text style={styles.timeLabel}>Phút</Text>
+                <TextInput
+                  style={styles.timeInputField}
+                  placeholder="00"
+                  placeholderTextColor="#999"
+                  maxLength={2}
+                  keyboardType="number-pad"
+                  value={tempTime.split(":")[1]}
+                  onChangeText={(value) => {
+                    const hour = tempTime.split(":")[0];
+                    const minute = value.padStart(2, "0");
+                    if (parseInt(minute, 10) <= 59) {
+                      setTempTime(`${hour}:${minute}`);
+                    }
+                  }}
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButtonCancel}
+                onPress={() => setShowScheduleModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalButtonSave}
+                onPress={() => {
+                  handleSaveSchedule(editingScheduleId!);
+                  setShowScheduleModal(false);
+                }}
+              >
+                <Text style={styles.modalButtonTextWhite}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -355,6 +593,23 @@ const styles = StyleSheet.create({
   categoryIcon: { fontSize: 24, marginRight: 8 },
   categoryName: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
   categoryNameActive: { color: "#fff" },
+  scheduleHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  addScheduleButton: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#6366F1", borderRadius: 8 },
+  addScheduleText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+  emptyText: { color: "rgba(255,255,255,0.5)", fontSize: 13, fontStyle: "italic" },
+  scheduleCard: { backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  scheduleTimeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  timeDisplay: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: "rgba(99,102,241,0.15)", borderRadius: 8 },
+  timeText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  deleteScheduleButton: { paddingHorizontal: 12, paddingVertical: 8 },
+  deleteScheduleText: { fontSize: 18 },
+  daysGrid: { flexDirection: "row", gap: 8, marginBottom: 12, justifyContent: "space-between" },
+  dayButton: { width: "13%", paddingVertical: 8, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8, alignItems: "center", borderWidth: 2, borderColor: "transparent" },
+  dayButtonActive: { backgroundColor: "rgba(99,102,241,0.2)", borderColor: "#6366F1" },
+  dayText: { color: "rgba(255,255,255,0.6)", fontWeight: "700", fontSize: 11 },
+  dayTextActive: { color: "#fff" },
+  reminderToggle: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "rgba(16,185,129,0.15)", borderRadius: 8, alignItems: "center" },
+  reminderText: { color: "#10B981", fontWeight: "700", fontSize: 13 },
   previewCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 20, marginBottom: 24 },
   previewTitle: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: 12 },
   previewHabit: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 16, borderWidth: 2 },
@@ -366,4 +621,19 @@ const styles = StyleSheet.create({
   createButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 16, padding: 18, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
   createButtonText: { color: "#fff", fontSize: 17, fontWeight: "700", marginRight: 8 },
   createButtonIcon: { color: "#fff", fontSize: 20, fontWeight: "700" },
+
+  // Modal styles
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
+  modalContent: { backgroundColor: "#1A1F3A", borderRadius: 16, padding: 24, width: "80%", maxWidth: 300 },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: "#fff", marginBottom: 20, textAlign: "center" },
+  timePickerContainer: { flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 8, marginBottom: 24 },
+  timeInput: { alignItems: "center" },
+  timeLabel: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginBottom: 6, fontWeight: "700" },
+  timeInputField: { width: 60, height: 50, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", color: "#fff", fontSize: 20, fontWeight: "700", textAlign: "center" },
+  timeSeparator: { fontSize: 24, color: "#fff", fontWeight: "700", marginBottom: 8 },
+  modalButtons: { flexDirection: "row", gap: 12 },
+  modalButtonCancel: { flex: 1, paddingVertical: 12, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 8, alignItems: "center" },
+  modalButtonSave: { flex: 1, paddingVertical: 12, backgroundColor: "#6366F1", borderRadius: 8, alignItems: "center" },
+  modalButtonText: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 14 },
+  modalButtonTextWhite: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });

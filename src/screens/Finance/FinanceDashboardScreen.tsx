@@ -11,35 +11,43 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
-import transactionApi from "../../api/transactionApi";
+import { useTransactionStore } from "../../store/transactionStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FinanceDashboard">;
 
 export default function FinanceDashboardScreen({ navigation }: Props) {
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  
+  // ⚠️ CRITICAL: Subscribe to store - này là key để auto-update
+  // Bất cứ lúc nào state.transactions thay đổi → component re-render
+  const transactions = useTransactionStore((state) => state.transactions);
+  const fetchTransactions = useTransactionStore((state) => state.fetchTransactions);
+  const transactionsLoading = useTransactionStore((state) => state.isLoading);
 
-  // Load transactions when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      loadRecentTransactions();
-    }, [])
-  );
+  // Recent transactions derived from store (most recent first)
+  // Computed lại mỗi khi transactions thay đổi
+  const recentTransactions = transactions ? transactions.slice(0, 5) : [];
 
-  const loadRecentTransactions = async () => {
-    setTransactionsLoading(true);
+  // Load transactions helper (declare before useFocusEffect to avoid TDZ error)
+  const loadRecentTransactions = React.useCallback(async () => {
     try {
-      const data = await transactionApi.getTransactions();
-      // Get last 5 transactions
-      setRecentTransactions(data.slice(0, 5));
+      console.log('📊 [DASHBOARD] Fetching fresh transactions...');
+      await fetchTransactions();
+      console.log('✅ [DASHBOARD] Fresh transactions fetched');
     } catch (error) {
       console.error("Error loading transactions:", error);
-    } finally {
-      setTransactionsLoading(false);
     }
-  };
+  }, [fetchTransactions]);
+
+  // ⚠️ IMPORTANT: Fetch fresh data khi screen focus
+  // Đây đảm bảo nếu có thay đổi từ tab khác → fetch fresh
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('👀 [DASHBOARD] Screen focused - fetching fresh data');
+      loadRecentTransactions();
+    }, [loadRecentTransactions])
+  );
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -48,6 +56,13 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
       useNativeDriver: true,
     }).start();
   }, [fadeAnim]);
+
+  // ⚠️ AUTO-UPDATE: Mỗi khi transactions thay đổi (từ Store)
+  // Component tự động re-render với dữ liệu mới
+  React.useEffect(() => {
+    console.log('📊 [DASHBOARD] Transactions updated from store. Count:', transactions.length);
+    // recentTransactions sẽ được computed lại tự động
+  }, [transactions]);
 
   const incomeData = [
     { month: "T1", value: 15000000, percent: 85 },
@@ -190,7 +205,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>💳 Chi tiêu theo danh mục</Text>
-              <TouchableOpacity onPress={() => navigation.navigate("AIInsight")}>
+              <TouchableOpacity onPress={() => navigation.navigate("AIInsight", undefined)}>
                 <Text style={styles.viewAllLink}>Xem chi tiết →</Text>
               </TouchableOpacity>
             </View>
@@ -251,7 +266,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
             </Text>
             <TouchableOpacity
               style={styles.aiButton}
-              onPress={() => navigation.navigate("AIChat")}
+              onPress={() => navigation.navigate("AIChat", undefined)}
             >
               <Text style={styles.aiButtonText}>Hỏi AI chi tiết hơn</Text>
               <Text style={styles.aiButtonIcon}>→</Text>
@@ -264,28 +279,28 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
             <View style={styles.actionsGrid}>
               <TouchableOpacity 
                 style={styles.actionCard}
-                onPress={() => navigation.navigate("AddTransaction")}
+                onPress={() => navigation.navigate("AddTransaction", { defaultType: 'income' })}
               >
                 <Text style={styles.actionIcon}>➕</Text>
                 <Text style={styles.actionText}>Thêm thu nhập</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.actionCard}
-                onPress={() => navigation.navigate("AddTransaction")}
+                onPress={() => navigation.navigate("AddTransaction", { defaultType: 'expense' })}
               >
                 <Text style={styles.actionIcon}>➖</Text>
                 <Text style={styles.actionText}>Thêm chi tiêu</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.actionCard}
-                onPress={() => navigation.navigate("AIRecommendation")}
+                onPress={() => navigation.navigate("AIRecommendation", undefined)}
               >
                 <Text style={styles.actionIcon}>🎯</Text>
                 <Text style={styles.actionText}>Gợi ý tiết kiệm</Text>
               </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionCard}
-                  onPress={() => navigation.navigate("AddTransaction")}
+                  onPress={() => navigation.navigate("AddTransaction", {})}
                 >
                   <Text style={styles.actionIcon}>📄</Text>
                   <Text style={styles.actionText}>Xuất báo cáo</Text>
@@ -312,11 +327,11 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
               </View>
             ) : (
               <View>
-                {recentTransactions.map((transaction, index) => (
+                {recentTransactions.map((transaction: any, index: number) => (
                   <TouchableOpacity
                     key={`transaction-${index}-${transaction.id}`}
                     style={styles.recentTransactionItem}
-                    onPress={() => navigation.push("EditTransaction", { transaction })}
+                    onPress={() => navigation.push("EditTransaction", { transaction: transaction as any })}
                   >
                     <View style={styles.transactionLeft}>
                       <Text style={styles.transactionEmoji}>

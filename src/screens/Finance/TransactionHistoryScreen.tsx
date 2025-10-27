@@ -12,10 +12,11 @@ import {
   FlatList,
   RefreshControl,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
-import transactionApi from "../../api/transactionApi";
 import { useTransactionStore } from "../../store/transactionStore";
+import TransactionHistoryService from "../../services/TransactionHistoryService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TransactionHistory">;
 
@@ -32,11 +33,13 @@ interface Transaction {
 }
 
 export default function TransactionHistoryScreen({ navigation, route }: Props) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const { newTransaction } = route.params || {};
+  
+  // ✅ Subscribe to Store - transactions từ Store
+  const transactions = useTransactionStore((state) => state.transactions);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -48,13 +51,23 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
     loadTransactions();
   }, [fadeAnim]);
 
+  // ✅ useFocusEffect để fetch fresh data khi quay lại screen
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("📄 [HISTORY-SCREEN] Screen focused - fetching fresh transactions");
+      loadTransactions();
+    }, [])
+  );
+
   const loadTransactions = async () => {
     setIsLoading(true);
     try {
-      const data = await transactionApi.getTransactions();
-      setTransactions(data as Transaction[]);
+      console.log("📄 [HISTORY-SCREEN] Loading transactions from Store");
+      // ✅ Gọi Store để fetch fresh data từ Firebase
+      await useTransactionStore.getState().fetchTransactions();
+      console.log("✅ [HISTORY-SCREEN] Transactions loaded from Store");
     } catch (error) {
-      console.error("Error loading transactions:", error);
+      console.error("❌ [HISTORY-SCREEN] Error loading transactions:", error);
       Alert.alert("Lỗi", "Không thể tải lịch sử giao dịch");
     } finally {
       setIsLoading(false);
@@ -64,10 +77,13 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      const data = await transactionApi.getTransactions();
-      setTransactions(data as Transaction[]);
+      console.log("🔄 [HISTORY-SCREEN] Refreshing transactions");
+      // ✅ Pull-to-refresh - fetch fresh data từ Store
+      await useTransactionStore.getState().fetchTransactions();
+      console.log("✅ [HISTORY-SCREEN] Transactions refreshed");
     } catch (error) {
-      console.error("Error refreshing transactions:", error);
+      console.error("❌ [HISTORY-SCREEN] Error refreshing transactions:", error);
+      Alert.alert("Lỗi", "Không thể làm mới danh sách");
     } finally {
       setRefreshing(false);
     }
@@ -91,12 +107,23 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
           text: "Xóa",
           onPress: async () => {
             try {
-              await transactionApi.deleteTransaction(transaction.id);
+              console.log("🗑️ [HISTORY-SCREEN] Starting delete for:", transaction.id);
+              
+              // ✅ Xóa từ Store
+              // Store sẽ:
+              // 1. Gọi TransactionService.deleteTransaction()
+              // 2. TransactionService xóa từ Firebase
+              // 3. TransactionService fetch fresh data từ server (source: 'server')
+              // 4. Store update state.transactions = freshData
+              // 5. Screen tự động re-render (subscribed to Store)
+              // 6. FinanceDashboardScreen tự động update (cũng subscribe Store)
+              console.log("🗑️ [HISTORY-SCREEN] Deleting from Store...");
               await useTransactionStore.getState().deleteTransaction(transaction.id);
-              setTransactions((prev) => prev.filter((t) => t.id !== transaction.id));
+              
+              console.log("✅ [HISTORY-SCREEN] Delete successful");
               Alert.alert("Thành công", "Đã xóa giao dịch");
             } catch (error) {
-              console.error("Error deleting transaction:", error);
+              console.error("❌ [HISTORY-SCREEN] Error deleting transaction:", error);
               Alert.alert("Lỗi", "Không thể xóa giao dịch");
             }
           },
@@ -106,53 +133,19 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
     );
   };
 
-  const formatDate = (dateObj: any) => {
-    try {
-      const date = dateObj?.toDate?.() || new Date(dateObj);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      if (date.toDateString() === today.toDateString()) {
-        return "Hôm nay";
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        return "Hôm qua";
-      } else {
-        return date.toLocaleDateString("vi-VN");
-      }
-    } catch {
-      return "Không xác định";
-    }
-  };
-
-  const groupTransactionsByDate = () => {
-    const grouped: { [key: string]: Transaction[] } = {};
-
-    transactions.forEach((transaction) => {
-      const date = transaction.date || transaction.createdAt;
-      const dateKey = formatDate(date);
-
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(transaction);
-    });
-
-    return grouped;
-  };
-
-  const groupedTransactions = groupTransactionsByDate();
-  const dateKeys = Object.keys(groupedTransactions);
+  const groupedTransactions = TransactionHistoryService.groupTransactionsByDate(transactions) as Record<string, Transaction[]>;
+  const dateKeys: string[] = Object.keys(groupedTransactions);
 
   const renderTransactionItem = ({ item }: { item: Transaction }) => {
     const isExpense = item.type === "expense";
-    const categoryEmoji = getCategoryEmoji(item.categoryId);
+    const categoryEmoji = TransactionHistoryService.getCategoryEmoji(item.categoryId);
 
     return (
       <Animated.View style={{ opacity: fadeAnim }}>
         <TouchableOpacity
           style={styles.transactionItem}
-          onLongPress={() => handleEdit(item)}
+          onPress={() => handleEdit(item)}
+          onLongPress={() => handleDelete(item)}
           activeOpacity={0.7}
         >
           <View style={styles.transactionLeft}>
@@ -161,7 +154,7 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
               <Text style={styles.transactionCategory}>{item.category}</Text>
               <Text style={styles.transactionDescription}>{item.description}</Text>
               <Text style={styles.transactionTime}>
-                {item.time || formatDate(item.date || item.createdAt)}
+                {TransactionHistoryService.formatFullDateTime(item.date || item.createdAt)}
               </Text>
             </View>
           </View>
@@ -187,24 +180,6 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
         </TouchableOpacity>
       </Animated.View>
     );
-  };
-
-  const getCategoryEmoji = (categoryId: string) => {
-    const emojiMap: { [key: string]: string } = {
-      "1": "🍔", // Ăn uống
-      "2": "🚗", // Di chuyển
-      "3": "🛍️", // Mua sắm
-      "4": "🎮", // Giải trí
-      "5": "💊", // Sức khỏe
-      "6": "📚", // Giáo dục
-      "7": "🏠", // Nhà cửa
-      "8": "📦", // Khác (expense)
-      "9": "💼", // Lương
-      "10": "🎁", // Thưởng
-      "11": "📈", // Đầu tư
-      "12": "💰", // Khác (income)
-    };
-    return emojiMap[categoryId] || "💳";
   };
 
   return (
@@ -263,7 +238,7 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
           <Text style={styles.emptySubText}>Hãy thêm giao dịch mới để bắt đầu</Text>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => navigation.navigate("AddTransaction")}
+            onPress={() => navigation.navigate("AddTransaction" as any)}
           >
             <Text style={styles.addButtonText}>+ Thêm giao dịch</Text>
           </TouchableOpacity>
@@ -276,16 +251,15 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
               <View style={styles.dateHeader}>
                 <Text style={styles.dateText}>{dateKey}</Text>
                 <View style={styles.dateSummary}>
-                  {groupedTransactions[dateKey].some((t) => t.type === "expense") && (
+                  {groupedTransactions[dateKey].some((t: Transaction) => t.type === "expense") && (
                     <Text style={styles.dateSummaryText}>
                       💸 ₫
-                      {groupedTransactions[dateKey]
-                        .filter((t) => t.type === "expense")
-                        .reduce((sum, t) => sum + t.amount, 0)
-                        .toLocaleString("vi-VN")}
+                      {(TransactionHistoryService.calculateDailySummary(
+                        groupedTransactions[dateKey]
+                      ) as { expenses: number; income: number }).expenses.toLocaleString("vi-VN")}
                     </Text>
                   )}
-                  {groupedTransactions[dateKey].some((t) => t.type === "income") && (
+                  {groupedTransactions[dateKey].some((t: Transaction) => t.type === "income") && (
                     <Text
                       style={[
                         styles.dateSummaryText,
@@ -293,16 +267,15 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
                       ]}
                     >
                       💰 ₫
-                      {groupedTransactions[dateKey]
-                        .filter((t) => t.type === "income")
-                        .reduce((sum, t) => sum + t.amount, 0)
-                        .toLocaleString("vi-VN")}
+                      {(TransactionHistoryService.calculateDailySummary(
+                        groupedTransactions[dateKey]
+                      ) as { expenses: number; income: number }).income.toLocaleString("vi-VN")}
                     </Text>
                   )}
                 </View>
               </View>
               <View>
-                {groupedTransactions[dateKey].map((transaction, transactionIndex) => (
+                {groupedTransactions[dateKey].map((transaction: Transaction, transactionIndex: number) => (
                   <View key={`${dateIndex}-${transactionIndex}-${transaction.id}`}>
                     {renderTransactionItem({ item: transaction })}
                   </View>
@@ -321,7 +294,7 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
       {transactions.length > 0 && (
         <TouchableOpacity
           style={styles.floatingButton}
-          onPress={() => navigation.navigate("AddTransaction")}
+          onPress={() => navigation.navigate("AddTransaction" as any)}
         >
           <Text style={styles.floatingButtonText}>+ Thêm giao dịch</Text>
         </TouchableOpacity>

@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
-import transactionApi from "../../api/transactionApi";
 import { useTransactionStore } from "../../store/transactionStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditTransaction">;
@@ -116,11 +115,10 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
         categoryId: selectedCategory,
       };
 
-      // Cập nhật giao dịch
-      await transactionApi.updateTransaction(transaction.id, updateData);
-
-      // Cập nhật store
+      // ✅ Only call Store (which calls Service → Firebase)
+      console.log('✏️ [EDIT-SCREEN] Updating transaction via Store...');
       await useTransactionStore.getState().updateTransaction(transaction.id, updateData);
+      console.log('✅ [EDIT-SCREEN] Update successful');
 
       Alert.alert("Thành công", "Đã cập nhật giao dịch", [
         {
@@ -131,7 +129,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
         },
       ]);
     } catch (error) {
-      console.error("Error updating transaction:", error);
+      console.error("❌ [EDIT-SCREEN] Error updating transaction:", error);
       Alert.alert("Lỗi", "Không thể cập nhật giao dịch. Vui lòng thử lại");
     } finally {
       setIsLoading(false);
@@ -153,8 +151,11 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
           onPress: async () => {
             setIsLoading(true);
             try {
-              await transactionApi.deleteTransaction(transaction.id);
+              console.log("🗑️ [EDIT-SCREEN] Starting delete:", transaction.id);
+              
+              // ✅ Only call Store which handles everything (Service → Firebase)
               await useTransactionStore.getState().deleteTransaction(transaction.id);
+              console.log("✅ [EDIT-SCREEN] Delete completed successfully");
 
               Alert.alert("Thành công", "Đã xóa giao dịch", [
                 {
@@ -165,8 +166,9 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
                 },
               ]);
             } catch (error) {
-              console.error("Error deleting transaction:", error);
-              Alert.alert("Lỗi", "Không thể xóa giao dịch. Vui lòng thử lại");
+              console.error("❌ [EDIT-SCREEN] Error deleting transaction:", error);
+              const errorMsg = error instanceof Error ? error.message : String(error);
+              Alert.alert("Lỗi", "Không thể xóa giao dịch: " + errorMsg);
               setIsLoading(false);
             }
           },

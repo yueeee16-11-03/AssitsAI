@@ -1,9 +1,56 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
+/**
+ * ⚠️ DEPRECATED: TransactionApi
+ * 
+ * Lý do deprecate:
+ * - Logic đã được move sang TransactionService
+ * - API gọi Firestore trực tiếp gây cache issues
+ * - Screens nên dùng Store (via TransactionService) thay vì API
+ * 
+ * Migration guide:
+ * ❌ OLD: import transactionApi from '../../api/transactionApi'
+ *         await transactionApi.getTransactions()
+ * 
+ * ✅ NEW: import { useTransactionStore } from '../../store/transactionStore'
+ *         await store.fetchTransactions()
+ * 
+ * Details: Xem ARCHITECTURE_SERVICE_STORE.md
+ */
+
 class TransactionApi {
   /**
-   * Thêm giao dịch mới
+   * @deprecated Sử dụng useTransactionStore.fetchTransactions() thay vì
+   */
+  async getTransactions() {
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        throw new Error('Người dùng chưa đăng nhập');
+      }
+
+      const snapshot = await firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('transactions')
+        .orderBy('createdAt', 'desc')
+        .get({ source: 'server' });
+
+      const transactions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      return transactions;
+    } catch (error) {
+      console.error('Lỗi lấy giao dịch:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Sử dụng useTransactionStore.addTransaction() thay vì
    */
   async addTransaction(transactionData) {
     try {
@@ -34,36 +81,7 @@ class TransactionApi {
   }
 
   /**
-   * Lấy tất cả giao dịch của người dùng
-   */
-  async getTransactions() {
-    try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error('Người dùng chưa đăng nhập');
-      }
-
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('transactions')
-        .orderBy('createdAt', 'desc')
-        .get();
-
-      const transactions = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      return transactions;
-    } catch (error) {
-      console.error('Lỗi lấy giao dịch:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Lấy giao dịch theo loại
+   * @deprecated Sử dụng useTransactionStore.getByType() thay vì
    */
   async getTransactionsByType(type) {
     try {
@@ -76,7 +94,7 @@ class TransactionApi {
   }
 
   /**
-   * Xóa giao dịch
+   * @deprecated Sử dụng useTransactionStore.deleteTransaction() thay vì
    */
   async deleteTransaction(transactionId) {
     try {
@@ -85,6 +103,8 @@ class TransactionApi {
         throw new Error('Người dùng chưa đăng nhập');
       }
 
+      console.log('🗑️ [API] Deleting transaction:', transactionId);
+
       await firestore()
         .collection('users')
         .doc(currentUser.uid)
@@ -92,15 +112,16 @@ class TransactionApi {
         .doc(transactionId)
         .delete();
 
+      console.log('🗑️ [API] Delete successful');
       return true;
     } catch (error) {
-      console.error('Lỗi xóa giao dịch:', error);
+      console.error('❌ Lỗi xóa giao dịch:', error);
       throw error;
     }
   }
 
   /**
-   * Cập nhật giao dịch
+   * @deprecated Sử dụng useTransactionStore.updateTransaction() thay vì
    */
   async updateTransaction(transactionId, updateData) {
     try {
@@ -127,7 +148,7 @@ class TransactionApi {
   }
 
   /**
-   * Tính tổng chi tiêu / thu nhập trong tháng
+   * @deprecated Sử dụng TransactionService.getMonthlyTotal() thay vì
    */
   async getMonthlyTotal(type = 'expense', month = null, year = null) {
     try {
@@ -153,7 +174,7 @@ class TransactionApi {
   }
 
   /**
-   * Tính tổng theo danh mục
+   * @deprecated Sử dụng TransactionService.getTotalByCategory() thay vì
    */
   async getTotalByCategory(category = null) {
     try {
@@ -165,7 +186,6 @@ class TransactionApi {
           .reduce((sum, t) => sum + (parseInt(t.amount, 10) || 0), 0);
       }
 
-      // Nếu không chỉ định category, trả về object với tổng theo từng category
       const byCategory = {};
       transactions.forEach(t => {
         const cat = t.category || 'Khác';

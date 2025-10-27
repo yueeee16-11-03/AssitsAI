@@ -38,6 +38,11 @@ service cloud.firestore {
       match /transactions/{transactionId} {
         allow read, write, delete: if request.auth.uid == userId;
       }
+      
+      // Thói quen của người dùng
+      match /habits/{habitId} {
+        allow read, write, delete: if request.auth.uid == userId;
+      }
     }
     
     // Từ chối tất cả truy cập khác
@@ -71,6 +76,10 @@ allow read, write: if request.auth.uid == userId;
 ✅ Lấy danh sách giao dịch - **HOẠT ĐỘNG**  
 ✅ Xóa giao dịch - **HOẠT ĐỘNG**  
 ✅ Sửa giao dịch - **HOẠT ĐỘNG**  
+✅ Thêm thói quen mới - **HOẠT ĐỘNG**  
+✅ Lấy danh sách thói quen - **HOẠT ĐỘNG**  
+✅ Xóa thói quen - **HOẠT ĐỘNG**  
+✅ Sửa thói quen - **HOẠT ĐỘNG**  
 
 ---
 
@@ -81,10 +90,14 @@ Firestore Database
 │
 └── users/
     └── {userId}  (ID của người dùng)
-        └── transactions/
-            ├── transaction1/
-            ├── transaction2/
-            └── transaction3/
+        ├── transactions/
+        │   ├── transaction1/
+        │   ├── transaction2/
+        │   └── transaction3/
+        └── habits/
+            ├── habit1/
+            ├── habit2/
+            └── habit3/
 ```
 
 ---
