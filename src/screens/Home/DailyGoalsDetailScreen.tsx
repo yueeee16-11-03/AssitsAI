@@ -551,7 +551,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#E0F2F1',
   },
   header: {
     flexDirection: 'row',
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     textAlign: 'center',
   },
   addButton: {
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#333333',
   },
   progressCircleContainer: {
     alignItems: 'center',
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
   goalTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 4,
   },
   goalTitleCompleted: {
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#E0F2F1',
   },
   modalHeader: {
     flexDirection: 'row',

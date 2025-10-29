@@ -247,7 +247,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
               activeOpacity={0.9}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#00897B" />
               ) : (
                 <>
                   <Text style={styles.submitButtonText}>Hoàn tất</Text>
@@ -274,7 +274,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
   },
   gradientBackground: {
     position: "absolute",
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#00796B",
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.9)",
+    color: "#00796B",
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
-    color: "#FFFFFF",
+    color: "#333333",
   },
   textArea: {
     height: 60,
@@ -457,13 +457,13 @@ const styles = StyleSheet.create({
   skipButton: {
     padding: 16,
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "rgba(0, 137, 123, 0.1)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "#00897B",
   },
   skipButtonText: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: "#00796B",
     fontSize: 15,
     fontWeight: "600",
   },

@@ -317,7 +317,7 @@ export default function AISettingScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -336,15 +336,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#fff" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  backIcon: { fontSize: 20, color: "#00897B" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
   saveButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: "#6366F1",
   },
-  saveText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  saveText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
   content: { padding: 16 },
   previewCard: {
     backgroundColor: "rgba(99,102,241,0.1)",
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   aiAvatarText: { fontSize: 24, fontWeight: "800", color: "#6366F1" },
-  previewTitle: { fontSize: 16, fontWeight: "800", color: "#fff", marginBottom: 8 },
+  previewTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 8 },
   previewText: {
     fontSize: 13,
     color: "rgba(255,255,255,0.7)",
@@ -379,14 +379,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#fff", marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
   settingCard: {
     backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
   },
-  settingLabel: { fontSize: 15, fontWeight: "700", color: "#fff", marginBottom: 4 },
+  settingLabel: { fontSize: 15, fontWeight: "700", color: "#00796B", marginBottom: 4 },
   settingDescription: {
     fontSize: 12,
     color: "rgba(255,255,255,0.6)",
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#fff",
+    backgroundColor: "#F3F4F6",
     top: -7,
     marginLeft: -10,
     shadowColor: "#000",

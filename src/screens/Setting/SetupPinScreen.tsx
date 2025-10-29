@@ -321,7 +321,7 @@ export default function SetupPinScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#E0F2F1',
   },
   header: {
     flexDirection: 'row',
@@ -341,13 +341,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#00897B',
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   headerPlaceholder: {
     width: 40,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   lengthOptionText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 4,
   },
   lengthOptionTextSelected: {
@@ -475,11 +475,11 @@ const styles = StyleSheet.create({
   numberButtonText: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#333333',
   },
   backspaceText: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#333333',
   },
   startOverButton: {
     marginTop: 30,
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   successDetailText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   tipsCard: {
     marginHorizontal: 20,

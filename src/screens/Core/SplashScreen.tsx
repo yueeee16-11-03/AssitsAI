@@ -113,7 +113,7 @@ export default function SplashScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 48,
     fontWeight: "900",
-    color: "#6366F1",
+    color: "#00897B",
     letterSpacing: -2,
   },
   logoRing: {
@@ -203,13 +203,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#00796B",
     marginBottom: 8,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: "rgba(0, 0, 0, 0.6)",
     letterSpacing: 1,
   },
   progressContainer: {
@@ -221,9 +221,9 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: "#6366F1",
+    backgroundColor: "#00897B",
     borderRadius: 2,
-    shadowColor: "#6366F1",
+    shadowColor: "#00897B",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 8,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 40,
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.4)",
+    color: "rgba(0, 0, 0, 0.4)",
     letterSpacing: 1.5,
   },
 });

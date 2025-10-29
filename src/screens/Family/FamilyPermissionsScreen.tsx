@@ -310,7 +310,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
         value={currentPermissions[key] as boolean}
         onValueChange={(value) => handlePermissionChange(key, value)}
         trackColor={{ false: '#374151', true: '#6366F1' }}
-        thumbColor={currentPermissions[key] ? '#FFFFFF' : '#9CA3AF'}
+        thumbColor={currentPermissions[key] ? '#00897B' : '#9CA3AF'}
       />
     </View>
   );
@@ -550,7 +550,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#E0F2F1',
   },
   header: {
     flexDirection: 'row',
@@ -570,13 +570,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#00796B',
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   headerPlaceholder: {
     width: 40,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   memberTabNameActive: {
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   memberRoleBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
   memberInfoName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 2,
   },
   memberInfoEmail: {
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 16,
   },
   rolePresets: {
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
   rolePresetTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 4,
   },
   rolePresetDescription: {
@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
   permissionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 2,
   },
   permissionDescription: {

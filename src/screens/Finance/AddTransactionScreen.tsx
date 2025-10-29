@@ -17,6 +17,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
+import { launchImageLibrary } from "react-native-image-picker";
 import TransactionService from "../../services/TransactionService";
 import { useTransactionStore } from "../../store/transactionStore";
 
@@ -24,28 +25,28 @@ type Props = NativeStackScreenProps<RootStackParamList, "AddTransaction">;
 
 type TransactionType = "expense" | "income";
 
-interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  type: TransactionType;
-}
-
-export default function AddTransactionScreen({ navigation, route }: Props) {
-  // route.params may be untyped in RootStackParamList; cast safely to avoid TS errors
-  const params = (route?.params ?? {}) as { defaultType?: TransactionType };
-  const defaultTypeFromRoute = params.defaultType;
-  const [type, setType] = useState<TransactionType>(defaultTypeFromRoute ?? "expense");
-  const [amount, setAmount] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+export default function AddTransactionScreen({ navigation }: Props) {
+  // Note state
   const [note, setNote] = useState("");
+  const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
+  
+  // UI state
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [billImage, setBillImage] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [billImage, setBillImage] = useState<string | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const [type] = useState<TransactionType>("expense"); // Default type for note-style
   const { hasPermission, requestPermission } = useCameraPermission();
+
+  // Get dynamic noteInput style based on fontStyle
+  const getNoteInputStyle = () => {
+    return {
+      fontWeight: fontStyle === "title" ? "800" as const : "500" as const,
+      fontStyle: fontStyle === "italic" ? "italic" as const : "normal" as const,
+    };
+  };
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -68,72 +69,34 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
     }
   }, [isRecording, pulseAnim]);
 
-  const expenseCategories: Category[] = [
-    { id: "1", name: "Ăn uống", icon: "🍔", type: "expense" },
-    { id: "2", name: "Di chuyển", icon: "🚗", type: "expense" },
-    { id: "3", name: "Mua sắm", icon: "🛍️", type: "expense" },
-    { id: "4", name: "Giải trí", icon: "🎮", type: "expense" },
-    { id: "5", name: "Sức khỏe", icon: "💊", type: "expense" },
-    { id: "6", name: "Giáo dục", icon: "📚", type: "expense" },
-    { id: "7", name: "Nhà cửa", icon: "🏠", type: "expense" },
-    { id: "8", name: "Khác", icon: "📦", type: "expense" },
-  ];
-
-  const incomeCategories: Category[] = [
-    { id: "9", name: "Lương", icon: "💼", type: "income" },
-    { id: "10", name: "Thưởng", icon: "🎁", type: "income" },
-    { id: "11", name: "Đầu tư", icon: "📈", type: "income" },
-    { id: "12", name: "Khác", icon: "💰", type: "income" },
-  ];
-
-  const categories = type === "expense" ? expenseCategories : incomeCategories;
-
   const handleVoiceInput = () => {
     setIsRecording(!isRecording);
     // TODO: Implement voice recognition
     if (!isRecording) {
       setTimeout(() => {
-        setAmount("50000");
-        setNote("Ăn trưa tại quán cơm");
-        setSelectedCategory("1");
+        // Add note about what was recorded
+        const voiceNote = "🎤 [Ghi âm]: Ăn trưa tại quán cơm";
+        setNote(note + (note ? "\n" : "") + voiceNote);
         setIsRecording(false);
-        Alert.alert("Ghi nhận giọng nói", "Đã chuyển đổi: 50,000đ - Ăn trưa");
+        Alert.alert("Ghi nhận giọng nói", "Đã thêm ghi chú từ giọng nói");
       }, 2000);
     }
   };
 
   const handleSave = async () => {
-    // Validation
-    if (!amount.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập số tiền");
-      return;
-    }
-
-    if (!selectedCategory) {
-      Alert.alert("Lỗi", "Vui lòng chọn danh mục");
-      return;
-    }
-
-    if (!note.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập mô tả giao dịch");
+    // Validation: Cần ảnh hoặc ghi chú (hoặc cả hai)
+    if (!note.trim() && !billImage) {
+      Alert.alert("Lỗi", "Vui lòng nhập ghi chú hoặc chụp/chọn ảnh");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Get category name from local array
-      const allCategories = type === "expense" ? expenseCategories : incomeCategories;
-      const selectedCategoryObj = allCategories.find(cat => cat.id === selectedCategory);
-      const categoryName = selectedCategoryObj?.name || "Khác";
-
-      // Create transaction object using Service
+      // Create transaction object - note-style (no amount/category required)
       const formData = {
         type,
-        amount,
-        categoryId: selectedCategory,
-        categoryName,
-        description: note,
+        description: note || (billImage ? "📸 Ảnh" : ""),  // Default title if image-only
         billImageUri: billImage,
       };
 
@@ -145,13 +108,11 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       const addTransaction = useTransactionStore.getState().addTransaction;
       await addTransaction(transactionObj);
 
-      Alert.alert("Thành công", "Đã lưu giao dịch", [
+      Alert.alert("Thành công", "Đã lưu ghi chú", [
         {
           text: "OK",
           onPress: () => {
             // Reset form
-            setAmount("");
-            setSelectedCategory("");
             setNote("");
             setBillImage(null);
             // Go back to FinanceDashboard
@@ -161,19 +122,10 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       ]);
     } catch (error) {
       console.error("❌ Error saving transaction:", error);
-      Alert.alert("Lỗi", error instanceof Error ? error.message : "Không thể lưu giao dịch. Vui lòng thử lại");
+      Alert.alert("Lỗi", error instanceof Error ? error.message : "Không thể lưu. Vui lòng thử lại");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatAmount = (text: string) => {
-    return TransactionService.formatAmount(text);
-  };
-
-  const handleAmountChange = (text: string) => {
-    const cleaned = text.replace(/[^0-9]/g, "");
-    setAmount(cleaned);
   };
 
   const handleTakePicture = async () => {
@@ -231,186 +183,102 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Camera Button - Scan Bill */}
-          {!billImage && (
-            <TouchableOpacity
-              style={styles.billCameraButton}
-              onPress={handleTakePicture}
-            >
-              <View style={styles.billCameraIconWrapper}>
-                <Text style={styles.cameraIconSymbol}>📸</Text>
-              </View>
-              <View style={styles.billCameraContent}>
-                <Text style={styles.billCameraTitle}>Quét Bill</Text>
-                <Text style={styles.billCameraSubtitle}>Truy cập camera để chụp ảnh hóa đơn</Text>
-              </View>
-              <Text style={styles.billCameraArrow}>→</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Bill Image Display */}
-          {billImage && (
-            <View style={styles.billImageContainer}>
-              <Image
-                source={{ uri: billImage }}
-                style={styles.billImage}
-              />
-              <View style={styles.billImageOverlay}>
-                <Text style={styles.billImageStatus}>✓ Ảnh hóa đơn đã được quét</Text>
+          {/* Note Input with Toolbar */}
+          <View style={styles.section}>
+            <View style={styles.noteHeader}>
+              <Text style={styles.label}>📝 Ghi chú</Text>
+              <View style={styles.fontStyleControl}>
                 <TouchableOpacity
-                  style={styles.billRemoveButton}
-                  onPress={handleRemoveBillImage}
+                  style={[styles.fontButton, fontStyle === "title" && styles.fontButtonActive]}
+                  onPress={() => setFontStyle("title")}
                 >
-                  <Text style={styles.billRemoveButtonText}>✕ Xóa</Text>
+                  <Text style={[styles.fontButtonText, fontStyle === "title" && styles.fontButtonTextActive, styles.fontButtonBold]}>
+                    B
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.fontButton, fontStyle === "regular" && styles.fontButtonActive]}
+                  onPress={() => setFontStyle("regular")}
+                >
+                  <Text style={[styles.fontButtonText, fontStyle === "regular" && styles.fontButtonTextActive]}>
+                    A
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.fontButton, fontStyle === "italic" && styles.fontButtonActive]}
+                  onPress={() => setFontStyle("italic")}
+                >
+                  <Text style={[styles.fontButtonText, fontStyle === "italic" && styles.fontButtonTextActive, styles.fontButtonItalic]}>
+                    I
+                  </Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.billProcessingNote}>💡 Sẵn sàng để xử lý bằng AI khi lưu giao dịch</Text>
             </View>
-          )}
 
-          {/* Type Selector */}
-          <View style={styles.typeSelector}>
-            <TouchableOpacity
-              style={[styles.typeButton, type === "expense" && styles.typeButtonExpense]}
-              onPress={() => {
-                setType("expense");
-                setSelectedCategory("");
-              }}
-            >
-              <Text style={styles.typeIcon}>💸</Text>
-              <Text style={[styles.typeText, type === "expense" && styles.typeTextActive]}>
-                Chi tiêu
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.typeButton, type === "income" && styles.typeButtonIncome]}
-              onPress={() => {
-                setType("income");
-                setSelectedCategory("");
-              }}
-            >
-              <Text style={styles.typeIcon}>💰</Text>
-              <Text style={[styles.typeText, type === "income" && styles.typeTextActive]}>
-                Thu nhập
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Amount Input */}
-          <View style={styles.amountSection}>
-            <Text style={styles.label}>Số tiền</Text>
-            <View style={styles.amountInputContainer}>
-              <Text style={styles.currencySymbol}>₫</Text>
-              <TextInput
-                style={styles.amountInput}
-                placeholder="0"
-                placeholderTextColor="#999"
-                value={formatAmount(amount)}
-                onChangeText={handleAmountChange}
-                keyboardType="numeric"
-              />
-            </View>
-            {amount && (
-              <Text style={styles.amountWords}>
-                {parseInt(amount, 10) > 1000000
-                  ? `≈ ${(parseInt(amount, 10) / 1000000).toFixed(1)} triệu đồng`
-                  : `${formatAmount(amount)} đồng`}
-              </Text>
-            )}
-          </View>
-
-          {/* Quick Amount Buttons */}
-          <View style={styles.quickAmounts}>
-            {["10000", "20000", "50000", "100000", "200000", "500000"].map((quickAmount) => (
-              <TouchableOpacity
-                key={quickAmount}
-                style={styles.quickButton}
-                onPress={() => setAmount(quickAmount)}
-              >
-                <Text style={styles.quickButtonText}>
-                  {parseInt(quickAmount, 10) >= 1000000
-                    ? `${parseInt(quickAmount, 10) / 1000000}M`
-                    : `${parseInt(quickAmount, 10) / 1000}K`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Category Selection */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Danh mục</Text>
-            <View style={styles.categoriesGrid}>
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryCard,
-                    selectedCategory === category.id && styles.categoryCardActive,
-                  ]}
-                  onPress={() => setSelectedCategory(category.id)}
-                >
-                  <Text style={styles.categoryIcon}>{category.icon}</Text>
-                  <Text style={styles.categoryName}>{category.name}</Text>
-                  {selectedCategory === category.id && (
-                    <View style={styles.checkMark}>
-                      <Text style={styles.checkMarkText}>✓</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Note Input */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Ghi chú</Text>
             <TextInput
-              style={styles.noteInput}
+              style={[
+                styles.noteInput,
+                getNoteInputStyle()
+              ]}
               placeholder="Thêm ghi chú cho giao dịch..."
               placeholderTextColor="#999"
               value={note}
               onChangeText={setNote}
               multiline
-              numberOfLines={3}
+              numberOfLines={6}
             />
-          </View>
 
-          {/* Date and Time Display - Read Only */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Ngày và giờ giao dịch</Text>
-            <View style={styles.dateTimeDisplayCard}>
-              <View style={styles.dateTimeContent}>
-                <Text style={styles.dateTimeIcon}>📅 🕐</Text>
-                <View style={styles.dateTimeTextContainer}>
-                  <Text style={styles.dateTimeLabel}>Thời gian hiện tại</Text>
-                  <Text style={styles.dateTimeValue}>
-                    {new Date().toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}{" "}
-                    · {String(new Date().getHours()).padStart(2, "0")}:
-                    {String(new Date().getMinutes()).padStart(2, "0")}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.dateTimeStatus}>
-                <Text style={styles.dateTimeStatusText}>✓ Tự động</Text>
-              </View>
+            {/* Note Toolbar */}
+            <View style={styles.noteToolbar}>
+              <TouchableOpacity style={styles.toolbarButton} onPress={handleVoiceInput}>
+                <Text style={styles.toolbarIcon}>{isRecording ? "⏹" : "🎤"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.toolbarButton} onPress={handleTakePicture}>
+                <Text style={styles.toolbarIcon}>📷</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.toolbarButton} 
+                onPress={() => {
+                  if (note.trim()) {
+                    navigation.navigate("AIProcessingOverlay", {
+                      handwritingText: note,
+                      onConfirm: (processedData: any) => {
+                        if (processedData.items && processedData.items.length > 0) {
+                          const summary = processedData.items
+                            .map((item: any) => `${item.name}: ${item.amount.toLocaleString("vi-VN")} VND`)
+                            .join("\n");
+                          setNote(summary);
+                          Alert.alert(
+                            "Thành công",
+                            `Ghi chú đã được xử lý. Tổng: ${processedData.totalAmount?.toLocaleString("vi-VN")} VND`
+                          );
+                        }
+                      },
+                    });
+                  } else {
+                    Alert.alert("Lỗi", "Vui lòng nhập ghi chú trước");
+                  }
+                }}
+              >
+                <Text style={styles.toolbarIcon}>✨</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* AI Suggestions */}
-          {amount && selectedCategory && (
-            <View style={styles.aiSuggestion}>
-              <Text style={styles.aiSuggestionIcon}>💡</Text>
-              <View style={styles.aiSuggestionContent}>
-                <Text style={styles.aiSuggestionTitle}>Gợi ý từ AI</Text>
-                <Text style={styles.aiSuggestionText}>
-                  {type === "expense"
-                    ? "Chi tiêu này cao hơn 20% so với trung bình. Bạn có thể cân nhắc giảm chi phí."
-                    : "Thu nhập tốt! Hãy cân nhắc tiết kiệm 20% cho quỹ dự phòng."}
-                </Text>
+          {/* Bill Image Display */}
+          {billImage && (
+            <View style={styles.section}>
+              <View style={styles.billImageContainer}>
+                <Image
+                  source={{ uri: billImage }}
+                  style={styles.billImage}
+                />
+                <TouchableOpacity
+                  style={styles.billRemoveButton}
+                  onPress={handleRemoveBillImage}
+                >
+                  <Text style={styles.billRemoveButtonText}>✕</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -419,7 +287,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
           <TouchableOpacity
             style={[
               styles.saveButton,
-              type === "expense" ? styles.saveButtonExpense : styles.saveButtonIncome,
+              styles.saveButtonDefault,
               isLoading && styles.saveButtonDisabled,
             ]}
             onPress={handleSave}
@@ -429,7 +297,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Text style={styles.saveButtonText}>Lưu giao dịch</Text>
+                <Text style={styles.saveButtonText}>Lưu ghi chú</Text>
                 <Text style={styles.saveButtonIcon}>✓</Text>
               </>
             )}
@@ -447,7 +315,24 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
           onCapture={(imageUri: string) => {
             setBillImage(imageUri);
             setIsCameraOpen(false);
-            Alert.alert("Thành công", "Ảnh bill đã được chụp. Sẵn sàng để xử lý bằng AI");
+            // Navigate to AI Processing Overlay
+            navigation.navigate("AIProcessingOverlay", {
+              imageUri,
+              onConfirm: (processedData: any) => {
+                // Handle the processed data from overlay
+                if (processedData.items && processedData.items.length > 0) {
+                  // Extract first item as primary transaction
+                  const firstItem = processedData.items[0];
+                  setNote(
+                    `${firstItem.name}\n${processedData.note || ""}`.trim()
+                  );
+                  Alert.alert(
+                    "Thành công",
+                    `Ảnh đã được xử lý bằng AI. Tổng: ${processedData.totalAmount?.toLocaleString("vi-VN")} VND`
+                  );
+                }
+              },
+            });
           }}
           onClose={() => setIsCameraOpen(false)}
         />
@@ -463,6 +348,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
   const camera = React.useRef<Camera>(null);
   const [permissionRequested, setPermissionRequested] = React.useState(false);
   const [torchEnabled, setTorchEnabled] = React.useState(false);
+  const [showOptions, setShowOptions] = React.useState(true);
 
   const format = useCameraFormat(device, [
     { videoStabilizationMode: "cinematic" },
@@ -500,9 +386,78 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
     }
   };
 
+  const handlePickFromGallery = async () => {
+    launchImageLibrary(
+      {
+        mediaType: "photo",
+        maxWidth: 1000,
+        maxHeight: 1000,
+        quality: 0.8,
+      },
+      (response) => {
+        if (response.didCancel) {
+          console.log("User cancelled image picker");
+        } else if (response.errorMessage) {
+          Alert.alert("Lỗi", "Không thể lấy hình ảnh: " + response.errorMessage);
+        } else if (response.assets && response.assets[0]) {
+          const asset = response.assets[0];
+          if (asset.uri) {
+            onCapture(asset.uri);
+          }
+        }
+      }
+    );
+  };
+
   const toggleFlash = () => {
     setTorchEnabled(!torchEnabled);
   };
+
+  // Show gallery/camera options screen first
+  if (showOptions) {
+    return (
+      <View style={styles.cameraContainer}>
+        <View style={styles.optionsContainer}>
+          <Text style={styles.optionsTitle}>📸 Chọn cách lấy ảnh</Text>
+          
+          <TouchableOpacity
+            style={styles.optionButton}
+            onPress={() => setShowOptions(false)}
+          >
+            <Text style={styles.optionIcon}>📷</Text>
+            <View style={styles.optionContent}>
+              <Text style={styles.optionButtonTitle}>Chụp ảnh</Text>
+              <Text style={styles.optionButtonDesc}>Sử dụng camera để chụp</Text>
+            </View>
+            <Text style={styles.optionArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.optionButton}
+            onPress={handlePickFromGallery}
+          >
+            <Text style={styles.optionIcon}>🖼️</Text>
+            <View style={styles.optionContent}>
+              <Text style={styles.optionButtonTitle}>Từ thư viện</Text>
+              <Text style={styles.optionButtonDesc}>Chọn từ hình ảnh có sẵn</Text>
+            </View>
+            <Text style={styles.optionArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.optionButton, styles.optionButtonCancel]}
+            onPress={onClose}
+          >
+            <Text style={styles.optionIcon}>✕</Text>
+            <View style={styles.optionContent}>
+              <Text style={styles.optionButtonTitle}>Hủy</Text>
+              <Text style={styles.optionButtonDesc}>Đóng mà không chọn</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (!hasPermission) {
     return (
@@ -619,7 +574,63 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
+  
+  // Options Screen Styles
+  optionsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    backgroundColor: "#E0F2F1",
+  },
+  optionsTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#00796B",
+    marginBottom: 30,
+    textAlign: "center",
+  },
+  optionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,137,123,0.1)",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: "rgba(0,137,123,0.3)",
+    width: "100%",
+  },
+  optionButtonCancel: {
+    backgroundColor: "rgba(239,68,68,0.1)",
+    borderColor: "rgba(239,68,68,0.3)",
+    marginTop: 20,
+  },
+  optionIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionButtonTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#00796B",
+    marginBottom: 2,
+  },
+  optionButtonDesc: {
+    fontSize: 12,
+    color: "rgba(0,0,0,0.6)",
+  },
+  optionArrow: {
+    fontSize: 20,
+    color: "#00897B",
+    marginLeft: 10,
+  },
+  
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -628,18 +639,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomColor: "rgba(0,0,0,0.05)",
+    backgroundColor: "#E0F2F1",
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(0,137,123,0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#fff" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  backIcon: { fontSize: 20, color: "#00796B" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
   voiceButton: {
     width: 40,
     height: 40,
@@ -682,7 +694,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "rgba(255,255,255,0.8)",
+    color: "#00796B",
     marginBottom: 12,
   },
   amountInputContainer: {
@@ -763,15 +775,154 @@ const styles = StyleSheet.create({
   },
   checkMarkText: { color: "#fff", fontSize: 10, fontWeight: "700" },
   noteInput: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(255,255,255,0.8)",
     borderRadius: 16,
     padding: 16,
+    color: "#1F2937",
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: "#B2DFDB",
+    textAlignVertical: "top",
+    minHeight: 100,
+  },
+  noteHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  fontStyleControl: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  fontButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#B2DFDB",
+  },
+  fontButtonActive: {
+    backgroundColor: "#00897B",
+    borderColor: "#00897B",
+  },
+  fontButtonText: {
+    fontWeight: "700",
+    color: "#00796B",
+    fontSize: 12,
+  },
+  fontButtonTextActive: {
+    color: "#fff",
+  },
+  fontButtonBold: {
+    fontWeight: "800",
+  },
+  fontButtonItalic: {
+    fontStyle: "italic",
+  },
+  noteToolbar: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.05)",
+  },
+  toolbarButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(0,137,123,0.1)",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#B2DFDB",
+  },
+  toolbarIcon: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  checklistInputContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  checklistInput: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: "#fff",
     fontSize: 14,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
-    textAlignVertical: "top",
-    minHeight: 80,
+  },
+  addChecklistButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#6366F1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addChecklistButtonText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  checklistItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#6366F1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#6366F1",
+  },
+  checkboxText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  checklistItemText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#fff",
+    fontWeight: "500",
+  },
+  checklistItemTextChecked: {
+    color: "rgba(255,255,255,0.5)",
+    textDecorationLine: "line-through",
+  },
+  deleteChecklistButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(239,68,68,0.15)",
+  },
+  deleteChecklistText: {
+    color: "#EF4444",
+    fontSize: 16,
+    fontWeight: "700",
   },
   dateButton: {
     flexDirection: "row",
@@ -974,13 +1125,9 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  saveButtonExpense: {
-    backgroundColor: "#EF4444",
-    shadowColor: "#EF4444",
-  },
-  saveButtonIncome: {
-    backgroundColor: "#10B981",
-    shadowColor: "#10B981",
+  saveButtonDefault: {
+    backgroundColor: "#00897B",
+    shadowColor: "#00897B",
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -1102,7 +1249,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
     paddingHorizontal: 20,
   },
   permissionIcon: {

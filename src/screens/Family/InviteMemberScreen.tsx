@@ -427,7 +427,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#E0F2F1',
   },
   header: {
     flexDirection: 'row',
@@ -447,13 +447,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#00796B',
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   refreshButton: {
     width: 40,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   familyName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 16,
   },
   codeContainer: {
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   qrToggleArrow: {
     fontSize: 14,
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E0E7FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   qrText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 8,
   },
   shareSection: {
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   shareMethodName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     textAlign: 'center',
   },
   pendingSection: {

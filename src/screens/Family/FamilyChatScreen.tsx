@@ -238,12 +238,12 @@ export default function FamilyChatScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: { flexDirection: "row", alignItems: "center", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#fff" },
+  backIcon: { fontSize: 20, color: "#00897B" },
   headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
   headerSubtitle: { fontSize: 12, color: "rgba(255,255,255,0.6)" },
   infoButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   infoIcon: { fontSize: 20 },
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   messageContent: { flex: 1 },
   senderName: { fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: 4 },
   messageBubble: { backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 12, padding: 12, borderBottomLeftRadius: 4 },
-  messageText: { fontSize: 15, color: "#fff", lineHeight: 20 },
+  messageText: { fontSize: 15, color: "#333333", lineHeight: 20 },
   timestamp: { fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 4 },
   aiSuggestionCard: { backgroundColor: "rgba(139,92,246,0.15)", borderRadius: 16, padding: 16, maxWidth: "90%", borderWidth: 1, borderColor: "rgba(139,92,246,0.3)" },
   aiSuggestionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
@@ -276,8 +276,8 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: "row", padding: 12, gap: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.05)" },
   attachButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
   attachIcon: { fontSize: 20 },
-  input: { flex: 1, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, color: "#fff", fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  input: { flex: 1, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, color: "#333333", fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
   sendButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: "rgba(99,102,241,0.3)" },
-  sendIcon: { fontSize: 20, color: "#fff", fontWeight: "700" },
+  sendIcon: { fontSize: 20, color: "#00897B", fontWeight: "700" },
 });

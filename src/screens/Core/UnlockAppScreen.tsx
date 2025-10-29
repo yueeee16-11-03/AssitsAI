@@ -323,7 +323,7 @@ export default function UnlockAppScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#E0F2F1',
   },
   blurOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   titleContainer: {
     alignItems: 'center',
@@ -365,12 +365,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(0, 0, 0, 0.6)',
     textAlign: 'center',
   },
   lockContainer: {
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   lockSubtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(0, 0, 0, 0.6)',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -412,13 +412,13 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 137, 123, 0.1)',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(0, 137, 123, 0.3)',
   },
   pinDotFilled: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: '#00897B',
+    borderColor: '#00897B',
   },
   warningContainer: {
     marginBottom: 20,
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(0, 137, 123, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

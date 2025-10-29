@@ -196,12 +196,12 @@ class TransactionService {
       if (!data.type || (data.type !== 'expense' && data.type !== 'income')) {
         throw new Error('❌ Invalid transaction type');
       }
-      if (!data.amount || data.amount <= 0) {
+      // ✅ Amount is optional for note-style transactions (image-only or note-only)
+      if (data.amount && data.amount <= 0) {
         throw new Error('❌ Amount must be greater than 0');
       }
-      if (!data.categoryId) {
-        throw new Error('❌ Category is required');
-      }
+      // ✅ CategoryId is optional for note-style transactions
+      // Note-only transactions will use 'note-only' as categoryId
       if (!data.description) {
         throw new Error('❌ Description is required');
       }
@@ -278,12 +278,13 @@ class TransactionService {
       if (!type || (type !== 'expense' && type !== 'income')) {
         throw new Error('❌ Invalid transaction type');
       }
-      if (!amount || amount <= 0) {
+      
+      // ✅ For note-style: amount & categoryId are OPTIONAL
+      // Only validate if provided
+      if (amount && amount <= 0) {
         throw new Error('❌ Amount must be greater than 0');
       }
-      if (!categoryId) {
-        throw new Error('❌ Category is required');
-      }
+      
       if (!description || !description.trim()) {
         throw new Error('❌ Description is required');
       }
@@ -294,10 +295,10 @@ class TransactionService {
 
       const transaction = {
         type,
-        amount: parseInt(amount, 10),
+        amount: amount ? parseInt(amount, 10) : 0,  // Default 0 for note-only
         description: description.trim(),
-        category: categoryName,
-        categoryId,
+        category: categoryName || '📝 Ghi chú',      // Default category for note-only
+        categoryId: categoryId || 'note-only',       // Default categoryId for note-only
         date: firestore.Timestamp.fromDate(now),
         time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
         billImageUri: billImageUri || null,

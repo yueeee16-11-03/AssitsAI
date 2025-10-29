@@ -1,3 +1,13 @@
+/**
+ * Màn hình Lịch sử Giao dịch (Ghi chú)
+ *
+ * UI được refactor thành dạng List (Danh sách) thay vì Grid (Lưới).
+ * - Đã xóa Dimensions import không dùng.
+ * - Đã xóa imageOverlay gây mờ ảnh.
+ * - Đã thay nút Xóa bằng onLongPress (nhấn giữ để xóa).
+ * - Toàn bộ logic với Zustand store (fetch, delete, update) được giữ nguyên.
+ */
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -11,6 +21,8 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  Image,
+  // Dimensions đã được xóa khỏi đây vì không còn dùng
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -30,14 +42,19 @@ interface Transaction {
   date?: any;
   time?: string;
   createdAt?: any;
+  billImageUri?: string | null;
 }
 
-export default function TransactionHistoryScreen({ navigation, route }: Props) {
+interface TransactionWithTitle extends Transaction {
+  displayTitle: string;
+  hasImage: boolean;
+}
+
+export default function TransactionHistoryScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
-  const { newTransaction } = route.params || {};
-  
+
   // ✅ Subscribe to Store - transactions từ Store
   const transactions = useTransactionStore((state) => state.transactions);
 
@@ -89,14 +106,19 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleEdit = (transaction: Transaction) => {
-    navigation.push("EditTransaction", { transaction });
+  const handleEditTitle = (transaction: TransactionWithTitle) => {
+    // Navigate to EditTransaction screen
+    navigation.navigate("EditTransaction" as any, { transaction });
   };
+
+
 
   const handleDelete = (transaction: Transaction) => {
     Alert.alert(
       "Xác nhận xóa",
-      `Bạn có chắc muốn xóa giao dịch "${transaction.description}" (${transaction.amount.toLocaleString("vi-VN")}đ)?`,
+      `Bạn có chắc muốn xóa giao dịch "${transaction.description}" (${transaction.amount.toLocaleString(
+        "vi-VN"
+      )}đ)?`,
       [
         {
           text: "Hủy",
@@ -108,16 +130,8 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
           onPress: async () => {
             try {
               console.log("🗑️ [HISTORY-SCREEN] Starting delete for:", transaction.id);
-              
-              // ✅ Xóa từ Store
-              // Store sẽ:
-              // 1. Gọi TransactionService.deleteTransaction()
-              // 2. TransactionService xóa từ Firebase
-              // 3. TransactionService fetch fresh data từ server (source: 'server')
-              // 4. Store update state.transactions = freshData
-              // 5. Screen tự động re-render (subscribed to Store)
-              // 6. FinanceDashboardScreen tự động update (cũng subscribe Store)
               console.log("🗑️ [HISTORY-SCREEN] Deleting from Store...");
+              // ✅ Xóa từ Store
               await useTransactionStore.getState().deleteTransaction(transaction.id);
               
               console.log("✅ [HISTORY-SCREEN] Delete successful");
@@ -133,52 +147,146 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
     );
   };
 
-  const groupedTransactions = TransactionHistoryService.groupTransactionsByDate(transactions) as Record<string, Transaction[]>;
-  const dateKeys: string[] = Object.keys(groupedTransactions);
+  const groupedTransactions = TransactionHistoryService.groupTransactionsByDate(
+    transactions
+  ) as Record<string, Transaction[]>;
+  const dateKeys: string[] = Object.keys(groupedTransactions).sort((a, b) => {
+    // Sắp xếp từ mới nhất (sau) đến cũ nhất (trước)
+    const dateA = new Date(a).getTime();
+    const dateB = new Date(b).getTime();
+    return dateB - dateA; // Giảm dần (mới nhất ở trên)
+  });
 
+  console.log("📋 Total transactions:", transactions.length);
+  console.log("📋 Date keys (sorted):", dateKeys);
+  console.log("📋 First date transactions:", dateKeys.length > 0 ? groupedTransactions[dateKeys[0]]?.length : 0);
+
+  /**
+   * 🎨 [BANKING UI REDESIGN]
+   * Render item dưới dạng List giống ngân hàng - Sáng, tinh tế, chuyên nghiệp
+   */
   const renderTransactionItem = ({ item }: { item: Transaction }) => {
     const isExpense = item.type === "expense";
     const categoryEmoji = TransactionHistoryService.getCategoryEmoji(item.categoryId);
+    const hasImage = !!item.billImageUri;
+    const displayTitle = item.description || item.category;
+
+    const date = new Date(item.date?.toDate?.() || item.createdAt?.toDate?.());
+    const timeStr = date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const dateStr = date.toLocaleDateString("vi-VN");
+
+    console.log(`🎫 Item: ${displayTitle}, hasImage: ${hasImage}, type: ${item.type}, amount: ${item.amount}`);
 
     return (
-      <Animated.View style={{ opacity: fadeAnim }}>
-        <TouchableOpacity
-          style={styles.transactionItem}
-          onPress={() => handleEdit(item)}
-          onLongPress={() => handleDelete(item)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.transactionLeft}>
-            <Text style={styles.transactionEmoji}>{categoryEmoji}</Text>
-            <View style={styles.transactionInfo}>
-              <Text style={styles.transactionCategory}>{item.category}</Text>
-              <Text style={styles.transactionDescription}>{item.description}</Text>
-              <Text style={styles.transactionTime}>
-                {TransactionHistoryService.formatFullDateTime(item.date || item.createdAt)}
-              </Text>
-            </View>
+      <TouchableOpacity
+        style={styles.bankListItem}
+        activeOpacity={0.6}
+        onPress={() => handleEditTitle({ ...item, displayTitle, hasImage } as TransactionWithTitle)}
+        onLongPress={() => handleDelete(item)}
+      >
+        {/* Icon Container (Bên trái - Tròn sáng) */}
+        <View style={[styles.bankIconBox, isExpense ? styles.bankIconExpense : styles.bankIconIncome]}>
+          {hasImage && item.billImageUri ? (
+            <Image
+              source={{ uri: item.billImageUri }}
+              style={styles.bankIconImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.bankIconEmoji}>{categoryEmoji}</Text>
+          )}
+        </View>
+        
+        {/* Thông tin giữa */}
+        <View style={styles.bankInfoContainer}>
+          <Text style={styles.bankItemTitle} numberOfLines={1}>
+            {displayTitle}
+          </Text>
+          <Text style={styles.bankItemDateTime}>
+            {timeStr} • {dateStr}
+          </Text>
+        </View>
+
+        {/* Số tiền bên phải */}
+        <View style={styles.bankAmountContainer}>
+          <Text
+            style={[
+              styles.bankItemAmount,
+              isExpense ? styles.bankAmountExpense : styles.bankAmountIncome,
+            ]}
+            numberOfLines={1}
+          >
+            {isExpense ? "-" : "+"} ₫{Math.abs(item.amount).toLocaleString("vi-VN")}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  /**
+   * 🎨 [UI REFACTOR]
+   * Render Header (Hôm nay...) và List (Danh sách)
+   */
+  const renderDateSection = ({ item: dateKey }: { item: string }) => {
+    let dayTransactions = groupedTransactions[dateKey] || [];
+    
+    // ✅ Sắp xếp giao dịch từ mới nhất đến cũ nhất trong ngày
+    dayTransactions = dayTransactions.sort((a: Transaction, b: Transaction) => {
+      const timeA = new Date(a.date?.toDate?.() || a.createdAt?.toDate?.()).getTime();
+      const timeB = new Date(b.date?.toDate?.() || b.createdAt?.toDate?.()).getTime();
+      return timeB - timeA; // Giảm dần
+    });
+
+    return (
+      <View style={styles.dateSection}>
+        {/* Date Header (Giữ nguyên, rất tốt) */}
+        <View style={styles.dateHeader}>
+          <View>
+            <Text style={styles.dateText}>{dateKey}</Text>
+            <Text style={styles.dateSubText}>{dayTransactions.length} giao dịch</Text>
           </View>
 
-          <View style={styles.transactionRight}>
-            <Text
-              style={[
-                styles.transactionAmount,
-                isExpense
-                  ? styles.transactionAmountExpense
-                  : styles.transactionAmountIncome,
-              ]}
-            >
-              {isExpense ? "-" : "+"} ₫ {Math.abs(item.amount).toLocaleString("vi-VN")}
-            </Text>
-            <TouchableOpacity
-              style={styles.deleteIconButton}
-              onPress={() => handleDelete(item)}
-            >
-              <Text style={styles.deleteIcon}>🗑️</Text>
-            </TouchableOpacity>
+          {/* Daily Summary (Giữ nguyên, rất tốt) */}
+          <View style={styles.dailySummary}>
+            {dayTransactions.some((t: Transaction) => t.type === "expense") && (
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>💸 Chi</Text>
+                <Text style={styles.summaryAmount}>
+                  ₫
+                  {dayTransactions
+                    .filter((t: Transaction) => t.type === "expense")
+                    .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0)
+                    .toLocaleString("vi-VN")}
+                </Text>
+              </View>
+            )}
+            {dayTransactions.some((t: Transaction) => t.type === "income") && (
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>💰 Thu</Text>
+                <Text style={[styles.summaryAmount, styles.summaryAmountIncome]}>
+                  ₫
+                  {dayTransactions
+                    .filter((t: Transaction) => t.type === "income")
+                    .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0)
+                    .toLocaleString("vi-VN")}
+                </Text>
+              </View>
+            )}
           </View>
-        </TouchableOpacity>
-      </Animated.View>
+        </View>
+
+        {/* 🎨 [UI REFACTOR] Bỏ Grid, thay bằng List container */}
+        <View style={styles.listContainer}>
+          {dayTransactions.map((transaction: Transaction, index: number) => (
+            <View key={`${dateKey}-${index}-${transaction.id}`}>
+              {renderTransactionItem({ item: transaction })}
+            </View>
+          ))}
+        </View>
+      </View>
     );
   };
 
@@ -187,6 +295,7 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {/* Header (Giữ nguyên) */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -194,117 +303,63 @@ export default function TransactionHistoryScreen({ navigation, route }: Props) {
         >
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lịch sử giao dịch</Text>
+        <Text style={styles.headerTitle}>Ghi chú</Text>
         <View style={styles.placeholderButton} />
       </View>
 
-      {/* New Transaction Highlight */}
-      {newTransaction && (
-        <Animated.View
-          style={[
-            styles.newTransactionBanner,
-            {
-              opacity: fadeAnim,
-              transform: [
-                {
-                  translateY: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Text style={styles.newTransactionIcon}>✨</Text>
-          <View style={styles.newTransactionInfo}>
-            <Text style={styles.newTransactionLabel}>Giao dịch mới được lưu</Text>
-            <Text style={styles.newTransactionDetails}>
-              {newTransaction.description} • ₫{newTransaction.amount.toLocaleString("vi-VN")}
-            </Text>
-          </View>
-        </Animated.View>
-      )}
-
+      {/* Loading (Giữ nguyên) */}
       {isLoading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#6366F1" />
-          <Text style={styles.loadingText}>Đang tải lịch sử...</Text>
+          <Text style={styles.loadingText}>Đang tải...</Text>
         </View>
+        
+      /* Empty State (Giữ nguyên) */
       ) : transactions.length === 0 ? (
         <View style={styles.centerContainer}>
           <Text style={styles.emptyIcon}>📭</Text>
-          <Text style={styles.emptyText}>Chưa có giao dịch nào</Text>
-          <Text style={styles.emptySubText}>Hãy thêm giao dịch mới để bắt đầu</Text>
+          <Text style={styles.emptyText}>Chưa có ghi chú nào</Text>
+          <Text style={styles.emptySubText}>Hãy thêm ghi chú mới để bắt đầu</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate("AddTransaction" as any)}
           >
-            <Text style={styles.addButtonText}>+ Thêm giao dịch</Text>
+            <Text style={styles.addButtonText}>+ Thêm ghi chú</Text>
           </TouchableOpacity>
         </View>
+        
+      /* FlatList (Giữ nguyên) */
       ) : (
         <FlatList
           data={dateKeys}
-          renderItem={({ item: dateKey, index: dateIndex }) => (
-            <View key={`date-${dateIndex}`} style={styles.dateSection}>
-              <View style={styles.dateHeader}>
-                <Text style={styles.dateText}>{dateKey}</Text>
-                <View style={styles.dateSummary}>
-                  {groupedTransactions[dateKey].some((t: Transaction) => t.type === "expense") && (
-                    <Text style={styles.dateSummaryText}>
-                      💸 ₫
-                      {(TransactionHistoryService.calculateDailySummary(
-                        groupedTransactions[dateKey]
-                      ) as { expenses: number; income: number }).expenses.toLocaleString("vi-VN")}
-                    </Text>
-                  )}
-                  {groupedTransactions[dateKey].some((t: Transaction) => t.type === "income") && (
-                    <Text
-                      style={[
-                        styles.dateSummaryText,
-                        styles.dateSummaryTextIncome,
-                      ]}
-                    >
-                      💰 ₫
-                      {(TransactionHistoryService.calculateDailySummary(
-                        groupedTransactions[dateKey]
-                      ) as { expenses: number; income: number }).income.toLocaleString("vi-VN")}
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <View>
-                {groupedTransactions[dateKey].map((transaction: Transaction, transactionIndex: number) => (
-                  <View key={`${dateIndex}-${transactionIndex}-${transaction.id}`}>
-                    {renderTransactionItem({ item: transaction })}
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          renderItem={renderDateSection}
           keyExtractor={(item) => item}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           scrollEnabled={true}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* Bottom Add Button */}
+      {/* Floating Add Button (Giữ nguyên) */}
       {transactions.length > 0 && (
         <TouchableOpacity
           style={styles.floatingButton}
           onPress={() => navigation.navigate("AddTransaction" as any)}
         >
-          <Text style={styles.floatingButtonText}>+ Thêm giao dịch</Text>
+          <Text style={styles.floatingButtonText}>+</Text>
         </TouchableOpacity>
       )}
+
+
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -313,51 +368,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomColor: "rgba(0,0,0,0.03)",
+    backgroundColor: "#E0F2F1",
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(76,175,80,0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#fff" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  backIcon: { fontSize: 20, color: "#1F2937" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
   placeholderButton: { width: 40, height: 40 },
-  newTransactionBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(99,102,241,0.15)",
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "rgba(99,102,241,0.3)",
-  },
-  newTransactionIcon: { fontSize: 24, marginRight: 12 },
-  newTransactionInfo: { flex: 1 },
-  newTransactionLabel: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  newTransactionDetails: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "700",
-  },
+
+  /* Center Container (Loading/Empty) */
   centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#E0F2F1",
   },
   loadingText: {
-    color: "rgba(255,255,255,0.6)",
+    color: "#00796B",
     marginTop: 12,
     fontSize: 14,
   },
@@ -365,97 +399,181 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#fff",
+    color: "#111827",
     marginBottom: 8,
   },
   emptySubText: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.6)",
+    color: "#6B7280",
     marginBottom: 24,
   },
   addButton: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "#00897B",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   addButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  listContent: { paddingHorizontal: 16, paddingBottom: 100 },
-  dateSection: { marginTop: 20 },
+
+  /* List Layout */
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 120,
+    paddingTop: 12,
+  },
+
+  /* Date Section */
+  dateSection: {
+    marginBottom: 24,
+  },
   dateHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 12,
     paddingHorizontal: 8,
   },
-  dateText: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.8)" },
-  dateSummary: { flexDirection: "row", gap: 16 },
-  dateSummaryText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#EF4444",
-  },
-  dateSummaryTextIncome: { color: "#10B981" },
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-  },
-  transactionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  transactionEmoji: { fontSize: 32, marginRight: 12 },
-  transactionInfo: { flex: 1 },
-  transactionCategory: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 2,
-  },
-  transactionDescription: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
+  dateText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#00796B",
     marginBottom: 4,
   },
-  transactionTime: { fontSize: 11, color: "rgba(255,255,255,0.5)" },
-  transactionRight: { alignItems: "flex-end", gap: 4 },
-  transactionAmount: {
-    fontSize: 14,
-    fontWeight: "800",
+  dateSubText: {
+    fontSize: 12,
+    color: "#00796B",
+    fontWeight: "600",
+    opacity: 0.7,
   },
-  transactionAmountExpense: { color: "#EF4444" },
-  transactionAmountIncome: { color: "#10B981" },
-  deleteIconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: "rgba(239,68,68,0.1)",
+
+  /* Daily Summary */
+  dailySummary: {
+    gap: 12,
+    alignItems: "flex-end",
+  },
+  summaryItem: {
+    alignItems: "flex-end",
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: "#00796B",
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  summaryAmount: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#DC2626", // Red
+  },
+  summaryAmountIncome: {
+    color: "#00897B", // Teal
+  },
+
+  /* 🎨 [NEW] List Item kiểu NGÂN HÀNG - Sáng, tinh tế */
+  bankListItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#B2DFDB",
+    shadowColor: "rgba(0,150,136,0.1)",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  
+  /* 🎨 [NEW] Icon Box - Tròn, sáng, theo loại giao dịch */
+  bankIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 14,
+    overflow: "hidden",
   },
-  deleteIcon: { fontSize: 14 },
+  bankIconExpense: {
+    backgroundColor: "#FFEBEE", // Red light
+  },
+  bankIconIncome: {
+    backgroundColor: "#E0F2F1", // Teal light
+  },
+  bankIconImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bankIconEmoji: {
+    fontSize: 28,
+  },
+  
+  /* 🎨 [NEW] Info Container - Giữa (Tiêu đề + Ngày giờ) */
+  bankInfoContainer: {
+    flex: 1,
+    justifyContent: "center",
+    paddingRight: 10,
+  },
+  bankItemTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 6,
+    letterSpacing: 0.2,
+  },
+  bankItemDateTime: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#00796B",
+  },
+  
+  /* 🎨 [NEW] Amount Container - Bên phải (Số tiền) */
+  bankAmountContainer: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  bankItemAmount: {
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  bankAmountExpense: {
+    color: "#DC2626",
+  },
+  bankAmountIncome: {
+    color: "#00897B",
+  },
+
+  /* 🎨 [NEW] List Container */
+  listContainer: {
+    gap: 2,
+  },
+
+  /* Floating Button (Giữ nguyên) */
   floatingButton: {
     position: "absolute",
     bottom: 24,
-    right: 16,
-    left: 16,
-    backgroundColor: "#6366F1",
-    paddingVertical: 16,
-    borderRadius: 12,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#00897B",
     alignItems: "center",
+    justifyContent: "center",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 12,
+    elevation: 10,
   },
   floatingButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 32,
     fontWeight: "700",
+    lineHeight: 32,
   },
+
+
 });

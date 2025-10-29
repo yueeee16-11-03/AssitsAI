@@ -174,7 +174,7 @@ export default function LoginScreen({ navigation }: Props) {
               activeOpacity={0.9}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#00897B" />
               ) : (
                 <>
                   <Text style={styles.loginButtonText}>Đăng nhập</Text>
@@ -210,7 +210,7 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
   },
   gradientBackground: {
     position: "absolute",
@@ -269,13 +269,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#00796B",
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: "#00796B",
     textAlign: "center",
   },
   form: {
@@ -287,10 +287,10 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 137, 123, 0.08)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(0, 137, 123, 0.2)",
     paddingHorizontal: 16,
   },
   inputIcon: {
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
-    color: "#FFFFFF",
+    color: "#333333",
   },
   inputError: {
     borderColor: "#EF4444",
@@ -324,14 +324,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   loginButton: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "#00897B",
     padding: 18,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     marginBottom: 24,
-    shadowColor: "#6366F1",
+    shadowColor: "#00897B",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -360,22 +360,22 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#B2DFDB",
   },
   dividerText: {
     marginHorizontal: 16,
-    color: "rgba(255, 255, 255, 0.5)",
+    color: "#999999",
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 137, 123, 0.1)",
     padding: 16,
     borderRadius: 16,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "#00897B",
     marginBottom: 32,
   },
   googleIconContainer: {
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     color: "#4285F4",
   },
   googleButtonText: {
-    color: "#FFFFFF",
+    color: "#00796B",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   footerText: {
-    color: "rgba(255, 255, 255, 0.6)",
+    color: "#999999",
     fontSize: 15,
   },
   registerText: {

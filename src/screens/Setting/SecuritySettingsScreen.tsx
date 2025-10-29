@@ -205,7 +205,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
         onValueChange={onToggle}
         disabled={disabled}
         trackColor={{ false: '#374151', true: '#6366F1' }}
-        thumbColor={value ? '#FFFFFF' : '#9CA3AF'}
+        thumbColor={value ? '#00897B' : '#9CA3AF'}
       />
     </View>
   );
@@ -464,7 +464,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#E0F2F1',
   },
   header: {
     flexDirection: 'row',
@@ -484,13 +484,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#00897B',
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
   },
   headerPlaceholder: {
     width: 40,
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 4,
   },
   statusLevel: {
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
   statusStatNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 4,
   },
   statusStatLabel: {
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 16,
   },
   sectionContent: {
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 2,
   },
   settingSubtitle: {
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   lockMethodTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 12,
   },
   lockMethodOptions: {
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   lockMethodLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 2,
   },
   lockMethodDescription: {
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   timeoutTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00796B',
     marginBottom: 12,
   },
   timeoutOptions: {
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   },
   timeoutLabel: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: '#333333',
     fontWeight: '500',
   },
   tipsCard: {

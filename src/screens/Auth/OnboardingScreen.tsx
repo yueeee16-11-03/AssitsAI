@@ -131,7 +131,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
   },
   gradientBackground: {
     position: "absolute",
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   skipText: {
-    color: "rgba(255, 255, 255, 0.6)",
+    color: "#00796B",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#00796B",
     textAlign: "center",
     marginBottom: 20,
     lineHeight: 44,
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.7)",
+    color: "rgba(0, 0, 0, 0.6)",
     textAlign: "center",
     lineHeight: 24,
     paddingHorizontal: 16,
@@ -252,13 +252,13 @@ const styles = StyleSheet.create({
   registerButton: {
     padding: 18,
     borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 137, 123, 0.1)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "#00897B",
     alignItems: "center",
   },
   registerButtonText: {
-    color: "#FFFFFF",
+    color: "#00796B",
     fontSize: 16,
     fontWeight: "600",
   },

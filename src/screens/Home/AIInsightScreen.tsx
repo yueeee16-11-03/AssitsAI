@@ -203,7 +203,7 @@ export default function AIInsightScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
   },
   header: {
     flexDirection: "row",
@@ -225,12 +225,12 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 20,
-    color: "#fff",
+    color: "#00897B",
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#fff",
+    color: "#00796B",
   },
   refreshButton: {
     width: 40,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   periodTextActive: {
-    color: "#fff",
+    color: "#FFFFFF",
   },
   summaryCard: {
     backgroundColor: "rgba(99,102,241,0.1)",
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#fff",
+    color: "#00796B",
     marginBottom: 8,
   },
   summaryText: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#fff",
+    color: "#00796B",
     marginBottom: 16,
   },
   spendingChart: {
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     flex: 1,
-    color: "#fff",
+    color: "#00796B",
     fontWeight: "700",
   },
   spendingAmount: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   amountText: {
-    color: "#fff",
+    color: "#333333",
     fontWeight: "600",
   },
   percentText: {
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   habitName: {
-    color: "#fff",
+    color: "#00796B",
     fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   insightTitle: {
-    color: "#fff",
+    color: "#00796B",
     fontWeight: "700",
     marginBottom: 4,
   },

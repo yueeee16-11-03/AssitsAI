@@ -1,15 +1,15 @@
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import HabitApi from '../api/habitApi';
 
 /**
- * HabitService: Business logic cho thói quen
+ * HabitService: Business logic ONLY
  * Responsibility:
- * - Thực hiện CRUD operations trên Firebase
+ * - Xử lý logic kinh doanh (validation, streak calculation, etc.)
+ * - Gọi HabitApi để thực hiện Firebase operations
  * - Fetch dữ liệu mới (freshData) sau mỗi thay đổi
  * - Trả về result object chứa {success, addedId/updatedId/deletedId, freshData}
  * - Handle errors
  *
- * Pattern: Screen → Store → Service → Firebase → freshData → Store state
+ * Pattern: Screen → Store → Service → API → Firebase → freshData → Store state
  */
 
 class HabitService {
@@ -19,30 +19,15 @@ class HabitService {
    */
   async getAllHabits() {
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error('Người dùng chưa đăng nhập');
-      }
+      console.log('📖 [SERVICE] Getting all habits via API...');
 
-      console.log('📖 [SERVICE] Fetching all habits...');
+      const habits = await HabitApi.getAllHabits();
 
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('habits')
-        .orderBy('createdAt', 'desc')
-        .get({ source: 'server' }); // Cache bypass
-
-      const habits = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      console.log('✅ [SERVICE] Fetched', habits.length, 'habits');
+      console.log('✅ [SERVICE] Got', habits.length, 'habits');
       return habits;
 
     } catch (error) {
-      console.error('❌ [SERVICE] Error fetching habits:', error);
+      console.error('❌ [SERVICE] Error getting habits:', error);
       throw error;
     }
   }
@@ -54,30 +39,11 @@ class HabitService {
    */
   async addHabit(habitData) {
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error('Người dùng chưa đăng nhập');
-      }
-
       console.log('➕ [SERVICE] Adding habit:', habitData.name);
 
-      // 1. Thêm thói quen vào Firebase
-      const docRef = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('habits')
-        .add({
-          ...habitData,
-          userId: currentUser.uid,
-          isActive: true,
-          currentStreak: 0,
-          bestStreak: 0,
-          completedDates: [],
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
+      // 1. Thêm thói quen qua API
+      const newHabitId = await HabitApi.addHabitToFirebase(habitData);
 
-      const newHabitId = docRef.id;
       console.log('✅ [SERVICE] Habit added with ID:', newHabitId);
 
       // 2. Wait a bit để Firebase sync
@@ -106,23 +72,10 @@ class HabitService {
    */
   async updateHabit(habitId, updateData) {
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error('Người dùng chưa đăng nhập');
-      }
-
       console.log('✏️ [SERVICE] Updating habit:', habitId);
 
-      // 1. Cập nhật thói quen trên Firebase
-      await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('habits')
-        .doc(habitId)
-        .update({
-          ...updateData,
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
+      // 1. Cập nhật thói quen qua API
+      await HabitApi.updateHabitOnFirebase(habitId, updateData);
 
       console.log('✅ [SERVICE] Habit updated');
 
@@ -151,20 +104,10 @@ class HabitService {
    */
   async deleteHabit(habitId) {
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error('Người dùng chưa đăng nhập');
-      }
-
       console.log('🗑️ [SERVICE] Deleting habit:', habitId);
 
-      // 1. Xóa thói quen từ Firebase
-      await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('habits')
-        .doc(habitId)
-        .delete();
+      // 1. Xóa thói quen qua API
+      await HabitApi.deleteHabitFromFirebase(habitId);
 
       console.log('✅ [SERVICE] Habit deleted');
 
@@ -193,34 +136,26 @@ class HabitService {
    */
   async toggleHabitToday(habitId) {
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error('Người dùng chưa đăng nhập');
-      }
+      console.log('🎯 [SERVICE] Toggling habit completion for today:', habitId);
 
       const today = new Date().toDateString();
-      const habitRef = firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('habits')
-        .doc(habitId);
 
-      // Lấy habit hiện tại
-      const doc = await habitRef.get({ source: 'server' });
-      if (!doc.exists) {
+      // Lấy habit hiện tại từ API
+      const habitData = await HabitApi.getHabitByIdFromFirebase(habitId);
+      
+      if (!habitData) {
         throw new Error('Thói quen không tồn tại');
       }
 
-      const habitData = doc.data();
       const completedDates = habitData.completedDates || [];
       const isCompletedToday = completedDates.includes(today);
 
-      // Toggle
+      // BUSINESS LOGIC: Toggle
       let newCompletedDates = isCompletedToday
         ? completedDates.filter(d => d !== today)
         : [...completedDates, today];
 
-      // Cập nhật streak
+      // BUSINESS LOGIC: Calculate streak
       let newStreak = habitData.currentStreak || 0;
       let newBestStreak = habitData.bestStreak || 0;
 
@@ -235,12 +170,11 @@ class HabitService {
         console.log('↩️ [SERVICE] Habit unmarked. Streak reset.');
       }
 
-      // Update Firebase
-      await habitRef.update({
+      // Update Firebase qua API
+      await HabitApi.updateStreakOnFirebase(habitId, {
         completedDates: newCompletedDates,
         currentStreak: newStreak,
         bestStreak: newBestStreak,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
 
       console.log('✅ [SERVICE] Habit toggled');
@@ -272,29 +206,14 @@ class HabitService {
    */
   async getHabitById(habitId) {
     try {
-      const currentUser = auth().currentUser;
-      if (!currentUser) {
-        throw new Error('Người dùng chưa đăng nhập');
-      }
+      console.log('📖 [SERVICE] Getting habit by ID:', habitId);
 
-      const doc = await firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('habits')
-        .doc(habitId)
-        .get({ source: 'server' });
+      const habit = await HabitApi.getHabitByIdFromFirebase(habitId);
 
-      if (!doc.exists) {
-        throw new Error('Thói quen không tồn tại');
-      }
-
-      return {
-        id: doc.id,
-        ...doc.data(),
-      };
+      return habit;
 
     } catch (error) {
-      console.error('❌ [SERVICE] Error fetching habit:', error);
+      console.error('❌ [SERVICE] Error getting habit by ID:', error);
       throw error;
     }
   }

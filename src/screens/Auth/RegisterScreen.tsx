@@ -239,7 +239,7 @@ export default function RegisterScreen({ navigation }: Props) {
               activeOpacity={0.9}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#00897B" />
               ) : (
                 <>
                   <Text style={styles.registerButtonText}>Đăng ký</Text>
@@ -281,7 +281,7 @@ export default function RegisterScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
   },
   gradientBackground: {
     position: "absolute",
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#00796B",
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
-    color: "#FFFFFF",
+    color: "#333333",
   },
   inputError: {
     borderColor: "#EF4444",
@@ -429,22 +429,22 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#B2DFDB",
   },
   dividerText: {
     marginHorizontal: 16,
-    color: "rgba(255, 255, 255, 0.5)",
+    color: "#999999",
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 137, 123, 0.1)",
     padding: 16,
     borderRadius: 16,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "#00897B",
     marginBottom: 24,
   },
   googleIconContainer: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     color: "#4285F4",
   },
   googleButtonText: {
-    color: "#FFFFFF",
+    color: "#00796B",
     fontSize: 16,
     fontWeight: "600",
   },

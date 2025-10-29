@@ -221,7 +221,7 @@ export default function HomeScreen({ navigation }: Props) {
 
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#fff" />
+          <ActivityIndicator size="large" color="#00897B" />
         </View>
       )}
     </View>
@@ -229,7 +229,7 @@ export default function HomeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: {
     paddingTop: 48,
     paddingHorizontal: 24,
@@ -238,8 +238,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  greeting: { color: "rgba(255,255,255,0.6)", fontSize: 14 },
-  username: { color: "#fff", fontSize: 22, fontWeight: "800" },
+  greeting: { color: "#999999", fontSize: 14 },
+  username: { color: "#00796B", fontSize: 22, fontWeight: "800" },
   profileButton: {
     width: 44,
     height: 44,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  profileInitial: { color: "#fff", fontWeight: "800" },
+  profileInitial: { color: "#00796B", fontWeight: "800" },
   headerButtons: {
     flexDirection: "row",
     gap: 8,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   notificationBadgeText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 10,
     fontWeight: "800",
   },
@@ -308,51 +308,55 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 12 },
   card: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(0, 137, 123, 0.08)",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0, 137, 123, 0.15)",
   },
   smallCard: { flex: 0.6, justifyContent: "space-between" },
-  cardTitle: { color: "rgba(255,255,255,0.7)", fontSize: 13, marginBottom: 8 },
-  cardAmount: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  cardSub: { color: "rgba(255,255,255,0.55)", fontSize: 12, marginTop: 8 },
+  cardTitle: { color: "#00796B", fontSize: 13, marginBottom: 8 },
+  cardAmount: { color: "#333333", fontSize: 20, fontWeight: "800" },
+  cardSub: { color: "#999999", fontSize: 12, marginTop: 8 },
   viewAllBtn: { marginTop: 12, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, backgroundColor: "rgba(99,102,241,0.15)" },
   viewAllText: { color: "#6366F1", fontWeight: "700" },
-  goalCount: { color: "#fff", fontSize: 22, fontWeight: "800" },
+  goalCount: { color: "#333333", fontSize: 22, fontWeight: "800" },
 
   section: { marginBottom: 20 },
-  sectionTitle: { color: "rgba(255,255,255,0.8)", fontSize: 16, fontWeight: "700", marginBottom: 12 },
+  sectionTitle: { color: "#00796B", fontSize: 16, fontWeight: "700", marginBottom: 12 },
 
   chart: {
     flexDirection: "row",
     alignItems: "flex-end",
     height: 120,
     paddingHorizontal: 8,
-    backgroundColor: "rgba(255,255,255,0.02)",
+    backgroundColor: "rgba(0, 137, 123, 0.06)",
     borderRadius: 12,
     paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 137, 123, 0.12)",
   },
   barColumn: { flex: 1, alignItems: "center" },
   bar: { width: 18, borderRadius: 6 },
-  barLabel: { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 8 },
+  barLabel: { color: "#999999", fontSize: 11, marginTop: 8 },
 
   habits: {},
   habitRow: { marginBottom: 12 },
   habitInfo: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  habitName: { color: "#fff", fontWeight: "700" },
-  habitMeta: { color: "rgba(255,255,255,0.6)" },
-  habitProgress: { height: 8, backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 8, overflow: "hidden" },
+  habitName: { color: "#00796B", fontWeight: "700" },
+  habitMeta: { color: "#999999" },
+  habitProgress: { height: 8, backgroundColor: "rgba(0, 137, 123, 0.15)", borderRadius: 8, overflow: "hidden" },
   progressFill: { height: "100%", backgroundColor: "#6366F1", width: "40%" },
 
   goals: {},
-  goalItem: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.03)", padding: 14, borderRadius: 12, marginBottom: 10 },
-  goalText: { color: "#fff", fontWeight: "700" },
-  goalMeta: { color: "rgba(255,255,255,0.6)" },
+  goalItem: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(0, 137, 123, 0.06)", padding: 14, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: "rgba(0, 137, 123, 0.12)" },
+  goalText: { color: "#00796B", fontWeight: "700" },
+  goalMeta: { color: "#999999" },
 
   fab: { position: "absolute", right: 20, bottom: 30 },
   fabButton: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center", shadowColor: "#6366F1", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10 },
-  fabIcon: { fontSize: 24, color: "#fff" },
+  fabIcon: { fontSize: 24, color: "#FFFFFF" },
 
   loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
 
@@ -381,8 +385,8 @@ const styles = StyleSheet.create({
   },
   bannerIcon: { fontSize: 32, marginRight: 12 },
   bannerContent: { flex: 1 },
-  bannerTitle: { color: "#fff", fontSize: 16, fontWeight: "800", marginBottom: 4 },
-  bannerSubtitle: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
+  bannerTitle: { color: "#00796B", fontSize: 16, fontWeight: "800", marginBottom: 4 },
+  bannerSubtitle: { color: "#999999", fontSize: 12 },
   bannerArrow: { fontSize: 20, color: "#EC4899", fontWeight: "700" },
 
   budgetButton: {

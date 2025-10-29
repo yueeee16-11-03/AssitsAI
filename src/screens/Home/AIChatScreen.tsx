@@ -219,7 +219,7 @@ export default function AIChatScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0E27",
+    backgroundColor: "#E0F2F1",
   },
   header: {
     flexDirection: "row",
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 20,
-    color: "#fff",
+    color: "#00897B",
   },
   headerCenter: {
     flex: 1,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#fff",
+    color: "#00796B",
   },
   headerSubtitle: {
     fontSize: 12,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   userText: {
-    color: "#fff",
+    color: "#FFFFFF",
   },
   aiText: {
     color: "rgba(255,255,255,0.9)",
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#fff",
+    color: "#333333",
     fontSize: 15,
     maxHeight: 100,
   },
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   },
   sendIcon: {
     fontSize: 20,
-    color: "#fff",
+    color: "#FFFFFF",
     fontWeight: "700",
   },
   suggestionsContainer: {

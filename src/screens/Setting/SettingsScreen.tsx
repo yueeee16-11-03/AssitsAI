@@ -127,7 +127,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 value={notifications}
                 onValueChange={setNotifications}
                 trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
-                thumbColor="#fff"
+                thumbColor="#00897B"
               />
             </View>
 
@@ -139,7 +139,7 @@ export default function SettingsScreen({ navigation }: Props) {
                     value={true}
                     onValueChange={() => {}}
                     trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
-                    thumbColor="#fff"
+                    thumbColor="#00897B"
                   />
                 </View>
 
@@ -149,7 +149,7 @@ export default function SettingsScreen({ navigation }: Props) {
                     value={true}
                     onValueChange={() => {}}
                     trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
-                    thumbColor="#fff"
+                    thumbColor="#00897B"
                   />
                 </View>
 
@@ -159,7 +159,7 @@ export default function SettingsScreen({ navigation }: Props) {
                     value={false}
                     onValueChange={() => {}}
                     trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
-                    thumbColor="#fff"
+                    thumbColor="#00897B"
                   />
                 </View>
               </>
@@ -260,7 +260,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 value={autoBackup}
                 onValueChange={setAutoBackup}
                 trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
-                thumbColor="#fff"
+                thumbColor="#00897B"
               />
             </View>
 
@@ -273,7 +273,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 value={biometric}
                 onValueChange={setBiometric}
                 trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
-                thumbColor="#fff"
+                thumbColor="#00897B"
               />
             </View>
 
@@ -351,31 +351,31 @@ export default function SettingsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#fff" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0, 137, 123, 0.08)", alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: "#00897B" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
   placeholder: { width: 40 },
   content: { padding: 16 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#fff", marginBottom: 12 },
-  settingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 16, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 12 },
+  settingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(0, 137, 123, 0.06)", borderRadius: 12, padding: 16, marginBottom: 12 },
   settingInfo: { flex: 1 },
-  settingLabel: { fontSize: 16, fontWeight: "700", color: "#fff", marginBottom: 4 },
-  settingDescription: { fontSize: 13, color: "rgba(255,255,255,0.6)" },
-  chevron: { fontSize: 20, color: "rgba(255,255,255,0.5)", marginLeft: 12 },
-  languageToggle: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" },
+  settingLabel: { fontSize: 16, fontWeight: "700", color: "#00796B", marginBottom: 4 },
+  settingDescription: { fontSize: 13, color: "#999999" },
+  chevron: { fontSize: 20, color: "#999999", marginLeft: 12 },
+  languageToggle: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0, 137, 123, 0.12)", alignItems: "center", justifyContent: "center" },
   languageText: { fontSize: 24 },
-  subSettingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(255,255,255,0.02)", borderRadius: 8, padding: 12, marginBottom: 8, marginLeft: 16 },
-  subSettingLabel: { fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
-  aiModeSelector: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 16 },
-  aiModeLabel: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.8)", marginBottom: 12 },
+  subSettingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(0, 137, 123, 0.04)", borderRadius: 8, padding: 12, marginBottom: 8, marginLeft: 16 },
+  subSettingLabel: { fontSize: 14, fontWeight: "600", color: "#00796B" },
+  aiModeSelector: { backgroundColor: "rgba(0, 137, 123, 0.06)", borderRadius: 12, padding: 16 },
+  aiModeLabel: { fontSize: 14, fontWeight: "700", color: "#00796B", marginBottom: 12 },
   aiModeButtons: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  aiModeButton: { flex: 1, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8, paddingVertical: 12, alignItems: "center", borderWidth: 2, borderColor: "transparent" },
+  aiModeButton: { flex: 1, backgroundColor: "rgba(0, 137, 123, 0.08)", borderRadius: 8, paddingVertical: 12, alignItems: "center", borderWidth: 2, borderColor: "transparent" },
   aiModeButtonActive: { borderColor: "#6366F1", backgroundColor: "rgba(99,102,241,0.1)" },
-  aiModeButtonText: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.6)" },
-  aiModeButtonTextActive: { color: "#fff" },
+  aiModeButtonText: { fontSize: 14, fontWeight: "700", color: "#999999" },
+  aiModeButtonTextActive: { color: "#FFFFFF" },
   aiModeDescription: { fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 18 },
   dangerButton: { backgroundColor: "rgba(239,68,68,0.1)", borderRadius: 12, padding: 16, alignItems: "center", marginBottom: 12, borderWidth: 1, borderColor: "rgba(239,68,68,0.3)" },
   dangerButtonText: { color: "#EF4444", fontWeight: "700", fontSize: 15 },

@@ -56,4 +56,31 @@ export type RootStackParamList = {
   
   // Finance Reports
   Report: undefined;
+  
+  // Transaction Attachments
+  TransactionAttachment: {
+    transactionId: string;
+    transactionDesc: string;
+  };
+  
+  // Smart Note
+  SmartNote: {
+    onSave: (content: string) => void;
+  };
+  
+  // AI Processing Overlay
+  AIProcessingOverlay: {
+    imageUri?: string;
+    handwritingText?: string;
+    onConfirm?: (data: any) => void;
+  };
+  
+  // AI Processing Results Screen
+  AIProcessingResults: {
+    imageUri?: string;
+    processedData: any;
+    editedData: any;
+    selectedItems: number[];
+    onConfirm?: (data: any) => void;
+  };
 };

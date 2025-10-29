@@ -44,6 +44,7 @@ import FamilyPermissionsScreen from "../screens/Family/FamilyPermissionsScreen";
 import ReportScreen from "../screens/Finance/ReportScreen";
 import EditTransactionScreen from "../screens/Finance/EditTransactionScreen";
 import TransactionHistoryScreen from "../screens/Finance/TransactionHistoryScreen";
+import AIProcessingOverlay from "../screens/Finance/AIProcessingOverlay";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -92,6 +93,7 @@ export default function AppNavigation() {
         <Stack.Screen name="Report" component={ReportScreen} />
         <Stack.Screen name="EditTransaction" component={EditTransactionScreen} />
         <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
+        <Stack.Screen name="AIProcessingOverlay" component={AIProcessingOverlay} />
       </Stack.Navigator>
     </NavigationContainer>
   );

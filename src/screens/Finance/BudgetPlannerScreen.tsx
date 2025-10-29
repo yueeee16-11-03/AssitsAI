@@ -349,7 +349,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: {
     flexDirection: "row",
     alignItems: "center",
