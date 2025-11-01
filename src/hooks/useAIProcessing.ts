@@ -1,22 +1,15 @@
 import { useState, useCallback } from "react";
+import { OCRService } from "../services/OCRService";
 
 export interface ProcessedData {
-  items?: Array<{
-    name: string;
-    amount: number;
-    category?: string;
-  }>;
-  totalAmount?: number;
-  currency?: string;
-  date?: string;
-  note?: string;
-  confidence?: number;
   rawText?: string;
+  note?: string;
+  processingTime?: number;
+  error?: string;
 }
 
 interface UseAIProcessingProps {
   imageUri?: string;
-  handwritingText?: string;
 }
 
 interface UseAIProcessingReturn {
@@ -24,77 +17,74 @@ interface UseAIProcessingReturn {
   processedData: ProcessedData | null;
   editedData: ProcessedData | null;
   error: string | null;
-  selectedItems: number[];
   processData: () => Promise<void>;
-  toggleItemSelection: (index: number) => void;
   setError: (error: string | null) => void;
 }
 
 export const useAIProcessing = ({
   imageUri,
-  handwritingText,
 }: UseAIProcessingProps): UseAIProcessingReturn => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
   const [editedData, setEditedData] = useState<ProcessedData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
   /**
-   * Process image or handwriting text using AI
-   * Simulates API call with mock data
+   * Process image using OCR only
+   * Flow: Image → OCR → Raw Text
    */
   const processData = useCallback(async () => {
     try {
       setIsProcessing(true);
       setError(null);
 
-      // Simulate API call delay (2.5 seconds)
-      await new Promise<void>((resolve) => setTimeout(resolve, 2500));
+      console.log('🚀 [OCR_PROCESSOR] Starting OCR processing...');
+      console.log('📷 [OCR_PROCESSOR] Image URI:', imageUri ? 'Yes' : 'No');
 
-      // Mock AI processing result
-      // In production, replace this with actual API call
-      const mockResult: ProcessedData = {
-        items: [
-          { name: "Cơm tấm", amount: 45000, category: "Ăn uống" },
-          { name: "Cà phê", amount: 25000, category: "Ăn uống" },
-          { name: "Xăng xe", amount: 200000, category: "Giao thông" },
-        ],
-        totalAmount: 270000,
-        currency: "VND",
-        date: new Date().toISOString().split("T")[0],
-        note: handwritingText || (imageUri ? "📸 Từ ảnh hóa đơn" : ""),
-        confidence: 0.94,
-        rawText: handwritingText || "Expense receipt detected",
+      let processingResult: ProcessedData = {};
+
+      if (!imageUri) {
+        throw new Error('Vui lòng chọn ảnh để xử lý');
+      }
+
+      console.log('\n📸 [OCR_PROCESSOR] Starting OCR...');
+      const ocrResult = await OCRService.recognizeText(imageUri);
+
+      if (!ocrResult.success) {
+        console.warn('⚠️ [OCR_PROCESSOR] OCR failed:', ocrResult.error);
+        setError(ocrResult.error || 'OCR không thành công');
+        setIsProcessing(false);
+        return;
+      }
+
+      processingResult = {
+        rawText: ocrResult.rawText,
+        note: '📸 Từ ảnh hóa đơn',
+        processingTime: ocrResult.processingTime,
       };
 
-      setProcessedData(mockResult);
-      setEditedData(JSON.parse(JSON.stringify(mockResult)));
+      console.log('✅ [OCR_PROCESSOR] OCR completed successfully');
+      console.log('� [OCR_PROCESSOR] Text length:', processingResult.rawText?.length || 0);
+
+      setProcessedData(processingResult);
+      setEditedData(JSON.parse(JSON.stringify(processingResult)));
       setIsProcessing(false);
+
+      console.log('\n✅ [OCR_PROCESSOR] Processing completed');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Lỗi xử lý";
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi xử lý';
+      console.error('❌ [OCR_PROCESSOR] Error:', errorMessage);
       setError(errorMessage);
       setIsProcessing(false);
     }
-  }, [imageUri, handwritingText]);
-
-  /**
-   * Toggle selection state for an item
-   */
-  const toggleItemSelection = useCallback((index: number) => {
-    setSelectedItems((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
-  }, []);
+  }, [imageUri]);
 
   return {
     isProcessing,
     processedData,
     editedData,
     error,
-    selectedItems,
     processData,
-    toggleItemSelection,
     setError,
   };
 };

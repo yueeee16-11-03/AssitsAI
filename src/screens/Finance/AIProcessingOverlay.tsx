@@ -5,7 +5,7 @@ import type { RootStackParamList } from "../../navigation/types";
 import { useAIProcessing } from "../../hooks/useAIProcessing";
 import LoadingOverlay from "./components/LoadingOverlay.tsx";
 import ErrorOverlay from "./components/ErrorOverlay.tsx";
-import ResultsOverlay from "./components/ResultsOverlay.tsx";
+import AIProcessingResultsScreen from "./AIProcessingResultsScreen";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AIProcessingOverlay">;
 
@@ -18,7 +18,6 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
     error,
     selectedItems,
     processData,
-    toggleItemSelection,
     setError,
   } = useAIProcessing({ imageUri, handwritingText });
 
@@ -77,13 +76,19 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
     );
   }
 
-  return <ResultsOverlay
-    imageUri={imageUri}
-    processedData={processedData}
-    editedData={editedData}
-    selectedItems={selectedItems}
-    onToggleItem={toggleItemSelection}
-    onConfirm={handleConfirm}
-    onCancel={handleCancel}
-  />;
+  // Render full screen results
+  return (
+    <AIProcessingResultsScreen
+      route={{
+        params: {
+          imageUri,
+          processedData,
+          editedData,
+          selectedItems,
+          onConfirm: handleConfirm,
+        },
+      } as any}
+      navigation={navigation as any}
+    />
+  );
 }
