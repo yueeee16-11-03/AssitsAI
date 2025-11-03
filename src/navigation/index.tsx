@@ -45,6 +45,7 @@ import ReportScreen from "../screens/Finance/ReportScreen";
 import EditTransactionScreen from "../screens/Finance/EditTransactionScreen";
 import TransactionHistoryScreen from "../screens/Finance/TransactionHistoryScreen";
 import AIProcessingOverlay from "../screens/Finance/AIProcessingOverlay";
+import GeminiTestScreen from "../screens/Core/GeminiTestScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -94,6 +95,7 @@ export default function AppNavigation() {
         <Stack.Screen name="EditTransaction" component={EditTransactionScreen} />
         <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
         <Stack.Screen name="AIProcessingOverlay" component={AIProcessingOverlay} />
+        <Stack.Screen name="GeminiTest" component={GeminiTestScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

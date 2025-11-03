@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Modal,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -34,7 +33,6 @@ export default function AIProcessingResultsScreen({
   } = route.params;
 
   const [editedDataState] = useState<ProcessedData | null>(editedData);
-  const [showFullRawText, setShowFullRawText] = useState(false);
 
   const handleConfirm = () => {
     if (!editedDataState || !editedDataState.rawText) {
@@ -66,7 +64,7 @@ export default function AIProcessingResultsScreen({
           >
             <Text style={styles.backButtonText}>← Quay lại</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nội dung OCR</Text>
+          <Text style={styles.headerTitle}>THÔNG TIN CHI TIÊU</Text>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -79,34 +77,37 @@ export default function AIProcessingResultsScreen({
                 resizeMode="cover"
               />
               <View style={styles.imageOverlay}>
-                <Text style={styles.imageLabel}>📸 Ảnh gốc</Text>
+                <Text style={styles.imageLabel}>📸 Bill chi tiêu</Text>
               </View>
             </View>
           )}
 
-          {/* Raw OCR Text - Main Content */}
+          {/* Processed Text by Gemini AI - Main Content */}
           {editedDataState?.rawText ? (
-            <View style={styles.rawTextMainSection}>
-              <View style={styles.rawTextHeader}>
-                <Text style={styles.rawTextTitle}>📄 Toàn bộ nội dung OCR</Text>
-                <TouchableOpacity
-                  onPress={() => setShowFullRawText(true)}
-                  style={styles.expandButton}
-                >
-                  <Text style={styles.expandButtonText}>⛶ Phóng to</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.rawTextBox}>
-                <Text style={styles.rawText}>
-                  {editedDataState.rawText}
+            editedDataState?.processedText ? (
+              <View style={styles.processedTextSection}>
+                <View style={styles.processedTextHeader}>
+                  <Text style={styles.processedTextTitle}>Thông tin giao dịch</Text>
+                </View>
+                
+                <View style={styles.processedTextBox}>
+                  <Text style={styles.processedText}>
+                    {editedDataState.processedText}
+                  </Text>
+                </View>
+
+                <Text style={styles.processingTimeInfo}>
+                  ⏱️ Thời gian xử lý: {editedDataState.processingTime || 0}ms
                 </Text>
               </View>
-
-              <Text style={styles.textLengthInfo}>
-                Tổng {editedDataState.rawText.length} ký tự
-              </Text>
-            </View>
+            ) : (
+              <View style={styles.noDataSection}>
+                <Text style={styles.noDataText}>⏳ Đang xử lý...</Text>
+                <Text style={styles.noDataSubtext}>
+                  Vui lòng chờ AI xử lý dữ liệu
+                </Text>
+              </View>
+            )
           ) : (
             <View style={styles.noDataSection}>
               <Text style={styles.noDataText}>❌ Không có dữ liệu OCR</Text>
@@ -142,44 +143,7 @@ export default function AIProcessingResultsScreen({
       </View>
 
       {/* Fullscreen Raw Text Modal */}
-      <Modal
-        visible={showFullRawText}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowFullRawText(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Toàn bộ OCR Text</Text>
-              <TouchableOpacity
-                onPress={() => setShowFullRawText(false)}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.modalText}>
-                {editedDataState?.rawText}
-              </Text>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <Text style={styles.modalFooterText}>
-                {editedDataState?.rawText?.length || 0} ký tự
-              </Text>
-              <TouchableOpacity
-                style={styles.closeModalButton}
-                onPress={() => setShowFullRawText(false)}
-              >
-                <Text style={styles.closeModalButtonText}>Đóng</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Modal này được giữ lại nhưng không hiển thị vì không cần OCR text */}
     </KeyboardAvoidingView>
   );
 }
@@ -250,63 +214,51 @@ const styles = StyleSheet.create({
     color: "#00796B",
   },
 
-  // Raw Text Main Section
-  rawTextMainSection: {
+  // Processed Text by AI
+  processedTextSection: {
     marginBottom: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F0F9FF",
     borderRadius: 12,
     padding: 16,
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: "#3B82F6",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 2,
   },
-  rawTextHeader: {
+  processedTextHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  rawTextTitle: {
+  processedTextTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#00796B",
+    color: "#1E40AF",
   },
-  expandButton: {
-    backgroundColor: "#E0F2F1",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#00897B",
-  },
-  expandButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#00796B",
-  },
-  rawTextBox: {
-    backgroundColor: "rgba(0, 0, 0, 0.03)",
+  processedTextBox: {
+    backgroundColor: "rgba(59, 130, 246, 0.05)",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderLeftWidth: 3,
-    borderLeftColor: "#B2DFDB",
+    borderLeftColor: "#3B82F6",
     marginBottom: 10,
     minHeight: 150,
   },
-  rawText: {
+  processedText: {
     fontSize: 13,
-    color: "#333",
+    color: "#1F2937",
     lineHeight: 20,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
-  textLengthInfo: {
+  processingTimeInfo: {
     fontSize: 12,
-    color: "#999",
+    color: "#0284C7",
     fontStyle: "italic",
     textAlign: "right",
+    fontWeight: "600",
   },
 
   // No Data Section
@@ -376,86 +328,5 @@ const styles = StyleSheet.create({
 
   spacer: {
     height: 20,
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    flex: 0.9,
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#00897B",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 137, 123, 0.1)",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
-  },
-  closeButtonText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  modalBody: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  modalText: {
-    fontSize: 13,
-    color: "#333",
-    lineHeight: 22,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-  },
-  modalFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#F5F5F5",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 137, 123, 0.1)",
-  },
-  modalFooterText: {
-    fontSize: 12,
-    color: "#999",
-    fontStyle: "italic",
-  },
-  closeModalButton: {
-    backgroundColor: "#00897B",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  closeModalButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
 });

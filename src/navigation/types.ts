@@ -83,4 +83,6 @@ export type RootStackParamList = {
     selectedItems: number[];
     onConfirm?: (data: any) => void;
   };
-};
+  
+  // Gemini Test Screen
+  GeminiTest: undefined;

@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react";
 import { OCRService } from "../services/OCRService";
+import { processOCRTextWithGemini } from "../services/GeminiAIService";
 
 export interface ProcessedData {
   rawText?: string;
+  processedText?: string;
   note?: string;
   processingTime?: number;
   error?: string;
@@ -10,6 +12,7 @@ export interface ProcessedData {
 
 interface UseAIProcessingProps {
   imageUri?: string;
+  enableGeminiProcessing?: boolean;
 }
 
 interface UseAIProcessingReturn {
@@ -23,6 +26,7 @@ interface UseAIProcessingReturn {
 
 export const useAIProcessing = ({
   imageUri,
+  enableGeminiProcessing = true,
 }: UseAIProcessingProps): UseAIProcessingReturn => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
@@ -30,16 +34,17 @@ export const useAIProcessing = ({
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Process image using OCR only
-   * Flow: Image → OCR → Raw Text
+   * Process image using OCR + optional Gemini AI
+   * Flow: Image → OCR → Raw Text → (Optional) Gemini AI → Processed Data
    */
   const processData = useCallback(async () => {
     try {
       setIsProcessing(true);
       setError(null);
 
-      console.log('🚀 [OCR_PROCESSOR] Starting OCR processing...');
+      console.log('🚀 [OCR_PROCESSOR] Starting processing...');
       console.log('📷 [OCR_PROCESSOR] Image URI:', imageUri ? 'Yes' : 'No');
+      console.log('🤖 [OCR_PROCESSOR] Gemini Processing:', enableGeminiProcessing ? 'Enabled' : 'Disabled');
 
       let processingResult: ProcessedData = {};
 
@@ -47,7 +52,8 @@ export const useAIProcessing = ({
         throw new Error('Vui lòng chọn ảnh để xử lý');
       }
 
-      console.log('\n📸 [OCR_PROCESSOR] Starting OCR...');
+      // Step 1: OCR
+      console.log('\n📸 [OCR_PROCESSOR] Step 1: Starting OCR...');
       const ocrResult = await OCRService.recognizeText(imageUri);
 
       if (!ocrResult.success) {
@@ -57,27 +63,44 @@ export const useAIProcessing = ({
         return;
       }
 
+      const rawOCRText = ocrResult.rawText || '';
+      console.log('✅ [OCR_PROCESSOR] OCR completed');
+      console.log('📊 [OCR_PROCESSOR] Raw text length:', rawOCRText.length);
+
       processingResult = {
-        rawText: ocrResult.rawText,
+        rawText: rawOCRText,
         note: '📸 Từ ảnh hóa đơn',
         processingTime: ocrResult.processingTime,
       };
 
-      console.log('✅ [OCR_PROCESSOR] OCR completed successfully');
-      console.log('� [OCR_PROCESSOR] Text length:', processingResult.rawText?.length || 0);
+      // Step 2: Optional Gemini AI Processing
+      if (enableGeminiProcessing && rawOCRText.trim().length > 0) {
+        console.log('\n🤖 [OCR_PROCESSOR] Step 2: Starting Gemini AI processing...');
+        const geminiResult = await processOCRTextWithGemini(rawOCRText);
+
+        if (geminiResult.success) {
+          console.log('✅ [OCR_PROCESSOR] Gemini processing completed');
+          processingResult.processedText = geminiResult.processedText;
+          processingResult.processingTime = (processingResult.processingTime || 0) + geminiResult.processingTime;
+        } else {
+          console.warn('⚠️ [OCR_PROCESSOR] Gemini processing failed:', geminiResult.error);
+          // Tiếp tục dù Gemini failed, vẫn có rawText
+          console.log('💡 [OCR_PROCESSOR] Continuing with OCR text only');
+        }
+      }
 
       setProcessedData(processingResult);
       setEditedData(JSON.parse(JSON.stringify(processingResult)));
       setIsProcessing(false);
 
-      console.log('\n✅ [OCR_PROCESSOR] Processing completed');
+      console.log('\n✅ [OCR_PROCESSOR] All processing completed');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Lỗi xử lý';
       console.error('❌ [OCR_PROCESSOR] Error:', errorMessage);
       setError(errorMessage);
       setIsProcessing(false);
     }
-  }, [imageUri]);
+  }, [imageUri, enableGeminiProcessing]);
 
   return {
     isProcessing,

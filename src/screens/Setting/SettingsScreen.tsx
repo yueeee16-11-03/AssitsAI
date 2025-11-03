@@ -336,6 +336,13 @@ export default function SettingsScreen({ navigation }: Props) {
 
           {/* Danger Zone */}
           <View style={styles.section}>
+            <TouchableOpacity 
+              style={styles.dangerButton}
+              onPress={() => navigation.navigate("GeminiTest")}
+            >
+              <Text style={styles.dangerButtonText}>🚀 Test Gemini API</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.dangerButton} onPress={handleClearCache}>
               <Text style={styles.dangerButtonText}>🗑️ Xóa bộ nhớ đệm</Text>
             </TouchableOpacity>
