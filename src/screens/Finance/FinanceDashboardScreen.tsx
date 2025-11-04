@@ -279,14 +279,14 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
             <View style={styles.actionsGrid}>
               <TouchableOpacity 
                 style={styles.actionCard}
-                onPress={() => navigation.navigate("AddTransaction", { defaultType: 'income' })}
+                onPress={() => navigation.navigate("AddIncome", {})}
               >
                 <Text style={styles.actionIcon}>➕</Text>
                 <Text style={styles.actionText}>Thêm thu nhập</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.actionCard}
-                onPress={() => navigation.navigate("AddTransaction", { defaultType: 'expense' })}
+                onPress={() => navigation.navigate("AddTransaction", {})}
               >
                 <Text style={styles.actionIcon}>➖</Text>
                 <Text style={styles.actionText}>Thêm chi tiêu</Text>

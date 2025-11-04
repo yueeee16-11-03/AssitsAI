@@ -15,6 +15,7 @@ import AIRecommendationScreen from "../screens/Home/AIRecommendationScreen";
 import AISettingScreen from "../screens/Setting/AISettingScreen";
 import FinanceDashboardScreen from "../screens/Finance/FinanceDashboardScreen";
 import AddTransactionScreen from "../screens/Finance/AddTransactionScreen";
+import AddIncomeScreen from "../screens/Finance/AddIncomeScreen";
 import BudgetPlannerScreen from "../screens/Finance/BudgetPlannerScreen";
 import GoalTrackingScreen from "../screens/Finance/GoalTrackingScreen";
 import HabitDashboardScreen from "../screens/Habbit/HabitDashboardScreen";
@@ -65,6 +66,7 @@ export default function AppNavigation() {
         <Stack.Screen name="AISetting" component={AISettingScreen} />
         <Stack.Screen name="FinanceDashboard" component={FinanceDashboardScreen} />
         <Stack.Screen name="AddTransaction" component={AddTransactionScreen} />
+        <Stack.Screen name="AddIncome" component={AddIncomeScreen} />
         <Stack.Screen name="BudgetPlanner" component={BudgetPlannerScreen} />
         <Stack.Screen name="GoalTracking" component={GoalTrackingScreen} />
         <Stack.Screen name="HabitDashboard" component={HabitDashboardScreen} />

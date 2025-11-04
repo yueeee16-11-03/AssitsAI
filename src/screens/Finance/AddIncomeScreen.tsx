@@ -18,14 +18,14 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
 import { launchImageLibrary } from "react-native-image-picker";
-import TransactionService from "../../services/TransactionService";
+import IncomeService from "../../services/IncomeService";
 import { useTransactionStore } from "../../store/transactionStore";
 
-type Props = NativeStackScreenProps<RootStackParamList, "AddTransaction">;
+type Props = NativeStackScreenProps<RootStackParamList, "AddIncome">;
 
 type TransactionType = "expense" | "income";
 
-export default function AddTransactionScreen({ navigation, route }: Props) {
+export default function AddIncomeScreen({ navigation, route }: Props) {
   // Note state
   const [note, setNote] = useState("");
   const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
@@ -37,7 +37,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
   const [billImage, setBillImage] = useState<string | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
-  const [type] = useState<TransactionType>("expense"); // Default type for note-style
+  const [type] = useState<TransactionType>("income"); // ✅ KHÁC: income thay vì expense
   
   // 🤖 AI Processing state
   const [processedText, setProcessedText] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
     if (!isRecording) {
       setTimeout(() => {
         // Add note about what was recorded
-        const voiceNote = "🎤 [Ghi âm]: Ăn trưa tại quán cơm";
+        const voiceNote = "🎤 [Ghi âm]: Tiền lương";
         setNote(note + (note ? "\n" : "") + voiceNote);
         setIsRecording(false);
         Alert.alert("Ghi nhận giọng nói", "Đã thêm ghi chú từ giọng nói");
@@ -113,7 +113,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
   };
 
   const handleSave = async () => {
-    // Validation: Cần ghi chú
+    // Validation: Cần ghi chú hoặc ảnh
     if (!note.trim() && !billImage) {
       Alert.alert("Lỗi", "Vui lòng nhập ghi chú hoặc chụp/chọn ảnh");
       return;
@@ -125,6 +125,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       // Create transaction object
       const formData = {
         type,
+        amount: 0, // 🟢 Mặc định 0 khi không nhập
         description: note || (billImage ? "📸 Ảnh" : ""),
         billImageUri: billImage,
         // 🤖 AI Processing data
@@ -135,18 +136,20 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       };
 
       console.log('📝 [SCREEN] handleSave - formData:', formData);
+      console.log('📝 [SCREEN] formData.type:', formData.type);
 
-      const transactionObj = TransactionService.createTransactionObject(formData);
+      const incomeObj = IncomeService.createIncomeObject(formData);
       
-      console.log('💾 [SCREEN] transactionObj created:', transactionObj);
+      console.log('💾 [SCREEN] incomeObj created:', incomeObj);
+      console.log('💾 [SCREEN] incomeObj.type:', incomeObj.type);
 
       // Use Store to add transaction (which uses Service internally)
       const addTransaction = useTransactionStore.getState().addTransaction;
-      await addTransaction(transactionObj);
+      await addTransaction(incomeObj);
 
       console.log('💾 [SCREEN] Transaction saved to Firebase successfully');
 
-      Alert.alert("Thành công", "Đã lưu ghi chú", [
+      Alert.alert("Thành công", "Đã lưu thu nhập", [
         {
           text: "OK",
           onPress: () => {
@@ -156,7 +159,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
             setProcessedText(null);
             setRawOCRText(null);
             setProcessingTime(0);
-            // ✅ Navigate trực tiếp về FinanceDashboard (không dùng goBack hoặc popToTop)
+            // ✅ Navigate trực tiếp về FinanceDashboard
             navigation.navigate("FinanceDashboard");
           },
         },
@@ -176,7 +179,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       if (!permission) {
         Alert.alert(
           "Quyền camera bị từ chối",
-          "Vui lòng cấp quyền camera trong cài đặt thiết bị để chụp ảnh hóa đơn",
+          "Vui lòng cấp quyền camera trong cài đặt thiết bị để chụp ảnh",
           [
             {
               text: "OK",
@@ -193,7 +196,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
 
   const handleRemoveBillImage = () => {
     setBillImage(null);
-    Alert.alert("Đã xóa", "Ảnh bill đã bị xóa");
+    Alert.alert("Đã xóa", "Ảnh đã bị xóa");
   };
 
   return (
@@ -208,7 +211,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
         >
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thêm giao dịch</Text>
+        <Text style={styles.headerTitle}>Thêm thu nhập</Text>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <TouchableOpacity
             style={[styles.voiceButton, isRecording && styles.voiceButtonActive]}
@@ -261,7 +264,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
                 styles.noteInput,
                 getNoteInputStyle()
               ]}
-              placeholder="Thêm ghi chú cho giao dịch..."
+              placeholder="Thêm ghi chú cho thu nhập..."
               placeholderTextColor="#999"
               value={note}
               onChangeText={setNote}
@@ -283,7 +286,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
                   if (note.trim()) {
                     navigation.navigate("AIProcessingOverlay", {
                       handwritingText: note,
-                      transactionType: "expense", // 🔴 QUAN TRỌNG: Truyền loại giao dịch
+                      transactionType: "income", // 🟢 QUAN TRỌNG: Truyền loại giao dịch
                     });
                   } else {
                     Alert.alert("Lỗi", "Vui lòng nhập ghi chú trước");
@@ -358,7 +361,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Text style={styles.saveButtonText}>Lưu ghi chú</Text>
+                <Text style={styles.saveButtonText}>Lưu thu nhập</Text>
                 <Text style={styles.saveButtonIcon}>✓</Text>
               </>
             )}
@@ -382,7 +385,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
             // NO callback needed anymore - ResultScreen will navigate directly
             navigation.navigate("AIProcessingOverlay", {
               imageUri,
-              transactionType: "expense", // 🔴 QUAN TRỌNG: Truyền loại giao dịch
+              transactionType: "income", // 🟢 QUAN TRỌNG: Truyền loại giao dịch
             });
           }}
           onClose={() => setIsCameraOpen(false)}
@@ -517,7 +520,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
           <Text style={styles.permissionIcon}>📷</Text>
           <Text style={styles.permissionText}>Cần quyền truy cập camera</Text>
           <Text style={styles.permissionDescription}>
-            Để chụp ảnh hóa đơn, vui lòng cấp quyền camera cho ứng dụng
+            Để chụp ảnh, vui lòng cấp quyền camera cho ứng dụng
           </Text>
           <TouchableOpacity
             style={styles.permissionButton}
@@ -576,10 +579,10 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={onClose}>
           <Text style={styles.cameraHeaderIcon}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.cameraHeaderTitle}>📸 Quét Hóa Đơn</Text>
+        <Text style={styles.cameraHeaderTitle}>📸 Quét Ảnh</Text>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={toggleFlash}>
           <Text style={styles.cameraHeaderIcon}>
-            {torchEnabled ? "�" : "�"}
+            {torchEnabled ? "💡" : "🌙"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -590,14 +593,14 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
         <View style={[styles.billFrameCorner, styles.billFrameCornerTopRight]} />
         <View style={[styles.billFrameCorner, styles.billFrameCornerBottomLeft]} />
         <View style={[styles.billFrameCorner, styles.billFrameCornerBottomRight]} />
-        <Text style={styles.billFrameText}>Căn chỉnh hóa đơn vào khung</Text>
+        <Text style={styles.billFrameText}>Căn chỉnh ảnh vào khung</Text>
       </View>
 
       {/* Status Bar */}
       <View style={styles.cameraStatusBar}>
         <View style={styles.statusIndicator}>
           <Text style={styles.statusText}>
-            {torchEnabled ? "� Đèn bật" : "� Đèn tắt"}
+            {torchEnabled ? "💡 Đèn bật" : "🌙 Đèn tắt"}
           </Text>
         </View>
       </View>
@@ -625,7 +628,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
+  container: { flex: 1, backgroundColor: "#F0FDF4" }, // ✅ KHÁC: Xanh lá thay vì xanh mộc
   
   // Options Screen Styles
   optionsContainer: {
@@ -633,25 +636,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#F0FDF4",
   },
   optionsTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#10B981",
     marginBottom: 30,
     textAlign: "center",
   },
   optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,137,123,0.1)",
+    backgroundColor: "rgba(16,185,129,0.1)",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: "rgba(0,137,123,0.3)",
+    borderColor: "rgba(16,185,129,0.3)",
     width: "100%",
   },
   optionButtonCancel: {
@@ -669,7 +672,7 @@ const styles = StyleSheet.create({
   optionButtonTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#10B981",
     marginBottom: 2,
   },
   optionButtonDesc: {
@@ -678,7 +681,7 @@ const styles = StyleSheet.create({
   },
   optionArrow: {
     fontSize: 20,
-    color: "#00897B",
+    color: "#059669",
     marginLeft: 10,
   },
   
@@ -691,27 +694,27 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#10B981", // ✅ KHÁC: Header màu xanh lá
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(0,137,123,0.1)",
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#00796B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
+  backIcon: { fontSize: 20, color: "#fff" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
   voiceButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(99,102,241,0.2)",
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
-  voiceButtonActive: { backgroundColor: "#EF4444" },
+  voiceButtonActive: { backgroundColor: "rgba(0,0,0,0.3)" },
   voiceIcon: { fontSize: 20 },
   content: { padding: 16 },
   typeSelector: {
@@ -745,7 +748,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#00796B",
+    color: "#10B981",
     marginBottom: 12,
   },
   amountInputContainer: {
@@ -755,20 +758,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1.5,
-    borderColor: "#B2DFDB",
+    borderColor: "#A7F3D0",
     marginBottom: 16,
   },
   currencySymbol: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#00897B",
+    color: "#10B981",
     marginRight: 8,
   },
   amountInput: {
     flex: 1,
     fontSize: 24,
     fontWeight: "800",
-    color: "#00897B",
+    color: "#10B981",
     paddingVertical: 14,
   },
   amountWords: {
@@ -833,7 +836,7 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     fontSize: 14,
     borderWidth: 1,
-    borderColor: "#B2DFDB",
+    borderColor: "#A7F3D0",
     textAlignVertical: "top",
     minHeight: 100,
   },
@@ -855,15 +858,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#B2DFDB",
+    borderColor: "#A7F3D0",
   },
   fontButtonActive: {
-    backgroundColor: "#00897B",
-    borderColor: "#00897B",
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
   },
   fontButtonText: {
     fontWeight: "700",
-    color: "#00796B",
+    color: "#10B981",
     fontSize: 12,
   },
   fontButtonTextActive: {
@@ -887,12 +890,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(0,137,123,0.1)",
+    backgroundColor: "rgba(16,185,129,0.1)",
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#B2DFDB",
+    borderColor: "#A7F3D0",
   },
   toolbarIcon: {
     fontSize: 18,
@@ -1178,8 +1181,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   saveButtonDefault: {
-    backgroundColor: "#00897B",
-    shadowColor: "#00897B",
+    backgroundColor: "#10B981", // ✅ KHÁC: Nút lưu màu xanh lá
+    shadowColor: "#10B981",
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -1301,7 +1304,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#F0FDF4",
     paddingHorizontal: 20,
   },
   permissionIcon: {
@@ -1311,13 +1314,13 @@ const styles = StyleSheet.create({
   permissionText: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#fff",
+    color: "#333",
     marginBottom: 12,
     textAlign: "center",
   },
   permissionDescription: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(0,0,0,0.7)",
     marginBottom: 28,
     textAlign: "center",
     lineHeight: 20,
@@ -1348,10 +1351,10 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(0,0,0,0.2)",
   },
   permissionButtonCancelText: {
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(0,0,0,0.7)",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -1628,7 +1631,7 @@ const styles = StyleSheet.create({
   },
   indicatorText: {
     fontSize: 11,
-    color: "#00796B",
+    color: "#10B981",
     fontWeight: "600",
   },
 });

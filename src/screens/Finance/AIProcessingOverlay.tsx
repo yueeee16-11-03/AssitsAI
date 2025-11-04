@@ -11,7 +11,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "AIProcessingOverlay">;
 
 export default function AIProcessingOverlay({ route, navigation }: Props) {
   // ✅ SimpleFlow: Không cần onConfirm callback nữa
-  const { imageUri } = route.params;
+  const { imageUri, transactionType = 'expense' } = route.params; // 🟢 Lấy loại giao dịch
   const {
     isProcessing,
     editedData,
@@ -59,6 +59,7 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
         params: {
           imageUri,
           editedData,
+          transactionType, // 🟢 TRUYỀN loại giao dịch
         },
       } as any}
       navigation={navigation as any}

@@ -150,11 +150,57 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
   const groupedTransactions = TransactionHistoryService.groupTransactionsByDate(
     transactions
   ) as Record<string, Transaction[]>;
+  
+  // 🔧 SỬA LỖI 1: Sắp xếp dateKeys + LOGGING CHI TIẾT
   const dateKeys: string[] = Object.keys(groupedTransactions).sort((a, b) => {
-    // Sắp xếp từ mới nhất (sau) đến cũ nhất (trước)
-    const dateA = new Date(a).getTime();
-    const dateB = new Date(b).getTime();
-    return dateB - dateA; // Giảm dần (mới nhất ở trên)
+    const transactionsA = groupedTransactions[a] || [];
+    const transactionsB = groupedTransactions[b] || [];
+    
+    if (transactionsA.length === 0 || transactionsB.length === 0) return 0;
+    
+    // 🔍 DEBUG: Lấy raw date objects
+    const rawDateA = transactionsA[0].date || transactionsA[0].createdAt;
+    const rawDateB = transactionsB[0].date || transactionsB[0].createdAt;
+    
+    console.log(`🔍 [DATEKEYS] Key A: "${a}", type:`, typeof rawDateA, rawDateA);
+    console.log(`🔍 [DATEKEYS] Key B: "${b}", type:`, typeof rawDateB, rawDateB);
+    
+    // ✅ Xử lý an toàn: Thử .toDate() trước, nếu không thì new Date()
+    let dateA = 0;
+    let dateB = 0;
+    
+    try {
+      if (rawDateA && typeof rawDateA.toDate === 'function') {
+        dateA = rawDateA.toDate().getTime();
+        console.log(`✅ [DATEKEYS] A used .toDate(): ${dateA}`);
+      } else if (rawDateA) {
+        dateA = new Date(rawDateA).getTime();
+        console.log(`✅ [DATEKEYS] A used new Date(): ${dateA}`);
+      }
+    } catch (e) {
+      console.warn(`⚠️ [DATEKEYS] Failed to parse A:`, e);
+      dateA = new Date().getTime();
+    }
+    
+    try {
+      if (rawDateB && typeof rawDateB.toDate === 'function') {
+        dateB = rawDateB.toDate().getTime();
+        console.log(`✅ [DATEKEYS] B used .toDate(): ${dateB}`);
+      } else if (rawDateB) {
+        dateB = new Date(rawDateB).getTime();
+        console.log(`✅ [DATEKEYS] B used new Date(): ${dateB}`);
+      }
+    } catch (e) {
+      console.warn(`⚠️ [DATEKEYS] Failed to parse B:`, e);
+      dateB = new Date().getTime();
+    }
+    
+    if (isNaN(dateA) || isNaN(dateB)) {
+      console.warn(`⚠️ [DATEKEYS] NaN detected! A: ${dateA}, B: ${dateB}`);
+      return 0;
+    }
+    
+    return dateB - dateA; // Mới nhất ở trên
   });
 
   console.log("📋 Total transactions:", transactions.length);
@@ -171,14 +217,67 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
     const hasImage = !!item.billImageUri;
     const displayTitle = item.description || item.category;
 
-    const date = new Date(item.date?.toDate?.() || item.createdAt?.toDate?.());
+    // 🔧 FIX: Xử lý Firebase Timestamp + LOGGING CHI TIẾT
+    let date: Date;
+    try {
+      console.log(`🎫 [ITEM-${item.id}] Parsing date...`);
+      console.log(`  - item.date:`, item.date, `(type: ${typeof item.date})`);
+      console.log(`  - item.createdAt:`, item.createdAt, `(type: ${typeof item.createdAt})`);
+      
+      // Priority 1: item.date.toDate()
+      if (item.date && typeof item.date.toDate === 'function') {
+        try {
+          date = item.date.toDate();
+          console.log(`✅ [ITEM-${item.id}] Used item.date.toDate():`, date);
+        } catch (e) {
+          console.warn(`⚠️ [ITEM-${item.id}] item.date.toDate() failed:`, e);
+          throw e;
+        }
+      }
+      // Priority 2: item.createdAt.toDate()
+      else if (item.createdAt && typeof item.createdAt.toDate === 'function') {
+        try {
+          date = item.createdAt.toDate();
+          console.log(`✅ [ITEM-${item.id}] Used item.createdAt.toDate():`, date);
+        } catch (e) {
+          console.warn(`⚠️ [ITEM-${item.id}] item.createdAt.toDate() failed:`, e);
+          throw e;
+        }
+      }
+      // Priority 3: Parse string
+      else if (typeof item.date === 'string') {
+        date = new Date(item.date);
+        console.log(`✅ [ITEM-${item.id}] Parsed item.date as string:`, date);
+      }
+      else if (typeof item.createdAt === 'string') {
+        date = new Date(item.createdAt);
+        console.log(`✅ [ITEM-${item.id}] Parsed item.createdAt as string:`, date);
+      }
+      // Fallback
+      else {
+        console.warn(`⚠️ [ITEM-${item.id}] No valid date found, using today`);
+        date = new Date();
+      }
+      
+      // Final check
+      if (isNaN(date.getTime())) {
+        console.warn(`⚠️ [ITEM-${item.id}] Date is Invalid! Resetting to today`);
+        date = new Date();
+      }
+      
+      console.log(`✅ [ITEM-${item.id}] Final date: ${date.toISOString()}`);
+    } catch (error) {
+      console.error(`❌ [ITEM-${item.id}] Critical error:`, error);
+      date = new Date();
+    }
+
     const timeStr = date.toLocaleTimeString("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
     });
     const dateStr = date.toLocaleDateString("vi-VN");
 
-    console.log(`🎫 Item: ${displayTitle}, hasImage: ${hasImage}, type: ${item.type}, amount: ${item.amount}`);
+    console.log(`🎫 [RENDER-${item.id}] ${displayTitle} => ${timeStr} • ${dateStr} (${item.type}) ₫${item.amount}`);
 
     return (
       <TouchableOpacity
@@ -219,7 +318,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
             ]}
             numberOfLines={1}
           >
-            {isExpense ? "-" : "+"} ₫{Math.abs(item.amount).toLocaleString("vi-VN")}
+            {isExpense ? "-" : "+"} ₫{Math.abs(item.amount || 0).toLocaleString("vi-VN")}
           </Text>
         </View>
       </TouchableOpacity>
@@ -233,12 +332,52 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
   const renderDateSection = ({ item: dateKey }: { item: string }) => {
     let dayTransactions = groupedTransactions[dateKey] || [];
     
-    // ✅ Sắp xếp giao dịch từ mới nhất đến cũ nhất trong ngày
+    // 🔧 SỬA LỖI 2: Sắp xếp giao dịch trong ngày + LOGGING CHI TIẾT
+    console.log(`📅 [DAYTX-SORT] Sorting ${dayTransactions.length} transactions for "${dateKey}"...`);
+    
     dayTransactions = dayTransactions.sort((a: Transaction, b: Transaction) => {
-      const timeA = new Date(a.date?.toDate?.() || a.createdAt?.toDate?.()).getTime();
-      const timeB = new Date(b.date?.toDate?.() || b.createdAt?.toDate?.()).getTime();
-      return timeB - timeA; // Giảm dần
+      // 🔍 DEBUG: Lấy raw date objects
+      const rawDateA = a.date || a.createdAt;
+      const rawDateB = b.date || b.createdAt;
+      
+      let timeA = 0;
+      let timeB = 0;
+      
+      try {
+        if (rawDateA && typeof rawDateA.toDate === 'function') {
+          timeA = rawDateA.toDate().getTime();
+          console.log(`  ✅ A (${a.description}): ${timeA}`);
+        } else if (rawDateA) {
+          timeA = new Date(rawDateA).getTime();
+          console.log(`  ✅ A (${a.description}): ${timeA} [from new Date]`);
+        }
+      } catch (e) {
+        console.warn(`  ⚠️ A failed:`, e);
+        timeA = new Date().getTime();
+      }
+      
+      try {
+        if (rawDateB && typeof rawDateB.toDate === 'function') {
+          timeB = rawDateB.toDate().getTime();
+          console.log(`  ✅ B (${b.description}): ${timeB}`);
+        } else if (rawDateB) {
+          timeB = new Date(rawDateB).getTime();
+          console.log(`  ✅ B (${b.description}): ${timeB} [from new Date]`);
+        }
+      } catch (e) {
+        console.warn(`  ⚠️ B failed:`, e);
+        timeB = new Date().getTime();
+      }
+      
+      if (isNaN(timeA) || isNaN(timeB)) {
+        console.warn(`  ⚠️ NaN! A: ${timeA}, B: ${timeB}`);
+        return 0;
+      }
+      
+      return timeB - timeA;
     });
+    
+    console.log(`✅ [DAYTX-SORT] Done sorting`);
 
     return (
       <View style={styles.dateSection}>
@@ -303,7 +442,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
         >
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Ghi chú</Text>
+        <Text style={styles.headerTitle}>Lịch sử giao dịch</Text>
         <View style={styles.placeholderButton} />
       </View>
 
@@ -574,6 +713,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 32,
   },
-
-
 });

@@ -29,6 +29,7 @@ export default function AIProcessingResultsScreen({
   const {
     imageUri,
     editedData,
+    transactionType = 'expense', // 🟢 MẶC ĐỊNH expense, nhưng có thể là income
   } = route.params;
 
   const [editedDataState] = useState<ProcessedData | null>(editedData);
@@ -48,10 +49,13 @@ export default function AIProcessingResultsScreen({
     };
 
     console.log('✅ [RESULT_SCREEN] Confirming with data:', processedData);
+    console.log('📊 [RESULT_SCREEN] Transaction type:', transactionType);
     
-    // ✅ KHÔNG GỌI CALLBACK - Thay vào đó, navigate trực tiếp về AddTransactionScreen
-    // và GỬI DỮ LIỆU VÀ PARAMS
-    navigation.navigate('AddTransaction', {
+    // 🟢 CHỌN SCREEN DỰA VÀO LOẠI GIAO DỊCH
+    const screenName = transactionType === 'income' ? 'AddIncome' : 'AddTransaction';
+    console.log('🏃 [RESULT_SCREEN] Navigating to:', screenName);
+    
+    navigation.navigate(screenName, {
       processedData: processedData,
     });
   };
@@ -70,7 +74,9 @@ export default function AIProcessingResultsScreen({
           >
             <Text style={styles.backButtonText}>← Quay lại</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>THÔNG TIN CHI TIÊU</Text>
+          <Text style={styles.headerTitle}>
+            {transactionType === 'income' ? '💰 THÔNG TIN THU NHẬP' : '📊 THÔNG TIN CHI TIÊU'}
+          </Text>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -83,7 +89,9 @@ export default function AIProcessingResultsScreen({
                 resizeMode="cover"
               />
               <View style={styles.imageOverlay}>
-                <Text style={styles.imageLabel}>📸 Bill chi tiêu</Text>
+                <Text style={styles.imageLabel}>
+                  📸 {transactionType === 'income' ? 'Bill thu nhập' : 'Bill chi tiêu'}
+                </Text>
               </View>
             </View>
           )}

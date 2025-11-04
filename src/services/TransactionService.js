@@ -13,15 +13,20 @@ class TransactionService {
 
   /**
    * HELPER: Xóa tất cả field undefined (Firestore không chấp nhận)
-   * ✅ PHIÊN BẢN SỬA LỖI: Dùng JSON.stringify để xóa cả 'undefined' lồng bên trong.
+   * ✅ PHIÊN BẢN GỐC: Chỉ xóa undefined ở cấp đầu, không ảnh hưởng đến nested objects
    */
   _cleanData(obj) {
-    if (obj === undefined) {
-      return null; // Xử lý trường hợp chính obj là undefined
+    if (obj === undefined || obj === null) {
+      return null;
     }
-    // Mẹo: JSON.stringify sẽ TỰ ĐỘNG loại bỏ tất cả các khóa có giá trị undefined
-    // JSON.parse sẽ biến nó trở lại thành một object sạch
-    return JSON.parse(JSON.stringify(obj));
+    // Chỉ lọc bỏ undefined ở cấp đầu - giữ các nested objects như date, createdAt
+    const cleaned = {};
+    for (const key in obj) {
+      if (obj[key] !== undefined) {
+        cleaned[key] = obj[key];
+      }
+    }
+    return cleaned;
   }
 
   /**
@@ -100,14 +105,22 @@ class TransactionService {
       let dataToSave = {
         ...transactionData,
         userId: currentUser.uid,
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        // ✅ FIX: Chỉ set createdAt/updatedAt nếu không có sẵn
+        // transactionData đã có date từ createTransactionObject, chỉ cần createdAt/updatedAt server-side
         updatedAt: firestore.FieldValue.serverTimestamp(),
         isDeleted: false,
+        // Nếu transactionData không có createdAt, mới set server timestamp
+        ...(transactionData.createdAt ? {} : { createdAt: firestore.FieldValue.serverTimestamp() }),
       };
+      
+      console.log('📝 [SERVICE] dataToSave.date:', dataToSave.date);
+      console.log('📝 [SERVICE] dataToSave.createdAt:', dataToSave.createdAt);
       
       // ✅ CLEAN DATA: Xóa tất cả field undefined trước khi lưu
       dataToSave = this._cleanData(dataToSave);
       console.log('✅ [SERVICE] Cleaned data:', dataToSave);
+      console.log('✅ [SERVICE] Cleaned data.date:', dataToSave.date);
+      console.log('✅ [SERVICE] Cleaned data.createdAt:', dataToSave.createdAt);
 
       // Step 3: Lưu vào Firestore
       const docRef = await this._getCollectionRef().add(dataToSave);
@@ -329,6 +342,8 @@ class TransactionService {
         try {
           aiParsedData = AIDataParserService.parseAIResult(processedText);
           console.log('✅ [SERVICE] Parsed AI data:', aiParsedData);
+          // ✅ FIX: Chỉ dùng JSON.stringify cho aiParsedData (xóa undefined lồng bên trong)
+          aiParsedData = JSON.parse(JSON.stringify(aiParsedData));
         } catch (parseError) {
           console.warn('⚠️ [SERVICE] Could not parse AI data:', parseError);
           // Don't fail, just keep aiParsedData null

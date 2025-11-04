@@ -20,6 +20,14 @@ export type RootStackParamList = {
       processingTime?: number;
     };
   };
+  AddIncome: { 
+    processedData?: {
+      rawOCRText?: string;
+      processedText?: string;
+      note?: string;
+      processingTime?: number;
+    };
+  };
   EditTransaction: { transaction: any };
   TransactionHistory: { newTransaction?: any };
   BudgetPlanner: undefined;
@@ -80,6 +88,7 @@ export type RootStackParamList = {
   AIProcessingOverlay: {
     imageUri?: string;
     handwritingText?: string;
+    transactionType?: 'income' | 'expense'; // 🟢 NĐ loại giao dịch
   };
   
   // AI Processing Results Screen
@@ -88,7 +97,9 @@ export type RootStackParamList = {
     processedData: any;
     editedData: any;
     selectedItems: number[];
+    transactionType?: 'income' | 'expense'; // 🟢 NĐ loại giao dịch
   };
   
   // Gemini Test Screen
   GeminiTest: undefined;
+};

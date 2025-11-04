@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 import TransactionService from '../services/TransactionService';
+import IncomeService from '../services/IncomeService';
 
 /**
  * TransactionStore: Zustand store cho giao dịch
  * * Responsibility: Chỉ quản lý STATE.
- * Business logic được handle bởi TransactionService.
+ * Business logic được handle bởi TransactionService (expense) hoặc IncomeService (income).
  *
  * Flow (Đồng bộ 100%):
  * Screen → Store.action → Service (thực hiện CUD + fetch fresh data) → Store.state
+ * 
+ * 🟢 INCOME: Sử dụng IncomeService (CỘNG tiền)
+ * 🔴 EXPENSE: Sử dụng TransactionService (TRỪ tiền)
  */
 
 export const useTransactionStore = create((set, get) => ({
@@ -27,17 +31,35 @@ export const useTransactionStore = create((set, get) => ({
 
   /**
    * 1️⃣ THÊM GIAO DỊCH (ĐÃ SỬA)
+   * 🟢 INCOME: Gọi IncomeService (CỘNG tiền)
+   * 🔴 EXPENSE: Gọi TransactionService (TRỪ tiền)
+   * 
    * Gọi Service, sau đó cập nhật state bằng freshData
    */
   addTransaction: async (transactionData) => {
-    console.log('🔵 [STORE] addTransaction called');
+    console.log('🔵 [STORE] addTransaction called - Type:', transactionData.type);
+    console.log('🔵 [STORE] transactionData:', transactionData);
     set({ isLoading: true, error: null });
     
     try {
-      // 1. Gọi Service, Service sẽ thêm và fetch lại dữ liệu mới
-      const result = await TransactionService.addTransaction(transactionData);
+      let result;
+      
+      // 🟢 Chọn Service dựa vào type
+      if (transactionData.type === 'income') {
+        console.log('🟢 [STORE] Using IncomeService (CỘNG tiền)');
+        result = await IncomeService.addIncome(transactionData);
+      } else {
+        console.log('🔴 [STORE] Using TransactionService (TRỪ tiền)');
+        result = await TransactionService.addTransaction(transactionData);
+      }
       
       // 2. Cập nhật state với dữ liệu đồng bộ (freshData)
+      console.log('📊 [STORE] Setting transactions to state. Count:', result.freshData.length);
+      console.log('📊 [STORE] First 3 transactions types:');
+      result.freshData.slice(0, 3).forEach((t, idx) => {
+        console.log(`   Transaction ${idx}: id=${t.id}, type=${t.type}, amount=${t.amount}`);
+      });
+      
       set({
         transactions: result.freshData,
         isLoading: false,
@@ -221,5 +243,44 @@ export const useTransactionStore = create((set, get) => ({
       }
     });
     return byCategory;
+  },
+
+  // ========== BALANCE CALCULATIONS ==========
+  /**
+   * Tính số dư hiện tại
+   * Logic: Thu nhập (cộng) - Chi tiêu (trừ)
+   */
+  getBalance: () => {
+    const transactions = get().transactions;
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    transactions.forEach(t => {
+      if (t.type === 'income') {
+        totalIncome += t.amount || 0;
+      } else if (t.type === 'expense') {
+        totalExpense += t.amount || 0;
+      }
+    });
+
+    return totalIncome - totalExpense;
+  },
+
+  /**
+   * Tính tổng thu nhập
+   */
+  getTotalIncome: () => {
+    return get().transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+  },
+
+  /**
+   * Tính tổng chi tiêu
+   */
+  getTotalExpense: () => {
+    return get().transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
   },
 }));

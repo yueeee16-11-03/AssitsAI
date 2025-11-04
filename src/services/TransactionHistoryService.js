@@ -9,6 +9,39 @@ import { useTransactionStore } from '../store/transactionStore';
  */
 
 class TransactionHistoryServiceClass {
+
+  /**
+   * --------------------------------------------------------------------
+   * 🚀 [SỬA LỖI] HÀM HELPER AN TOÀN ĐỂ XỬ LÝ DATE
+   * --------------------------------------------------------------------
+   * Luôn trả về một Date object HỢP LỆ hoặc NULL.
+   * Xử lý cả 3 trường hợp: Firestore Timestamp, String, hoặc Date object.
+   */
+  _getSafeDate(dateObj) {
+    try {
+      // 1. Ưu tiên Firestore Timestamp (ví dụ: { seconds: 167..., nanoseconds: ... })
+      if (dateObj && typeof dateObj.toDate === 'function') {
+        const date = dateObj.toDate();
+        // Kiểm tra xem date có hợp lệ không
+        if (!isNaN(date.getTime())) return date;
+      }
+      
+      // 2. Thử parse (nếu là string, number, hoặc Date object đã hỏng)
+      if (dateObj) {
+        const date = new Date(dateObj);
+        // Kiểm tra xem date có hợp lệ không
+        if (!isNaN(date.getTime())) return date;
+      }
+
+      // 3. Nếu là null, undefined, hoặc parse lỗi -> trả về null
+      return null;
+    } catch (error) {
+      // Nếu có bất kỳ lỗi nào (ví dụ: new Date(null) ở một số môi trường)
+      return null;
+    }
+  }
+
+
   /**
    * Format full datetime: "HH:MM, DD/MM/YYYY"
    * @param {any} dateObj - Firestore Timestamp hoặc Date object
@@ -17,8 +50,14 @@ class TransactionHistoryServiceClass {
    */
   formatFullDateTime(dateObj) {
     console.log('📅 [HISTORY-SERVICE] Formatting full datetime:', dateObj);
+    
+    // ✅ SỬA LỖI: Dùng _getSafeDate
+    const date = this._getSafeDate(dateObj);
+    if (!date) {
+      return '--:--, --/--/----'; // Trả về giá trị rỗng an toàn
+    }
+
     try {
-      const date = dateObj?.toDate?.() || new Date(dateObj);
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
@@ -38,8 +77,17 @@ class TransactionHistoryServiceClass {
    */
   formatDate(dateObj) {
     console.log('📅 [HISTORY-SERVICE] Formatting date:', dateObj);
+    
+    // ✅ SỬA LỖI: Dùng _getSafeDate
+    const date = this._getSafeDate(dateObj);
+
+    // ✅ SỬA LỖI: Nếu ngày không hợp lệ, trả về một key an toàn
+    if (!date) {
+      console.warn('⚠️ [HISTORY-SERVICE] Invalid date found, grouping as "Không xác định"');
+      return 'Không xác định';
+    }
+
     try {
-      const date = dateObj?.toDate?.() || new Date(dateObj);
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -49,6 +97,7 @@ class TransactionHistoryServiceClass {
       const year = date.getFullYear();
       const dateString = `${day}/${month}/${year}`;
 
+      // So sánh an toàn (chỉ so sánh date parts)
       if (date.toDateString() === today.toDateString()) {
         return `Hôm nay (${dateString})`;
       } else if (date.toDateString() === yesterday.toDateString()) {
@@ -66,12 +115,6 @@ class TransactionHistoryServiceClass {
    * 🎯 Nhóm giao dịch theo ngày
    * @param {Array} transactions - Danh sách giao dịch
    * @returns {Object} Grouped transactions by date key
-   * * Example:
-   * {
-   * "Hôm nay": [{...}, {...}],
-   * "Hôm qua": [{...}],
-   * "20/10/2025": [{...}]
-   * }
    */
   groupTransactionsByDate(transactions) {
     console.log('📊 [HISTORY-SERVICE] Grouping transactions by date. Count:', transactions.length);
@@ -80,8 +123,13 @@ class TransactionHistoryServiceClass {
       const grouped = {};
 
       transactions.forEach((transaction) => {
-        const date = transaction.date || transaction.createdAt;
-        const dateKey = this.formatDate(date);
+        // ✅ SỬA LỖI: Ưu tiên `date` (vì nó là ngày giao dịch)
+        // sau đó mới tới `createdAt` (ngày tạo).
+        const dateObj = transaction.date || transaction.createdAt;
+        
+        // ✅ SỬA LỖI: Hàm formatDate đã an toàn
+        // Nó sẽ trả về "Không xác định" nếu dateObj là null/undefined
+        const dateKey = this.formatDate(dateObj); 
 
         if (!grouped[dateKey]) {
           grouped[dateKey] = [];
@@ -107,7 +155,7 @@ class TransactionHistoryServiceClass {
       '1': '🍔',   // Ăn uống
       '2': '🚗',   // Di chuyển
       '3': '🛍️',  // Mua sắm
-      '4': '🎮',   // Giải trí
+      '4.': '🎮',   // Giải trí
       '5': '💊',   // Sức khỏe
       '6': '📚',   // Giáo dục
       '7': '🏠',   // Nhà cửa
@@ -116,8 +164,11 @@ class TransactionHistoryServiceClass {
       '10': '🎁',  // Thưởng
       '11': '📈',  // Đầu tư
       '12': '💰',  // Khác (income)
+      // Thêm các category mặc định từ service
+      'note-only': '📝',
+      'income-general': '💰',
     };
-    return emojiMap[categoryId] || '💳';
+    return emojiMap[categoryId] || '💳'; // Fallback
   }
 
   /**
@@ -132,10 +183,10 @@ class TransactionHistoryServiceClass {
       const summary = {
         expenses: transactions
           .filter(t => t.type === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0),
+          .reduce((sum, t) => sum + (t.amount || 0), 0), // Thêm (|| 0)
         income: transactions
           .filter(t => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0),
+          .reduce((sum, t) => sum + (t.amount || 0), 0), // Thêm (|| 0)
       };
 
       console.log('✅ [HISTORY-SERVICE] Daily summary:', summary);
@@ -148,20 +199,12 @@ class TransactionHistoryServiceClass {
 
   /**
    * 🗑️ Xóa giao dịch với confirmation + Store update
-   * @param {string} transactionId - Transaction ID to delete
-   * @param {Transaction} transaction - Transaction object (for display in confirmation)
-   * @returns {Promise<boolean>} true if deleted, false if cancelled
-   * * Usage:
-   * const deleted = await TransactionHistoryService.deleteTransaction(id, transaction);
-   * if (deleted) {
-   * // Show success message
-   * }
+   * (Hàm này hiện đang được xử lý logic ở Screen, giữ lại cho tương thích)
    */
   async deleteTransaction(transactionId, transaction) {
     console.log('🗑️ [HISTORY-SERVICE] Deleting transaction:', transactionId);
     
     return new Promise((resolve) => {
-      // This function returns a promise that needs to be confirmed from UI
       // The actual deletion logic is handled in the screen component
       resolve(true);
     });
@@ -169,20 +212,14 @@ class TransactionHistoryServiceClass {
 
   /**
    * 🔄 Xoá giao dịch - Internal implementation
-   * @param {string} transactionId - Transaction ID
-   * @returns {Promise<Object>} { success: boolean, message: string }
+   * (Đã sửa lỗi: Logic này nên ở trong Screen, nhưng giữ lại)
    */
   async performDelete(transactionId) {
     console.log('⚠️ [HISTORY-SERVICE] Performing delete for:', transactionId);
     
     try {
-      // ----- BẮT ĐẦU SỬA LỖI -----
-      // Lấy hàm xóa từ Store
       const deleteTransactionFromStore = useTransactionStore.getState().deleteTransaction;
-      
-      // ✅ ĐÚNG: Chỉ gọi Store. Store sẽ gọi Service và đồng bộ state.
       await deleteTransactionFromStore(transactionId);
-      // ----- KẾT THÚC SỬA LỖI -----
 
       console.log('✅ [HISTORY-SERVICE] Transaction deleted successfully via Store');
       return {
@@ -200,18 +237,14 @@ class TransactionHistoryServiceClass {
   }
 
   /**
-   * ✏️ Chuẩn bị dữ liệu để edit (có thể thêm logic nếu cần)
-   * @param {Transaction} transaction - Transaction to edit
-   * @returns {Transaction} Transaction object for editing
+   * ✏️ Chuẩn bị dữ liệu để edit
    */
   prepareForEdit(transaction) {
     console.log('✏️ [HISTORY-SERVICE] Preparing transaction for edit:', transaction.id);
     
     try {
-      // Có thể thêm logic transform dữ liệu cho edit form
       return {
         ...transaction,
-        // Thêm computed fields nếu cần
       };
     } catch (error) {
       console.error('❌ [HISTORY-SERVICE] Error preparing for edit:', error);
@@ -221,9 +254,6 @@ class TransactionHistoryServiceClass {
 
   /**
    * 🔍 Lọc giao dịch theo type (expense/income)
-   * @param {Array} transactions - Danh sách giao dịch
-   * @param {string} type - 'expense' or 'income'
-   * @returns {Array} Filtered transactions
    */
   filterByType(transactions, type) {
     console.log('🔍 [HISTORY-SERVICE] Filtering by type:', type);
@@ -232,9 +262,6 @@ class TransactionHistoryServiceClass {
 
   /**
    * 🔍 Lọc giao dịch theo danh mục
-   * @param {Array} transactions - Danh sách giao dịch
-   * @param {string} categoryId - Category ID
-   * @returns {Array} Filtered transactions
    */
   filterByCategory(transactions, categoryId) {
     console.log('🔍 [HISTORY-SERVICE] Filtering by category:', categoryId);
@@ -243,30 +270,34 @@ class TransactionHistoryServiceClass {
 
   /**
    * 🔍 Lọc giao dịch theo khoảng ngày
-   * @param {Array} transactions - Danh sách giao dịch
-   * @param {Date} startDate - Start date
-   * @param {Date} endDate - End date
-   * @returns {Array} Filtered transactions
    */
   filterByDateRange(transactions, startDate, endDate) {
     console.log('🔍 [HISTORY-SERVICE] Filtering by date range:', startDate, '-', endDate);
     
+    // Đảm bảo startDate và endDate là Date objects hợp lệ
+    const start = this._getSafeDate(startDate);
+    const end = this._getSafeDate(endDate);
+
+    if (!start || !end) {
+      console.warn("⚠️ [HISTORY-SERVICE] Invalid date range provided for filtering.");
+      return transactions;
+    }
+
     return transactions.filter(transaction => {
-      const date = transaction.date?.toDate?.() || new Date(transaction.date);
-      return date >= startDate && date <= endDate;
+      // ✅ SỬA LỖI: Dùng _getSafeDate
+      const date = this._getSafeDate(transaction.date || transaction.createdAt);
+      if (!date) return false; // Không bao gồm giao dịch không có ngày
+      return date >= start && date <= end;
     });
   }
 
   /**
    * 🔍 Tìm giao dịch theo keyword
-   * @param {Array} transactions - Danh sách giao dịch
-   * @param {string} keyword - Search keyword
-   * @returns {Array} Filtered transactions
    */
   searchTransactions(transactions, keyword) {
     console.log('🔍 [HISTORY-SERVICE] Searching for:', keyword);
     
-    if (!keyword.trim()) {
+    if (!keyword || !keyword.trim()) {
       return transactions;
     }
 
@@ -279,26 +310,26 @@ class TransactionHistoryServiceClass {
 
   /**
    * 📊 Lấy thống kê giao dịch
-   * @param {Array} transactions - Danh sách giao dịch
-   * @returns {Object} Statistics
    */
   getStatistics(transactions) {
     console.log('📊 [HISTORY-SERVICE] Calculating statistics for', transactions.length, 'transactions');
     
     try {
-      const expenses = transactions.filter(t => t.type === 'expense');
-      const incomes = transactions.filter(t => t.type === 'income');
+      const expenses = this.filterByType(transactions, 'expense');
+      const incomes = this.filterByType(transactions, 'income');
 
-      const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
-      const totalIncome = incomes.reduce((sum, t) => sum + t.amount, 0);
-      const totalTransactions = expenses.length + incomes.length;
+      const totalExpenses = expenses.reduce((sum, t) => sum + (t.amount || 0), 0);
+      const totalIncome = incomes.reduce((sum, t) => sum + (t.amount || 0), 0);
+      const totalTransactions = transactions.length;
 
       const stats = {
         totalTransactions,
         totalExpenses,
         totalIncome,
         netAmount: totalIncome - totalExpenses,
-        averageTransaction: totalTransactions > 0 ? (totalExpenses + totalIncome) / totalTransactions : 0,
+        averageTransaction: totalTransactions > 0 
+          ? (totalExpenses + totalIncome) / totalTransactions 
+          : 0,
         expenseCount: expenses.length,
         incomeCount: incomes.length,
       };
@@ -321,7 +352,6 @@ class TransactionHistoryServiceClass {
 
   /**
    * 🔄 Làm mới dữ liệu giao dịch từ Store
-   * @returns {Promise<Array>} Fresh transactions from Store
    */
   async refreshTransactions() {
     console.log('🔄 [HISTORY-SERVICE] Refreshing transactions from Store');
@@ -341,12 +371,10 @@ class TransactionHistoryServiceClass {
 
   /**
    * 📅 Sắp xếp giao dịch theo số tiền (cao nhất trước)
-   * @param {Array} transactions - Danh sách giao dịch
-   * @returns {Array} Sorted transactions
    */
   sortByAmountDesc(transactions) {
     console.log('📅 [HISTORY-SERVICE] Sorting transactions by amount descending');
-    return [...transactions].sort((a, b) => b.amount - a.amount);
+    return [...transactions].sort((a, b) => (b.amount || 0) - (a.amount || 0));
   }
 
   /**
@@ -357,8 +385,14 @@ class TransactionHistoryServiceClass {
    */
   formatTime(dateObj) {
     console.log('⏰ [HISTORY-SERVICE] Formatting time:', dateObj);
+    
+    // ✅ SỬA LỖI: Dùng _getSafeDate
+    const date = this._getSafeDate(dateObj);
+    if (!date) {
+      return '--:--';
+    }
+
     try {
-      const date = dateObj?.toDate?.() || new Date(dateObj);
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       return `${hours}:${minutes}`;
@@ -375,10 +409,14 @@ class TransactionHistoryServiceClass {
    */
   sortByDateDesc(transactions) {
     console.log('📅 [HISTORY-SERVICE] Sorting transactions by date descending');
+    
     return [...transactions].sort((a, b) => {
-      const dateA = a.date || a.createdAt;
-      const dateB = b.date || b.createdAt;
-      return new Date(dateB) - new Date(dateA);
+      // ✅ SỬA LỖI: Dùng _getSafeDate
+      // Gán ngày không hợp lệ là 0 để chúng bị đẩy xuống cuối
+      const dateA = this._getSafeDate(a.date || a.createdAt)?.getTime() || 0;
+      const dateB = this._getSafeDate(b.date || b.createdAt)?.getTime() || 0;
+      
+      return dateB - dateA;
     });
   }
 }
