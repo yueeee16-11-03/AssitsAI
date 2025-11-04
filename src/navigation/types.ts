@@ -18,6 +18,11 @@ export type RootStackParamList = {
       processedText?: string;
       note?: string;
       processingTime?: number;
+      // 🟢 AI extracted fields
+      totalAmount?: number;
+      items?: any[];
+      category?: string;
+      description?: string;
     };
   };
   AddIncome: { 
@@ -26,6 +31,11 @@ export type RootStackParamList = {
       processedText?: string;
       note?: string;
       processingTime?: number;
+      // 🟢 AI extracted fields
+      totalAmount?: number;
+      items?: any[];
+      category?: string;
+      description?: string;
     };
   };
   EditTransaction: { transaction: any };
@@ -87,6 +97,7 @@ export type RootStackParamList = {
   // AI Processing Overlay
   AIProcessingOverlay: {
     imageUri?: string;
+    textNote?: string;
     handwritingText?: string;
     transactionType?: 'income' | 'expense'; // 🟢 NĐ loại giao dịch
   };

@@ -35,16 +35,24 @@ export default function AIProcessingResultsScreen({
   const [editedDataState] = useState<ProcessedData | null>(editedData);
 
   const handleConfirm = () => {
-    if (!editedDataState || !editedDataState.rawText) {
-      Alert.alert("Lỗi", "Không có dữ liệu OCR để xác nhận");
+    // 🟢 VALIDATION: Cho phép cả TEXT (rawText) và IMAGE (processedText)
+    const hasTextData = editedDataState?.rawText;
+    const hasImageData = editedDataState?.processedText;
+    const hasAIExtractedData = editedDataState?.totalAmount !== undefined;
+    
+    if (!editedDataState || (!hasTextData && !hasImageData && !hasAIExtractedData)) {
+      Alert.alert("Lỗi", "Không có dữ liệu để xác nhận");
       return;
     }
 
-    // ✅ Chuẩn bị dữ liệu để gửi về
+    // ✅ Chuẩn bị dữ liệu để gửi về (bao gồm cả amount, items, category từ AI)
     const processedData = {
       rawOCRText: editedDataState.rawText,
       processedText: editedDataState.processedText,
-      note: editedDataState.note,
+      totalAmount: editedDataState.totalAmount || 0,
+      items: editedDataState.items || [],
+      category: editedDataState.category,
+      description: editedDataState.description,
       processingTime: editedDataState.processingTime || 0,
     };
 

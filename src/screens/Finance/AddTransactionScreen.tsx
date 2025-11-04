@@ -43,6 +43,10 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
   const [processedText, setProcessedText] = useState<string | null>(null);
   const [rawOCRText, setRawOCRText] = useState<string | null>(null);
   const [processingTime, setProcessingTime] = useState<number>(0);
+  const [aiTotalAmount, setAiTotalAmount] = useState<number | null>(null);
+  const [aiItems, setAiItems] = useState<any[]>([]);
+  const [aiCategory, setAiCategory] = useState<string | null>(null);
+  const [aiDescription, setAiDescription] = useState<string | null>(null);
   
   const { hasPermission, requestPermission } = useCameraPermission();
 
@@ -52,17 +56,27 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       const data = route.params.processedData;
       console.log('✅ [SCREEN] Received processedData from ResultScreen:', data);
       
-      // TỰ ĐỘNG ĐIỀN VÀO STATE
+      // TỰ ĐỘNG ĐIỀN VÀO STATE - OCR DATA
       if (data.processedText) setProcessedText(data.processedText);
       if (data.rawOCRText) setRawOCRText(data.rawOCRText);
       setProcessingTime(data.processingTime || 0);
+      
+      // 🟢 AI EXTRACTED DATA - NGUYÊN ĐÁO
+      if (data.totalAmount !== undefined) setAiTotalAmount(data.totalAmount);
+      if (data.items) setAiItems(data.items);
+      if (data.category) setAiCategory(data.category);
+      if (data.description) setAiDescription(data.description);
       
       // Nếu có note, thêm vào
       if (data.note) {
         setNote(data.note);
       }
       
-      console.log('✅ [SCREEN] AI data has been set to state');
+      console.log('✅ [SCREEN] AI data has been set to state:', {
+        totalAmount: data.totalAmount,
+        category: data.category,
+        items: data.items,
+      });
       
       // Xóa param để tránh lặp lại
       navigation.setParams({ processedData: undefined });
@@ -112,29 +126,44 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
     }
   };
 
+  /**
+   * 🤖 Xử lý NOTE với TextAIProcessingService
+   * (Hàm này đã được sửa lại trong onPress của nút ✨)
+   */
+  // const handleProcessNoteWithAI = ... (Đã chuyển logic vào onPress)
+
   const handleSave = async () => {
-    // Validation: Cần ghi chú
-    if (!note.trim() && !billImage) {
-      Alert.alert("Lỗi", "Vui lòng nhập ghi chú hoặc chụp/chọn ảnh");
+    // 🟢 VALIDATION: Accept note OR image OR AI extracted data
+    const hasNote = note.trim();
+    const hasImage = billImage;
+    const hasAIData = aiTotalAmount !== null || aiItems.length > 0;
+    
+    if (!hasNote && !hasImage && !hasAIData) {
+      Alert.alert("Lỗi", "Vui lòng nhập ghi chú, chụp ảnh, hoặc xử lý AI");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Create transaction object
+      // 🟢 NẾU CÓ AI DATA, DÙNG AI DATA (totalAmount, category)
+      // 🟡 NẾU KHÔNG CÓ, DÙNG DESCRIPTION TỪ NOTE
       const formData = {
         type,
-        description: note || (billImage ? "📸 Ảnh" : ""),
+        description: aiDescription || note || (billImage ? "📸 Ảnh" : ""),
         billImageUri: billImage,
-        // 🤖 AI Processing data
+        // 🤖 AI Extracted data - HIGH PRIORITY
+        amount: aiTotalAmount, // ✨ Lấy từ Gemini
+        category: aiCategory, // ✨ Lấy từ Gemini
+        items: aiItems, // ✨ Items breakdown
+        // OCR Processing metadata
         processedText: processedText,
         rawOCRText: rawOCRText,
         processingTime: processingTime,
-        hasAIProcessing: !!processedText,
+        hasAIProcessing: !!processedText || !!aiTotalAmount,
       };
 
-      console.log('📝 [SCREEN] handleSave - formData:', formData);
+      console.log('📝 [SCREEN] handleSave - formData with AI data:', formData);
 
       const transactionObj = TransactionService.createTransactionObject(formData);
       
@@ -156,6 +185,11 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
             setProcessedText(null);
             setRawOCRText(null);
             setProcessingTime(0);
+            // Reset AI data
+            setAiTotalAmount(null);
+            setAiItems([]);
+            setAiCategory(null);
+            setAiDescription(null);
             // ✅ Navigate trực tiếp về FinanceDashboard (không dùng goBack hoặc popToTop)
             navigation.navigate("FinanceDashboard");
           },
@@ -277,13 +311,20 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
               <TouchableOpacity style={styles.toolbarButton} onPress={handleTakePicture}>
                 <Text style={styles.toolbarIcon}>📷</Text>
               </TouchableOpacity>
+              
+              {/* ====================================================== */}
+              {/* ✅✅✅ ĐÂY LÀ PHẦN ĐÃ SỬA LỖI ✅✅✅ */}
+              {/* Sửa 'handwritingText' thành 'textNote' */}
+              {/* Thêm 'transactionType: type' */}
+              {/* ====================================================== */}
               <TouchableOpacity 
                 style={styles.toolbarButton} 
                 onPress={() => {
+                  console.log('🎯 [SCREEN] AI Note button pressed!');
                   if (note.trim()) {
                     navigation.navigate("AIProcessingOverlay", {
-                      handwritingText: note,
-                      transactionType: "expense", // 🔴 QUAN TRỌNG: Truyền loại giao dịch
+                      textNote: note, // <-- ĐÃ SỬA
+                      transactionType: type, // <-- ĐÃ THÊM
                     });
                   } else {
                     Alert.alert("Lỗi", "Vui lòng nhập ghi chú trước");
@@ -391,6 +432,8 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
     </KeyboardAvoidingView>
   );
 }
+
+// ... (Toàn bộ component CameraScreen và styles giữ nguyên)
 
 // Camera Screen Component
 function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
@@ -579,7 +622,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
         <Text style={styles.cameraHeaderTitle}>📸 Quét Hóa Đơn</Text>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={toggleFlash}>
           <Text style={styles.cameraHeaderIcon}>
-            {torchEnabled ? "�" : "�"}
+            {torchEnabled ? "💡" : "🌙"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -597,7 +640,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
       <View style={styles.cameraStatusBar}>
         <View style={styles.statusIndicator}>
           <Text style={styles.statusText}>
-            {torchEnabled ? "� Đèn bật" : "� Đèn tắt"}
+            {torchEnabled ? "💡 Đèn bật" : "🌙 Đèn tắt"}
           </Text>
         </View>
       </View>
@@ -624,6 +667,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
   );
 }
 
+// ... (Toàn bộ styles giữ nguyên)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E0F2F1" },
   
@@ -893,6 +937,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#B2DFDB",
+  },
+  toolbarButtonProcessing: {
+    backgroundColor: "rgba(99,102,241,0.2)",
+    borderColor: "#6366F1",
   },
   toolbarIcon: {
     fontSize: 18,
@@ -1629,6 +1677,73 @@ const styles = StyleSheet.create({
   indicatorText: {
     fontSize: 11,
     color: "#00796B",
+    fontWeight: "600",
+  },
+
+  // AI Extracted Data Styles
+  aiExtractedDataSection: {
+    backgroundColor: "#F0F9FF",
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#10B981",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  aiExtractedHeader: {
+    marginBottom: 12,
+  },
+  aiExtractedTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  aiExtractedBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.2)",
+  },
+  aiExtractedRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  aiExtractedLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+  aiExtractedValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  aiExtractedValueTotal: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#059669",
+  },
+  aiExtractedDivider: {
+    height: 1,
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    marginVertical: 8,
+  },
+  aiExtractedNote: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  aiExtractedNoteText: {
+    fontSize: 12,
+    color: "#059669",
     fontWeight: "600",
   },
 });

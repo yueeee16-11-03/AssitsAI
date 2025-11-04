@@ -43,6 +43,10 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
   const [processedText, setProcessedText] = useState<string | null>(null);
   const [rawOCRText, setRawOCRText] = useState<string | null>(null);
   const [processingTime, setProcessingTime] = useState<number>(0);
+  const [aiTotalAmount, setAiTotalAmount] = useState<number | null>(null);
+  const [aiItems, setAiItems] = useState<any[]>([]);
+  const [aiCategory, setAiCategory] = useState<string | null>(null);
+  const [aiDescription, setAiDescription] = useState<string | null>(null);
   
   const { hasPermission, requestPermission } = useCameraPermission();
 
@@ -52,17 +56,27 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
       const data = route.params.processedData;
       console.log('✅ [SCREEN] Received processedData from ResultScreen:', data);
       
-      // TỰ ĐỘNG ĐIỀN VÀO STATE
+      // TỰ ĐỘNG ĐIỀN VÀO STATE - OCR DATA
       if (data.processedText) setProcessedText(data.processedText);
       if (data.rawOCRText) setRawOCRText(data.rawOCRText);
       setProcessingTime(data.processingTime || 0);
+      
+      // 🟢 AI EXTRACTED DATA - NGUYÊN ĐÁO
+      if (data.totalAmount !== undefined) setAiTotalAmount(data.totalAmount);
+      if (data.items) setAiItems(data.items);
+      if (data.category) setAiCategory(data.category);
+      if (data.description) setAiDescription(data.description);
       
       // Nếu có note, thêm vào
       if (data.note) {
         setNote(data.note);
       }
       
-      console.log('✅ [SCREEN] AI data has been set to state');
+      console.log('✅ [SCREEN] AI data has been set to state:', {
+        totalAmount: data.totalAmount,
+        category: data.category,
+        items: data.items,
+      });
       
       // Xóa param để tránh lặp lại
       navigation.setParams({ processedData: undefined });
@@ -113,29 +127,36 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
   };
 
   const handleSave = async () => {
-    // Validation: Cần ghi chú hoặc ảnh
-    if (!note.trim() && !billImage) {
-      Alert.alert("Lỗi", "Vui lòng nhập ghi chú hoặc chụp/chọn ảnh");
+    // 🟢 VALIDATION: Accept note OR image OR AI extracted data
+    const hasNote = note.trim();
+    const hasImage = billImage;
+    const hasAIData = aiTotalAmount !== null || aiItems.length > 0;
+    
+    if (!hasNote && !hasImage && !hasAIData) {
+      Alert.alert("Lỗi", "Vui lòng nhập ghi chú, chụp ảnh, hoặc xử lý AI");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Create transaction object
+      // 🟢 NẾU CÓ AI DATA, DÙNG AI DATA (totalAmount, category)
+      // 🟡 NẾU KHÔNG CÓ, DÙNG DESCRIPTION TỪ NOTE
       const formData = {
         type,
-        amount: 0, // 🟢 Mặc định 0 khi không nhập
-        description: note || (billImage ? "📸 Ảnh" : ""),
+        amount: aiTotalAmount || 0, // ✨ Lấy từ Gemini nếu có, nếu không mặc định 0
+        description: aiDescription || note || (billImage ? "📸 Ảnh" : ""),
         billImageUri: billImage,
-        // 🤖 AI Processing data
+        category: aiCategory, // ✨ AI category
+        items: aiItems, // ✨ Items breakdown
+        // OCR Processing metadata
         processedText: processedText,
         rawOCRText: rawOCRText,
         processingTime: processingTime,
-        hasAIProcessing: !!processedText,
+        hasAIProcessing: !!processedText || !!aiTotalAmount,
       };
 
-      console.log('📝 [SCREEN] handleSave - formData:', formData);
+      console.log('📝 [SCREEN] handleSave - formData with AI data:', formData);
       console.log('📝 [SCREEN] formData.type:', formData.type);
 
       const incomeObj = IncomeService.createIncomeObject(formData);
@@ -159,6 +180,11 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
             setProcessedText(null);
             setRawOCRText(null);
             setProcessingTime(0);
+            // Reset AI data
+            setAiTotalAmount(null);
+            setAiItems([]);
+            setAiCategory(null);
+            setAiDescription(null);
             // ✅ Navigate trực tiếp về FinanceDashboard
             navigation.navigate("FinanceDashboard");
           },
@@ -280,13 +306,18 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
               <TouchableOpacity style={styles.toolbarButton} onPress={handleTakePicture}>
                 <Text style={styles.toolbarIcon}>📷</Text>
               </TouchableOpacity>
+              
+              {/* ====================================================== */}
+              {/* ✅✅✅ ĐÂY LÀ PHẦN ĐÃ SỬA LỖI ✅✅✅ */}
+              {/* Sửa 'handwritingText' thành 'textNote' */}
+              {/* ====================================================== */}
               <TouchableOpacity 
                 style={styles.toolbarButton} 
                 onPress={() => {
                   if (note.trim()) {
                     navigation.navigate("AIProcessingOverlay", {
-                      handwritingText: note,
-                      transactionType: "income", // 🟢 QUAN TRỌNG: Truyền loại giao dịch
+                      textNote: note, // <-- ĐÃ SỬA
+                      transactionType: type, // 'type' ở đây là "income"
                     });
                   } else {
                     Alert.alert("Lỗi", "Vui lòng nhập ghi chú trước");
@@ -394,6 +425,8 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
     </KeyboardAvoidingView>
   );
 }
+
+// ... (Toàn bộ component CameraScreen và styles giữ nguyên)
 
 // Camera Screen Component
 function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
@@ -627,6 +660,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
   );
 }
 
+// ... (Toàn bộ styles giữ nguyên)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F0FDF4" }, // ✅ KHÁC: Xanh lá thay vì xanh mộc
   

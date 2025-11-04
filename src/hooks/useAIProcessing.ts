@@ -8,6 +8,11 @@ export interface ProcessedData {
   note?: string;
   processingTime?: number;
   error?: string;
+  // 🟢 AI extracted fields (for text processing)
+  totalAmount?: number;
+  items?: any[];
+  category?: string;
+  description?: string;
 }
 
 interface UseAIProcessingProps {
