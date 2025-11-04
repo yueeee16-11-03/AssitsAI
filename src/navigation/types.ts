@@ -11,7 +11,15 @@ export type RootStackParamList = {
   AIRecommendation: undefined;
   AISetting: undefined;
   FinanceDashboard: undefined;
-  AddTransaction: { defaultType?: 'income' | 'expense' };
+  AddTransaction: { 
+    defaultType?: 'income' | 'expense';
+    processedData?: {
+      rawOCRText?: string;
+      processedText?: string;
+      note?: string;
+      processingTime?: number;
+    };
+  };
   EditTransaction: { transaction: any };
   TransactionHistory: { newTransaction?: any };
   BudgetPlanner: undefined;
@@ -72,7 +80,6 @@ export type RootStackParamList = {
   AIProcessingOverlay: {
     imageUri?: string;
     handwritingText?: string;
-    onConfirm?: (data: any) => void;
   };
   
   // AI Processing Results Screen
@@ -81,7 +88,6 @@ export type RootStackParamList = {
     processedData: any;
     editedData: any;
     selectedItems: number[];
-    onConfirm?: (data: any) => void;
   };
   
   // Gemini Test Screen

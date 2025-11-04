@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "AddTransaction">;
 
 type TransactionType = "expense" | "income";
 
-export default function AddTransactionScreen({ navigation }: Props) {
+export default function AddTransactionScreen({ navigation, route }: Props) {
   // Note state
   const [note, setNote] = useState("");
   const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
@@ -38,7 +38,36 @@ export default function AddTransactionScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
   const [type] = useState<TransactionType>("expense"); // Default type for note-style
+  
+  // 🤖 AI Processing state
+  const [processedText, setProcessedText] = useState<string | null>(null);
+  const [rawOCRText, setRawOCRText] = useState<string | null>(null);
+  const [processingTime, setProcessingTime] = useState<number>(0);
+  
   const { hasPermission, requestPermission } = useCameraPermission();
+
+  // ===== 🎯 PHÉP THUẬT: Bắt processedData từ ResultScreen =====
+  useEffect(() => {
+    if (route.params?.processedData) {
+      const data = route.params.processedData;
+      console.log('✅ [SCREEN] Received processedData from ResultScreen:', data);
+      
+      // TỰ ĐỘNG ĐIỀN VÀO STATE
+      if (data.processedText) setProcessedText(data.processedText);
+      if (data.rawOCRText) setRawOCRText(data.rawOCRText);
+      setProcessingTime(data.processingTime || 0);
+      
+      // Nếu có note, thêm vào
+      if (data.note) {
+        setNote(data.note);
+      }
+      
+      console.log('✅ [SCREEN] AI data has been set to state');
+      
+      // Xóa param để tránh lặp lại
+      navigation.setParams({ processedData: undefined });
+    }
+  }, [route.params?.processedData, navigation]);
 
   // Get dynamic noteInput style based on fontStyle
   const getNoteInputStyle = () => {
@@ -98,15 +127,24 @@ export default function AddTransactionScreen({ navigation }: Props) {
         type,
         description: note || (billImage ? "📸 Ảnh" : ""),  // Default title if image-only
         billImageUri: billImage,
+        // 🤖 AI Processing data
+        processedText: processedText,
+        rawOCRText: rawOCRText,
+        processingTime: processingTime,
+        hasAIProcessing: !!processedText, // true nếu có AI processed data
       };
+
+      console.log('📝 [SCREEN] handleSave - formData:', formData);
 
       const transactionObj = TransactionService.createTransactionObject(formData);
       
-      console.log('💾 [SCREEN] Saving transaction:', transactionObj);
+      console.log('💾 [SCREEN] transactionObj created:', transactionObj);
 
       // Use Store to add transaction (which uses Service internally)
       const addTransaction = useTransactionStore.getState().addTransaction;
       await addTransaction(transactionObj);
+
+      console.log('💾 [SCREEN] Transaction saved to Firebase successfully');
 
       Alert.alert("Thành công", "Đã lưu ghi chú", [
         {
@@ -115,13 +153,16 @@ export default function AddTransactionScreen({ navigation }: Props) {
             // Reset form
             setNote("");
             setBillImage(null);
-            // Go back to FinanceDashboard
-            navigation.goBack();
+            setProcessedText(null);
+            setRawOCRText(null);
+            setProcessingTime(0);
+            // ✅ Navigate trực tiếp về FinanceDashboard (không dùng goBack hoặc popToTop)
+            navigation.navigate("FinanceDashboard");
           },
         },
       ]);
     } catch (error) {
-      console.error("❌ Error saving transaction:", error);
+      console.error("❌ [SCREEN] Error saving transaction:", error);
       Alert.alert("Lỗi", error instanceof Error ? error.message : "Không thể lưu. Vui lòng thử lại");
     } finally {
       setIsLoading(false);
@@ -242,18 +283,6 @@ export default function AddTransactionScreen({ navigation }: Props) {
                   if (note.trim()) {
                     navigation.navigate("AIProcessingOverlay", {
                       handwritingText: note,
-                      onConfirm: (processedData: any) => {
-                        if (processedData.items && processedData.items.length > 0) {
-                          const summary = processedData.items
-                            .map((item: any) => `${item.name}: ${item.amount.toLocaleString("vi-VN")} VND`)
-                            .join("\n");
-                          setNote(summary);
-                          Alert.alert(
-                            "Thành công",
-                            `Ghi chú đã được xử lý. Tổng: ${processedData.totalAmount?.toLocaleString("vi-VN")} VND`
-                          );
-                        }
-                      },
                     });
                   } else {
                     Alert.alert("Lỗi", "Vui lòng nhập ghi chú trước");
@@ -279,6 +308,37 @@ export default function AddTransactionScreen({ navigation }: Props) {
                 >
                   <Text style={styles.billRemoveButtonText}>✕</Text>
                 </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* 🤖 Display AI Processed Data */}
+          {processedText && (
+            <View style={styles.section}>
+              <View style={styles.aiProcessedSection}>
+                <View style={styles.aiProcessedHeader}>
+                  <Text style={styles.aiProcessedTitle}>🤖 Dữ liệu AI đã xử lý</Text>
+                  <Text style={styles.aiProcessedTime}>⏱️ {processingTime}ms</Text>
+                </View>
+                
+                <View style={styles.aiProcessedBox}>
+                  <Text style={styles.aiProcessedText}>{processedText}</Text>
+                </View>
+
+                <View style={styles.aiDataIndicators}>
+                  <View style={styles.indicator}>
+                    <Text style={styles.indicatorIcon}>✓</Text>
+                    <Text style={styles.indicatorText}>OCR Text</Text>
+                  </View>
+                  <View style={styles.indicator}>
+                    <Text style={styles.indicatorIcon}>✓</Text>
+                    <Text style={styles.indicatorText}>AI Processed</Text>
+                  </View>
+                  <View style={styles.indicator}>
+                    <Text style={styles.indicatorIcon}>✓</Text>
+                    <Text style={styles.indicatorText}>Ready to Save</Text>
+                  </View>
+                </View>
               </View>
             </View>
           )}
@@ -313,25 +373,14 @@ export default function AddTransactionScreen({ navigation }: Props) {
       >
         <CameraScreen
           onCapture={(imageUri: string) => {
+            console.log('📷 [SCREEN] Image captured:', imageUri);
             setBillImage(imageUri);
             setIsCameraOpen(false);
-            // Navigate to AI Processing Overlay
+            
+            // ✅ Navigate to AI Processing Overlay
+            // NO callback needed anymore - ResultScreen will navigate directly
             navigation.navigate("AIProcessingOverlay", {
               imageUri,
-              onConfirm: (processedData: any) => {
-                // Handle the processed data from overlay
-                if (processedData.items && processedData.items.length > 0) {
-                  // Extract first item as primary transaction
-                  const firstItem = processedData.items[0];
-                  setNote(
-                    `${firstItem.name}\n${processedData.note || ""}`.trim()
-                  );
-                  Alert.alert(
-                    "Thành công",
-                    `Ảnh đã được xử lý bằng AI. Tổng: ${processedData.totalAmount?.toLocaleString("vi-VN")} VND`
-                  );
-                }
-              },
             });
           }}
           onClose={() => setIsCameraOpen(false)}
@@ -1513,5 +1562,70 @@ const styles = StyleSheet.create({
   },
   emptySpace: {
     width: 50,
+  },
+
+  // 🤖 AI Processed Data Styles
+  aiProcessedSection: {
+    backgroundColor: "#E3F2FD",
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#2196F3",
+    shadowColor: "#2196F3",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  aiProcessedHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  aiProcessedTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1976D2",
+  },
+  aiProcessedTime: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0288D1",
+  },
+  aiProcessedBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(33, 150, 243, 0.2)",
+  },
+  aiProcessedText: {
+    fontSize: 13,
+    color: "#1F2937",
+    lineHeight: 20,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
+  aiDataIndicators: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(33, 150, 243, 0.1)",
+  },
+  indicator: {
+    alignItems: "center",
+    gap: 4,
+  },
+  indicatorIcon: {
+    fontSize: 16,
+    color: "#4CAF50",
+    fontWeight: "700",
+  },
+  indicatorText: {
+    fontSize: 11,
+    color: "#00796B",
+    fontWeight: "600",
   },
 });

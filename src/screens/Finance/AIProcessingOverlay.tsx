@@ -10,44 +10,20 @@ import AIProcessingResultsScreen from "./AIProcessingResultsScreen";
 type Props = NativeStackScreenProps<RootStackParamList, "AIProcessingOverlay">;
 
 export default function AIProcessingOverlay({ route, navigation }: Props) {
-  const { imageUri, handwritingText, onConfirm } = route.params;
+  // ✅ SimpleFlow: Không cần onConfirm callback nữa
+  const { imageUri } = route.params;
   const {
     isProcessing,
-    processedData,
     editedData,
     error,
-    selectedItems,
     processData,
     setError,
-  } = useAIProcessing({ imageUri, handwritingText });
+  } = useAIProcessing({ imageUri, enableGeminiProcessing: true });
 
   // Start processing on component mount
   useEffect(() => {
     processData();
   }, [processData]);
-
-  const handleConfirm = () => {
-    if (!editedData || !editedData.items || editedData.items.length === 0) {
-      Alert.alert("Lỗi", "Vui lòng chọn ít nhất một mục");
-      return;
-    }
-
-    const selectedItemsData =
-      selectedItems.length > 0
-        ? selectedItems.map((i) => editedData.items![i])
-        : editedData.items;
-
-    const result = {
-      items: selectedItemsData,
-      totalAmount: selectedItemsData.reduce((sum, item) => sum + item.amount, 0),
-      date: editedData.date,
-      note: editedData.note,
-      confidence: editedData.confidence,
-    };
-
-    onConfirm?.(result);
-    navigation.goBack();
-  };
 
   const handleCancel = () => {
     Alert.alert("Huỷ xử lý", "Bạn có chắc muốn huỷ?", [
@@ -82,13 +58,10 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
       route={{
         params: {
           imageUri,
-          processedData,
           editedData,
-          selectedItems,
-          onConfirm: handleConfirm,
         },
       } as any}
       navigation={navigation as any}
     />
   );
-}
+};

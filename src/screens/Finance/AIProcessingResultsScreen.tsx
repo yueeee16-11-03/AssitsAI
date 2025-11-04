@@ -29,7 +29,6 @@ export default function AIProcessingResultsScreen({
   const {
     imageUri,
     editedData,
-    onConfirm,
   } = route.params;
 
   const [editedDataState] = useState<ProcessedData | null>(editedData);
@@ -40,14 +39,21 @@ export default function AIProcessingResultsScreen({
       return;
     }
 
-    const result = {
-      rawText: editedDataState.rawText,
+    // ✅ Chuẩn bị dữ liệu để gửi về
+    const processedData = {
+      rawOCRText: editedDataState.rawText,
+      processedText: editedDataState.processedText,
       note: editedDataState.note,
+      processingTime: editedDataState.processingTime || 0,
     };
 
-    console.log('✅ [RESULT_SCREEN] User confirmed OCR data:', result);
-    onConfirm?.(result);
-    navigation.goBack();
+    console.log('✅ [RESULT_SCREEN] Confirming with data:', processedData);
+    
+    // ✅ KHÔNG GỌI CALLBACK - Thay vào đó, navigate trực tiếp về AddTransactionScreen
+    // và GỬI DỮ LIỆU VÀ PARAMS
+    navigation.navigate('AddTransaction', {
+      processedData: processedData,
+    });
   };
 
   return (

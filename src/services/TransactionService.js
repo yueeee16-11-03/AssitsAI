@@ -1,5 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import AIDataParserService from './AIDataParserService';
 
 /**
  * TransactionService: Xử lý tất cả logic CRUD cho giao dịch
@@ -9,6 +10,19 @@ import auth from '@react-native-firebase/auth';
  */
 
 class TransactionService {
+
+  /**
+   * HELPER: Xóa tất cả field undefined (Firestore không chấp nhận)
+   * ✅ PHIÊN BẢN SỬA LỖI: Dùng JSON.stringify để xóa cả 'undefined' lồng bên trong.
+   */
+  _cleanData(obj) {
+    if (obj === undefined) {
+      return null; // Xử lý trường hợp chính obj là undefined
+    }
+    // Mẹo: JSON.stringify sẽ TỰ ĐỘNG loại bỏ tất cả các khóa có giá trị undefined
+    // JSON.parse sẽ biến nó trở lại thành một object sạch
+    return JSON.parse(JSON.stringify(obj));
+  }
 
   /**
    * --------------------------------------------------------------------
@@ -83,13 +97,17 @@ class TransactionService {
       this._validateTransactionData(transactionData); 
 
       // Step 2: Chuẩn bị dữ liệu
-      const dataToSave = {
+      let dataToSave = {
         ...transactionData,
         userId: currentUser.uid,
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
         isDeleted: false,
       };
+      
+      // ✅ CLEAN DATA: Xóa tất cả field undefined trước khi lưu
+      dataToSave = this._cleanData(dataToSave);
+      console.log('✅ [SERVICE] Cleaned data:', dataToSave);
 
       // Step 3: Lưu vào Firestore
       const docRef = await this._getCollectionRef().add(dataToSave);
@@ -273,7 +291,19 @@ class TransactionService {
     console.log('🔧 [SERVICE] Creating transaction object from form data:', formData);
     
     try {
-      const { type, amount, categoryId, categoryName, description, billImageUri } = formData;
+      const { 
+        type, 
+        amount, 
+        categoryId, 
+        categoryName, 
+        description, 
+        billImageUri,
+        // 🤖 AI Processing fields
+        processedText,
+        rawOCRText,
+        processingTime,
+        hasAIProcessing,
+      } = formData;
       
       if (!type || (type !== 'expense' && type !== 'income')) {
         throw new Error('❌ Invalid transaction type');
@@ -293,9 +323,21 @@ class TransactionService {
       const hours = now.getHours();
       const minutes = now.getMinutes();
 
+      // 🤖 Parse AI data if available
+      let aiParsedData = null;
+      if (processedText && processedText.trim()) {
+        try {
+          aiParsedData = AIDataParserService.parseAIResult(processedText);
+          console.log('✅ [SERVICE] Parsed AI data:', aiParsedData);
+        } catch (parseError) {
+          console.warn('⚠️ [SERVICE] Could not parse AI data:', parseError);
+          // Don't fail, just keep aiParsedData null
+        }
+      }
+
       const transaction = {
         type,
-        amount: amount ? parseInt(amount, 10) : 0,  // Default 0 for note-only
+        amount: amount ? parseInt(amount, 10) : (aiParsedData?.totalAmount || 0),  // Use AI amount if available
         description: description.trim(),
         category: categoryName || '📝 Ghi chú',      // Default category for note-only
         categoryId: categoryId || 'note-only',       // Default categoryId for note-only
@@ -303,10 +345,16 @@ class TransactionService {
         time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
         billImageUri: billImageUri || null,
         createdAt: firestore.Timestamp.fromDate(now),
+        // 🤖 AI Processing fields - ✅ LUÔN dùng null thay vì undefined
+        processedText: processedText || null,
+        rawOCRText: rawOCRText || null,
+        aiParsedData: aiParsedData || null,  // ✅ Thêm || null để tránh undefined
+        hasAIProcessing: !!hasAIProcessing,
+        processingTime: processingTime || 0,
         // Lưu ý: Không thêm 'id' ở đây
       };
 
-      console.log('✅ [SERVICE] Transaction object created successfully');
+      console.log('✅ [SERVICE] Transaction object created successfully:', transaction);
       return transaction;
     } catch (error) {
       console.error('❌ [SERVICE] Error creating transaction object:', error.message);
