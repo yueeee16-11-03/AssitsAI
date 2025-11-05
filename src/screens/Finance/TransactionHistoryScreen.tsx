@@ -151,6 +151,22 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
     transactions
   ) as Record<string, Transaction[]>;
   
+  // 🎯 Tính tổng thu nhập, chi tiêu, balance từ tất cả transactions
+  const totalIncome = transactions
+    .filter((t: Transaction) => t.type === 'income')
+    .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0);
+  
+  const totalExpense = transactions
+    .filter((t: Transaction) => t.type === 'expense')
+    .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0);
+  
+  const balance = totalIncome - totalExpense;
+  const savingRate = totalIncome > 0 
+    ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1)
+    : '0.0';
+
+  console.log(`📊 [HISTORY-CALC] Total: Income=${totalIncome}, Expense=${totalExpense}, Balance=${balance}, SavingRate=${savingRate}%`);
+  
   // 🔧 SỬA LỖI 1: Sắp xếp dateKeys + LOGGING CHI TIẾT
   const dateKeys: string[] = Object.keys(groupedTransactions).sort((a, b) => {
     const transactionsA = groupedTransactions[a] || [];
@@ -469,17 +485,42 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
         
       /* FlatList (Giữ nguyên) */
       ) : (
-        <FlatList
-          data={dateKeys}
-          renderItem={renderDateSection}
-          keyExtractor={(item) => item}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          scrollEnabled={true}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        <View style={styles.fullContainer}>
+          {/* Summary Stats Header */}
+          <View style={styles.summaryStatsHeader}>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>💰 Tổng thu nhập</Text>
+              <Text style={styles.statValueIncome}>₫{totalIncome.toLocaleString('vi-VN')}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>💸 Tổng chi tiêu</Text>
+              <Text style={styles.statValueExpense}>₫{totalExpense.toLocaleString('vi-VN')}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>📊 Số dư</Text>
+              <Text style={[styles.statValue, balance >= 0 ? styles.statValueGreen : styles.statValueRed]}>
+                ₫{balance.toLocaleString('vi-VN')}
+              </Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>✓ Tiết kiệm</Text>
+              <Text style={styles.statValuePercent}>{savingRate}%</Text>
+            </View>
+          </View>
+
+          {/* Transaction List */}
+          <FlatList
+            data={dateKeys}
+            renderItem={renderDateSection}
+            keyExtractor={(item) => item}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            scrollEnabled={true}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
       )}
 
       {/* Floating Add Button (Giữ nguyên) */}
@@ -712,5 +753,62 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     lineHeight: 32,
+  },
+
+  /* 🎨 [NEW] Summary Stats Header */
+  fullContainer: {
+    flex: 1,
+  },
+  summaryStatsHeader: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0, 137, 123, 0.1)",
+  },
+  statBox: {
+    flex: 1,
+    minWidth: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 137, 123, 0.15)",
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#666666",
+    marginBottom: 6,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#00796B",
+  },
+  statValueIncome: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#10B981",
+  },
+  statValueExpense: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#EF4444",
+  },
+  statValuePercent: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#F59E0B",
+  },
+  statValueGreen: {
+    color: "#10B981",
+  },
+  statValueRed: {
+    color: "#EF4444",
   },
 });

@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { OCRService } from "../services/OCRService";
-import { processOCRTextWithGemini } from "../services/GeminiAIService";
+import { processOCRTextWithGemini, extractDescriptionFromProcessedText, extractAmountFromProcessedText } from "../services/GeminiAIService";
 
 export interface ProcessedData {
   rawText?: string;
@@ -13,6 +13,7 @@ export interface ProcessedData {
   items?: any[];
   category?: string;
   description?: string;
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 interface UseAIProcessingProps {
@@ -86,7 +87,12 @@ export const useAIProcessing = ({
         if (geminiResult.success) {
           console.log('✅ [OCR_PROCESSOR] Gemini processing completed');
           processingResult.processedText = geminiResult.processedText;
+          // 🔥 Extract short description từ processed text thay vì lưu toàn bộ
+          processingResult.description = extractDescriptionFromProcessedText(geminiResult.processedText);
+          // 💰 Extract amount từ processed text
+          processingResult.totalAmount = extractAmountFromProcessedText(geminiResult.processedText);
           processingResult.processingTime = (processingResult.processingTime || 0) + geminiResult.processingTime;
+          console.log('💰 [OCR_PROCESSOR] Extracted amount:', processingResult.totalAmount);
         } else {
           console.warn('⚠️ [OCR_PROCESSOR] Gemini processing failed:', geminiResult.error);
           // Tiếp tục dù Gemini failed, vẫn có rawText

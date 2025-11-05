@@ -19,7 +19,9 @@ import type { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
 import { launchImageLibrary } from "react-native-image-picker";
 import TransactionService from "../../services/TransactionService";
+import TextAIProcessingService from "../../services/TextAIProcessingService";
 import { useTransactionStore } from "../../store/transactionStore";
+import { analyzeTransactionsWithAI } from '../../services/AIInsightService';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddTransaction">;
 
@@ -146,21 +148,44 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
     setIsLoading(true);
 
     try {
+      // 🤖 AUTO-PROCESS: Nếu có note nhưng chưa xử lý AI, tự động process
+      let finalAiTotalAmount = aiTotalAmount;
+      let finalAiItems = aiItems;
+      let finalAiCategory = aiCategory;
+      let finalAiDescription = aiDescription;
+
+      if (hasNote && !processedText && !aiTotalAmount) {
+        console.log('🤖 [SCREEN] Auto-processing note with TextAIProcessingService...');
+        try {
+          const aiResult = await TextAIProcessingService.processTextNote(note, type);
+          console.log('✅ [SCREEN] AI processing completed:', aiResult);
+          
+          finalAiTotalAmount = aiResult.totalAmount;
+          finalAiItems = aiResult.items || [];
+          finalAiCategory = aiResult.category;
+          finalAiDescription = aiResult.description;
+        } catch (aiError) {
+          console.warn('⚠️ [SCREEN] AI processing failed, continuing with basic note:', aiError);
+          // Tiếp tục mà không fail - user có thể save note mà không cần AI
+        }
+      }
+
       // 🟢 NẾU CÓ AI DATA, DÙNG AI DATA (totalAmount, category)
       // 🟡 NẾU KHÔNG CÓ, DÙNG DESCRIPTION TỪ NOTE
       const formData = {
         type,
-        description: aiDescription || note || (billImage ? "📸 Ảnh" : ""),
+        description: finalAiDescription || note || (billImage ? "📸 Ảnh" : ""),  // ✅ Ưu tiên aiDescription
         billImageUri: billImage,
         // 🤖 AI Extracted data - HIGH PRIORITY
-        amount: aiTotalAmount, // ✨ Lấy từ Gemini
-        category: aiCategory, // ✨ Lấy từ Gemini
-        items: aiItems, // ✨ Items breakdown
+        amount: finalAiTotalAmount, // ✨ Lấy từ AI
+        category: finalAiCategory, // ✨ Lấy từ AI
+        items: finalAiItems, // ✨ Items breakdown
+        totalAmount: finalAiTotalAmount,
         // OCR Processing metadata
         processedText: processedText,
         rawOCRText: rawOCRText,
         processingTime: processingTime,
-        hasAIProcessing: !!processedText || !!aiTotalAmount,
+        hasAIProcessing: !!processedText || !!finalAiTotalAmount,
       };
 
       console.log('📝 [SCREEN] handleSave - formData with AI data:', formData);
@@ -172,6 +197,18 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       // Use Store to add transaction (which uses Service internally)
       const addTransaction = useTransactionStore.getState().addTransaction;
       await addTransaction(transactionObj);
+
+      try {
+        // After saving, fetch current transactions from store and call AI analysis
+        const currentTx = useTransactionStore.getState().transactions || [];
+        console.log('🔎 [SCREEN] Calling AIInsightService with', currentTx.length, 'transactions');
+        const aiResult = await analyzeTransactionsWithAI(currentTx, { periodLabel: 'recent' });
+        console.log('🤖 [SCREEN] AIInsightService result:', aiResult);
+        // Optionally navigate to AIInsight screen and pass aiResult for display
+        // navigation.navigate('AIInsight', { aiResult });
+      } catch (aiErr) {
+        console.warn('⚠️ [SCREEN] AI analysis failed after save:', aiErr);
+      }
 
       console.log('💾 [SCREEN] Transaction saved to Firebase successfully');
 

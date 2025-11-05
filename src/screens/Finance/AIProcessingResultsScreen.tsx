@@ -10,10 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import type { ProcessedData } from "../../hooks/useAIProcessing";
+import TransactionService from "../../services/TransactionService";
+import { useTransactionStore } from "../../store/transactionStore";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -33,6 +36,7 @@ export default function AIProcessingResultsScreen({
   } = route.params;
 
   const [editedDataState] = useState<ProcessedData | null>(editedData);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
 
   const handleConfirm = () => {
     // 🟢 VALIDATION: Cho phép cả TEXT (rawText) và IMAGE (processedText)
@@ -47,12 +51,13 @@ export default function AIProcessingResultsScreen({
 
     // ✅ Chuẩn bị dữ liệu để gửi về (bao gồm cả amount, items, category từ AI)
     const processedData = {
+      note: editedDataState.description || editedDataState.rawText, // 🟢 Gửi note để AddTransactionScreen dùng
       rawOCRText: editedDataState.rawText,
       processedText: editedDataState.processedText,
       totalAmount: editedDataState.totalAmount || 0,
       items: editedDataState.items || [],
       category: editedDataState.category,
-      description: editedDataState.description,
+      description: editedDataState.description, // 🟢 Gửi description để AddTransactionScreen dùng
       processingTime: editedDataState.processingTime || 0,
     };
 
@@ -66,6 +71,54 @@ export default function AIProcessingResultsScreen({
     navigation.navigate(screenName, {
       processedData: processedData,
     });
+  };
+
+  // 🟢 AUTO-SAVE: Tự động lưu transaction mà không cần quay về AddTransactionScreen
+  const handleAutoSave = async () => {
+    if (!editedDataState) {
+      Alert.alert("Lỗi", "Không có dữ liệu để lưu");
+      return;
+    }
+
+    setIsAutoSaving(true);
+    try {
+      const formData = {
+        type: transactionType,
+        description: editedDataState.description || editedDataState.rawText || "📝 Ghi chú từ AI",
+        billImageUri: null,
+        amount: editedDataState.totalAmount || 0,
+        category: editedDataState.category || "📝 Ghi chú",
+        items: editedDataState.items || [],
+        totalAmount: editedDataState.totalAmount || 0,
+        processedText: editedDataState.processedText,
+        rawOCRText: editedDataState.rawText,
+        processingTime: editedDataState.processingTime || 0,
+        hasAIProcessing: true,
+      };
+
+      console.log('💾 [RESULT_SCREEN] Auto-saving with formData:', formData);
+
+      const transactionObj = TransactionService.createTransactionObject(formData);
+      const addTransaction = useTransactionStore.getState().addTransaction;
+      await addTransaction(transactionObj);
+
+      console.log('💾 [RESULT_SCREEN] Transaction auto-saved successfully');
+
+      Alert.alert("Thành công", "Đã lưu giao dịch", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Quay về FinanceDashboard
+            navigation.navigate("FinanceDashboard");
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("❌ [RESULT_SCREEN] Error saving transaction:", error);
+      Alert.alert("Lỗi", error instanceof Error ? error.message : "Không thể lưu. Vui lòng thử lại");
+    } finally {
+      setIsAutoSaving(false);
+    }
   };
 
   return (
@@ -109,13 +162,61 @@ export default function AIProcessingResultsScreen({
             editedDataState?.processedText ? (
               <View style={styles.processedTextSection}>
                 <View style={styles.processedTextHeader}>
-                  <Text style={styles.processedTextTitle}>Thông tin giao dịch</Text>
+                  <Text style={styles.processedTextTitle}>🤖 Thông tin giao dịch</Text>
                 </View>
                 
-                <View style={styles.processedTextBox}>
-                  <Text style={styles.processedText}>
-                    {editedDataState.processedText}
-                  </Text>
+                {/* Display formatted AI data (not raw JSON) */}
+                <View style={styles.aiDataContainer}>
+                  {/* Total Amount */}
+                  {editedDataState.totalAmount !== undefined && editedDataState.totalAmount > 0 && (
+                    <View style={styles.aiDataRow}>
+                      <Text style={styles.aiDataLabel}>💰 Tổng tiền:</Text>
+                      <Text style={styles.aiDataValue}>
+                        ₫ {editedDataState.totalAmount.toLocaleString("vi-VN")}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Category */}
+                  {editedDataState.category && (
+                    <View style={styles.aiDataRow}>
+                      <Text style={styles.aiDataLabel}>📦 Danh mục:</Text>
+                      <Text style={styles.aiDataValue}>{editedDataState.category}</Text>
+                    </View>
+                  )}
+
+                  {/* Description */}
+                  {editedDataState.description && (
+                    <View style={styles.aiDataRow}>
+                      <Text style={styles.aiDataLabel}>📝 Mô tả:</Text>
+                      <Text style={styles.aiDataValue}>{editedDataState.description}</Text>
+                    </View>
+                  )}
+
+                  {/* Items Breakdown */}
+                  {editedDataState.items && editedDataState.items.length > 0 && (
+                    <View style={styles.itemsBreakdownSection}>
+                      <Text style={styles.itemsBreakdownTitle}>📋 Chi tiết các mục:</Text>
+                      {editedDataState.items.map((item: any, index: number) => (
+                        <View key={index} style={styles.itemBreakdownRow}>
+                          <Text style={styles.itemBreakdownName}>• {item.item}</Text>
+                          <Text style={styles.itemBreakdownAmount}>
+                            {item.amount?.toLocaleString("vi-VN") || "0"} ₫
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Confidence */}
+                  {editedDataState.confidence && (
+                    <View style={styles.confidenceRow}>
+                      <Text style={styles.aiDataLabel}>✓ Độ chắc chắn:</Text>
+                      <Text style={[styles.aiDataValue, styles.confidenceBadge]}>
+                        {editedDataState.confidence === 'high' ? '✓ Cao' : editedDataState.confidence === 'medium' ? '≈ Trung bình' : '? Thấp'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 <Text style={styles.processingTimeInfo}>
@@ -152,14 +253,29 @@ export default function AIProcessingResultsScreen({
                 { text: "Có", onPress: () => navigation.goBack() },
               ]);
             }}
+            disabled={isAutoSaving}
           >
             <Text style={styles.cancelButtonText}>Huỷ</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity
-            style={styles.confirmButton}
+            style={styles.editButton}
             onPress={handleConfirm}
+            disabled={isAutoSaving}
           >
-            <Text style={styles.confirmButtonText}>✓ Xác nhận & Lưu</Text>
+            <Text style={styles.editButtonText}>✏️ Chỉnh sửa</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.confirmButton, isAutoSaving && styles.confirmButtonDisabled]}
+            onPress={handleAutoSave}
+            disabled={isAutoSaving}
+          >
+            {isAutoSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.confirmButtonText}>✓ Lưu ngay</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -259,6 +375,78 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1E40AF",
   },
+  aiDataContainer: {
+    backgroundColor: "rgba(59, 130, 246, 0.05)",
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: "#3B82F6",
+    marginBottom: 10,
+  },
+  aiDataRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(59, 130, 246, 0.1)",
+  },
+  aiDataLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0284C7",
+    flex: 1,
+  },
+  aiDataValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F2937",
+    flex: 1.5,
+    textAlign: "right",
+  },
+  itemsBreakdownSection: {
+    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  itemsBreakdownTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6366F1",
+    marginBottom: 8,
+  },
+  itemBreakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  itemBreakdownName: {
+    fontSize: 12,
+    color: "#555555",
+    flex: 1,
+  },
+  itemBreakdownAmount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#00796B",
+  },
+  confidenceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 8,
+  },
+  confidenceBadge: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    color: "#10B981",
+  },
   processedTextBox: {
     backgroundColor: "rgba(59, 130, 246, 0.05)",
     borderRadius: 8,
@@ -334,6 +522,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#00796B",
   },
+  editButton: {
+    flex: 1,
+    backgroundColor: "#FFA500",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
   confirmButton: {
     flex: 1,
     backgroundColor: "#00897B",
@@ -341,6 +542,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  confirmButtonDisabled: {
+    opacity: 0.6,
   },
   confirmButtonText: {
     fontSize: 14,

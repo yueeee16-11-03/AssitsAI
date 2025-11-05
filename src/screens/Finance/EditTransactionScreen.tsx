@@ -254,19 +254,73 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
           <View style={styles.section}>
             <Text style={styles.infoLabel}>📋 Thông tin gốc</Text>
             <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                {transaction.type === "expense" ? "💸 Chi tiêu" : "💰 Thu nhập"}
-              </Text>
-              {transaction.amount > 0 && (
-                <Text style={styles.infoAmount}>
-                  ₫ {transaction.amount.toLocaleString("vi-VN")}
+              <View style={styles.aiItemRow}>
+                <Text style={styles.aiItemLabel}>Loại giao dịch:</Text>
+                <Text style={styles.aiItemValue}>
+                  {transaction.type === "expense" ? "💸 Chi tiêu" : "💰 Thu nhập"}
                 </Text>
+              </View>
+              {transaction.amount > 0 && (
+                <View style={styles.aiItemRow}>
+                  <Text style={styles.aiItemLabel}>Số tiền:</Text>
+                  <Text style={styles.aiItemValue}>
+                    ₫ {transaction.amount.toLocaleString("vi-VN")}
+                  </Text>
+                </View>
               )}
-              <Text style={styles.infoDate}>
-                {new Date(transaction.createdAt?.toDate?.() || transaction.createdAt).toLocaleDateString("vi-VN")}
-              </Text>
+              {transaction.category && (
+                <View style={styles.aiItemRow}>
+                  <Text style={styles.aiItemLabel}>Danh mục:</Text>
+                  <Text style={styles.aiItemValue}>{transaction.category}</Text>
+                </View>
+              )}
+              <View style={styles.aiItemRowLast}>
+                <Text style={styles.aiItemLabel}>Ngày:</Text>
+                <Text style={styles.aiItemValue}>
+                  {new Date(transaction.createdAt?.toDate?.() || transaction.createdAt).toLocaleDateString("vi-VN")}
+                </Text>
+              </View>
             </View>
           </View>
+
+          {/* AI Extracted Data */}
+          {(transaction.totalAmount !== undefined || transaction.items?.length > 0 || transaction.category) && (
+            <View style={styles.section}>
+              <Text style={styles.infoLabel}>🤖 Thông tin xử lý AI</Text>
+              <View style={styles.aiSection}>
+                {transaction.totalAmount !== undefined && transaction.totalAmount > 0 && (
+                  <View style={styles.aiItemRow}>
+                    <Text style={styles.aiItemLabel}>💰 Tổng tiền (AI):</Text>
+                    <Text style={styles.aiItemValue}>
+                      ₫ {transaction.totalAmount.toLocaleString("vi-VN")}
+                    </Text>
+                  </View>
+                )}
+                
+                {transaction.category && (
+                  <View style={styles.aiItemRow}>
+                    <Text style={styles.aiItemLabel}>📦 Danh mục (AI):</Text>
+                    <Text style={styles.aiItemValue}>{transaction.category}</Text>
+                  </View>
+                )}
+
+                {/* Items Breakdown */}
+                {transaction.items && transaction.items.length > 0 && (
+                  <View style={styles.itemsBreakdown}>
+                    <Text style={styles.itemsTitle}>📋 Chi tiết các mục:</Text>
+                    {transaction.items.map((item: any, index: number) => (
+                      <View key={index} style={styles.itemRow}>
+                        <Text style={styles.itemName}>• {item.item}</Text>
+                        <Text style={styles.itemAmount}>
+                          {item.amount?.toLocaleString("vi-VN") || "0"} ₫
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Delete & Save Buttons */}
           <View style={styles.buttonContainer}>
@@ -458,7 +512,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E27" },
+  container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -477,13 +531,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#fff" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  backIcon: { fontSize: 20, color: "#00897B" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
   voiceButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0, 137, 123, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -502,7 +556,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "rgba(255,255,255,0.8)",
+    color: "#00796B",
   },
   fontSizeControl: {
     flexDirection: "row",
@@ -512,26 +566,26 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0, 137, 123, 0.06)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0, 137, 123, 0.15)",
   },
   fontButtonActive: {
     backgroundColor: "#6366F1",
     borderColor: "#6366F1",
   },
-  fontButtonSmall: { fontSize: 12, fontWeight: "700", color: "#fff" },
-  fontButtonMedium: { fontSize: 14, fontWeight: "700", color: "#fff" },
-  fontButtonLarge: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  fontButtonSmall: { fontSize: 12, fontWeight: "700", color: "#00796B" },
+  fontButtonMedium: { fontSize: 14, fontWeight: "700", color: "#00796B" },
+  fontButtonLarge: { fontSize: 16, fontWeight: "700", color: "#00796B" },
   noteInput: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(0, 137, 123, 0.06)",
     borderRadius: 16,
     padding: 16,
-    color: "#fff",
+    color: "#00796B",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0, 137, 123, 0.15)",
     textAlignVertical: "top",
     minHeight: 120,
   },
@@ -542,19 +596,19 @@ const styles = StyleSheet.create({
   },
   toolbarButton: {
     flex: 1,
-    backgroundColor: "rgba(99,102,241,0.2)",
+    backgroundColor: "rgba(0, 137, 123, 0.06)",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(99,102,241,0.3)",
+    borderColor: "rgba(0, 137, 123, 0.15)",
   },
   toolbarIcon: { fontSize: 20 },
   billImageContainer: {
     position: "relative",
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(0, 137, 123, 0.06)",
   },
   billImage: {
     width: "100%",
@@ -578,33 +632,99 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 8,
+    color: "#00796B",
+    marginBottom: 12,
   },
   infoBox: {
-    backgroundColor: "rgba(99,102,241,0.1)",
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(99,102,241,0.2)",
+    borderColor: "rgba(0, 137, 123, 0.15)",
   },
   infoText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#6366F1",
+    color: "#00796B",
     marginBottom: 4,
   },
   infoAmount: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
-    color: "#fff",
+    color: "#00796B",
     marginBottom: 4,
   },
   infoDate: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    color: "#999999",
+  },
+  aiSection: {
+    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(99, 102, 241, 0.2)",
+  },
+  aiTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6366F1",
+    marginBottom: 12,
+  },
+  aiItemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(99, 102, 241, 0.1)",
+  },
+  aiItemRowLast: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 0,
+  },
+  aiItemLabel: {
+    fontSize: 12,
+    color: "#666666",
+  },
+  aiItemValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#00796B",
+  },
+  itemsBreakdown: {
+    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+  },
+  itemsTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6366F1",
+    marginBottom: 8,
+  },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  itemName: {
+    fontSize: 12,
+    color: "#555555",
+  },
+  itemAmount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#00796B",
   },
   buttonContainer: {
     gap: 12,
@@ -632,7 +752,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saveButtonDefault: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "#00897B",
   },
   saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   saveButtonIcon: { color: "#fff", fontSize: 18, fontWeight: "700" },

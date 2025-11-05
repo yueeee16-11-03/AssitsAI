@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,18 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+
+import { useTransactionStore } from "../../store/transactionStore";
+import { analyzeTransactionsWithAI } from "../../services/AIInsightService";
+import { useHabitStore } from "../../store/habitStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AIInsight">;
 
+const PALETTE = ["#EC4899", "#8B5CF6", "#6366F1", "#10B981", "#F59E0B", "#EF4444", "#06B6D4"];
+
 export default function AIInsightScreen({ navigation }: Props) {
-  const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "year">("month");
+  const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
   const [fadeAnim] = useState(new Animated.Value(0));
 
   React.useEffect(() => {
@@ -24,19 +30,189 @@ export default function AIInsightScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const spendingData = [
-    { category: "Ăn uống", amount: 4500000, percent: 35, color: "#EC4899" },
-    { category: "Di chuyển", amount: 2000000, percent: 15, color: "#8B5CF6" },
-    { category: "Mua sắm", amount: 3200000, percent: 25, color: "#6366F1" },
-    { category: "Giải trí", amount: 1800000, percent: 14, color: "#10B981" },
-    { category: "Khác", amount: 1400000, percent: 11, color: "#F59E0B" },
-  ];
+  const transactions = useTransactionStore((s: any) => s.transactions);
+  const getFinancialDataByPeriod = useTransactionStore((s: any) => s.getFinancialDataByPeriod);
+  const habitsRaw = useHabitStore((s: any) => s.habits);
 
-  const habits = [
-    { name: "Uống nước", streak: 7, progress: 85, icon: "💧" },
-    { name: "Tập thể dục", streak: 5, progress: 70, icon: "🏃" },
-    { name: "Đọc sách", streak: 3, progress: 45, icon: "📚" },
-  ];
+  const financial = useMemo(() => {
+    try {
+      return getFinancialDataByPeriod(selectedPeriod);
+    } catch {
+      return { totalIncome: 0, totalExpense: 0, balance: 0, savingRate: '0.0', transactionCount: 0 };
+    }
+  }, [getFinancialDataByPeriod, selectedPeriod]);
+
+  // AI analysis state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<any | null>(null);
+
+  // Call AI analysis whenever transactions or selectedPeriod change
+  React.useEffect(() => {
+    let mounted = true;
+    // Debounce to avoid rapid calls
+    const timer = setTimeout(() => {
+      (async () => {
+        try {
+          if (!transactions || transactions.length === 0) {
+            setAiResult(null);
+            return;
+          }
+          setAiLoading(true);
+          setAiError(null);
+          // compute explicit startDate/endDate for the selected period so AI gets exact range
+          const now = new Date();
+          let startDate: Date | null = null;
+          let endDate: Date | null = null;
+          switch (selectedPeriod) {
+            case 'day': {
+              startDate = new Date(now);
+              startDate.setHours(0, 0, 0, 0);
+              endDate = new Date(startDate);
+              endDate.setHours(23, 59, 59, 999);
+              break;
+            }
+            case 'week': {
+              startDate = new Date(now);
+              const dayOfWeek = now.getDay();
+              startDate.setDate(now.getDate() - dayOfWeek);
+              startDate.setHours(0, 0, 0, 0);
+              endDate = now;
+              break;
+            }
+            case 'month': {
+              startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+              endDate = now;
+              break;
+            }
+            case 'year': {
+              startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+              endDate = now;
+              break;
+            }
+            default: {
+              startDate = null;
+              endDate = null;
+            }
+          }
+
+          const res = await analyzeTransactionsWithAI(transactions, { periodLabel: selectedPeriod, startDate: startDate ?? undefined, endDate: endDate ?? undefined });
+          if (!mounted) return;
+          if (res.success) {
+            setAiResult(res.data || null);
+          } else {
+            setAiError(res.error || 'AI returned no data');
+            setAiResult(null);
+          }
+        } catch (e: any) {
+          if (!mounted) return;
+          setAiError(e?.message || String(e));
+          setAiResult(null);
+        } finally {
+          if (mounted) setAiLoading(false);
+        }
+      })();
+    }, 300);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
+  }, [transactions, selectedPeriod]);
+
+  const spendingData = useMemo(() => {
+    // compute category totals for the selected period
+    const now = new Date();
+    let startDate = new Date();
+    switch (selectedPeriod) {
+      case 'day': {
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      }
+      case 'week': {
+        const dayOfWeek = now.getDay();
+        startDate.setDate(now.getDate() - dayOfWeek);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      }
+      case 'month': {
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      }
+      case 'year': {
+        startDate.setMonth(0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      }
+      default: {
+        startDate.setDate(1);
+      }
+    }
+
+    const byCat = {} as Record<string, number>;
+    const filtered = (transactions || []).filter((t: any) => {
+      const txDate = t.date?.toDate?.() || new Date(t.date || t.createdAt);
+      if (!txDate || isNaN(new Date(txDate).getTime())) return false;
+      return new Date(txDate) >= startDate && new Date(txDate) <= now && t.type === 'expense';
+    });
+
+    filtered.forEach((t: any) => {
+      const cat = t.category || 'Khác';
+      byCat[cat] = (byCat[cat] || 0) + (t.amount || 0);
+    });
+
+    const total = Object.values(byCat).reduce((s, v) => s + v, 0) || 1;
+    const items = Object.entries(byCat)
+      .map(([category, amount], idx) => ({
+        category,
+        amount,
+        percent: Math.round((amount / total) * 100),
+        color: PALETTE[idx % PALETTE.length],
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // If AI provided categoryBreakdown, prefer it (map to our UI shape)
+    // Note: aiResult is in component state; we will use it at render-time as override.
+    if (items.length === 0) {
+      return [
+        { category: "Ăn uống", amount: 4500000, percent: 35, color: "#EC4899" },
+        { category: "Di chuyển", amount: 2000000, percent: 15, color: "#8B5CF6" },
+        { category: "Mua sắm", amount: 3200000, percent: 25, color: "#6366F1" },
+      ];
+    }
+
+    return items;
+  }, [transactions, selectedPeriod]);
+
+  // If AI provided breakdown, prefer that for display
+  const displaySpending = useMemo(() => {
+    if (aiResult?.categoryBreakdown && Array.isArray(aiResult.categoryBreakdown) && aiResult.categoryBreakdown.length > 0) {
+      return aiResult.categoryBreakdown.map((c: any, idx: number) => ({
+        category: c.category,
+        amount: c.amount || 0,
+        percent: Math.round((c.percent || 0) * 10) / 10,
+        color: PALETTE[idx % PALETTE.length],
+      }));
+    }
+    return spendingData;
+  }, [aiResult, spendingData]);
+
+  const habits = useMemo(() => {
+    if (!habitsRaw || habitsRaw.length === 0) {
+      return [
+        { name: "Uống nước", streak: 7, progress: 85, icon: "💧" },
+        { name: "Tập thể dục", streak: 5, progress: 70, icon: "🏃" },
+      ];
+    }
+
+    return habitsRaw.map((h: any, idx: number) => ({
+      name: h.title || h.name || 'Thói quen',
+      streak: h.currentStreak || h.streak || 0,
+      progress: h.progress || Math.min(100, Math.round(((h.completedDates?.length || 0) / 7) * 100)),
+      icon: h.icon || ['💧','🏃','📚','🧘','🧑‍🍳'][idx % 5],
+    }));
+  }, [habitsRaw]);
 
   const insights = [
     {
@@ -81,7 +257,7 @@ export default function AIInsightScreen({ navigation }: Props) {
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Period Selector */}
           <View style={styles.periodSelector}>
-            {(["week", "month", "year"] as const).map((period) => (
+            {(["day", "week", "month", "year"] as const).map((period) => (
               <TouchableOpacity
                 key={period}
                 style={[
@@ -96,7 +272,7 @@ export default function AIInsightScreen({ navigation }: Props) {
                     selectedPeriod === period && styles.periodTextActive,
                   ]}
                 >
-                  {period === "week" ? "Tuần" : period === "month" ? "Tháng" : "Năm"}
+                  {period === "day" ? "Ngày" : period === "week" ? "Tuần" : period === "month" ? "Tháng" : "Năm"}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -109,16 +285,29 @@ export default function AIInsightScreen({ navigation }: Props) {
             </View>
             <Text style={styles.summaryTitle}>Phân tích AI</Text>
             <Text style={styles.summaryText}>
-              Tháng này bạn đã chi tiêu <Text style={styles.highlight}>₫12,900,000</Text>, tăng 15% so với tháng trước. 
-              Chi tiêu chủ yếu vào ăn uống và mua sắm. Bạn nên giảm 20% chi tiêu không cần thiết.
+              {aiResult?.summary ? (
+                aiResult.summary
+              ) : (
+                <>
+                  {`Tháng này bạn đã chi tiêu `}
+                  <Text style={styles.highlight}>{`₫${(financial.totalExpense || 0).toLocaleString('vi-VN')}`}</Text>
+                  {`, tiết kiệm ${financial.savingRate}% so với thu nhập. Chi tiêu chủ yếu vào các hạng mục hiển thị bên dưới.`}
+                </>
+              )}
             </Text>
+            {aiLoading && (
+              <Text style={styles.aiStatusText}>Đang phân tích bằng AI...</Text>
+            )}
+            {aiError && (
+              <Text style={styles.aiErrorText}>{`AI lỗi: ${aiError}`}</Text>
+            )}
           </View>
 
           {/* Spending Breakdown */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Phân tích chi tiêu</Text>
             <View style={styles.spendingChart}>
-              {spendingData.map((item, index) => (
+              {displaySpending.map((item: any, index: number) => (
                 <View key={index} style={styles.spendingItem}>
                   <View style={styles.spendingInfo}>
                     <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
@@ -145,7 +334,7 @@ export default function AIInsightScreen({ navigation }: Props) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tiến độ thói quen</Text>
             <View style={styles.habitsGrid}>
-              {habits.map((habit, index) => (
+              {habits.map((habit: any, index: number) => (
                 <View key={index} style={styles.habitCard}>
                   <Text style={styles.habitIcon}>{habit.icon}</Text>
                   <Text style={styles.habitName}>{habit.name}</Text>
@@ -261,7 +450,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#6366F1",
   },
   periodText: {
-    color: "rgba(255,255,255,0.6)",
+    color: "#666666",
     fontWeight: "600",
   },
   periodTextActive: {
@@ -295,7 +484,7 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
+    color: "#333333",
     lineHeight: 20,
   },
   highlight: {
@@ -345,7 +534,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   percentText: {
-    color: "rgba(255,255,255,0.6)",
+    color: "#666666",
   },
   progressBar: {
     height: 6,
@@ -383,7 +572,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   streakText: {
-    color: "rgba(255,255,255,0.7)",
+    color: "#666666",
     fontSize: 12,
   },
   habitProgressBar: {
@@ -399,7 +588,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
   },
   habitPercent: {
-    color: "rgba(255,255,255,0.6)",
+    color: "#666666",
     fontSize: 12,
   },
   insightCard: {
@@ -432,7 +621,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   insightDescription: {
-    color: "rgba(255,255,255,0.7)",
+    color: "#333333",
     fontSize: 13,
     lineHeight: 18,
   },
@@ -457,5 +646,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  aiStatusText: {
+    marginTop: 8,
+    color: "#666666",
+    fontSize: 13,
+  },
+  aiErrorText: {
+    marginTop: 8,
+    color: "#EF4444",
+    fontSize: 13,
   },
 });

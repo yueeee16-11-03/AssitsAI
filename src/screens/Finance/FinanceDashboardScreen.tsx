@@ -12,6 +12,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useTransactionStore } from "../../store/transactionStore";
+import { useFinancialData } from "../../hooks/useFinancialData";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FinanceDashboard">;
 
@@ -64,6 +65,9 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
     // recentTransactions sẽ được computed lại tự động
   }, [transactions]);
 
+  // 🎯 Sử dụng custom hook để tính toán dữ liệu tài chính
+  const financialData = useFinancialData(transactions, selectedPeriod);
+
   const incomeData = [
     { month: "T1", value: 15000000, percent: 85 },
     { month: "T2", value: 18000000, percent: 100 },
@@ -80,10 +84,11 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
     { name: "Mua sắm", amount: 1400000, percent: 11, color: "#10B981", trend: "+8%" },
   ];
 
-  const totalIncome = 22000000;
-  const totalExpense = 12900000;
-  const balance = totalIncome - totalExpense;
-  const savingRate = ((balance / totalIncome) * 100).toFixed(1);
+  // 🟢 Xóa hardcoded values, dùng financialData thay vào
+  const totalIncome = financialData.totalIncome;
+  const totalExpense = financialData.totalExpense;
+  const balance = financialData.balance;
+  const savingRate = financialData.savingRate;
 
   const getCategoryEmoji = (categoryId: string) => {
     const emojiMap: { [key: string]: string } = {
@@ -327,36 +332,83 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
               </View>
             ) : (
               <View>
-                {recentTransactions.map((transaction: any, index: number) => (
-                  <TouchableOpacity
-                    key={`transaction-${index}-${transaction.id}`}
-                    style={styles.recentTransactionItem}
-                    onPress={() => navigation.push("EditTransaction", { transaction: transaction as any })}
-                  >
-                    <View style={styles.transactionLeft}>
-                      <Text style={styles.transactionEmoji}>
-                        {getCategoryEmoji(transaction.categoryId)}
-                      </Text>
-                      <View style={styles.transactionInfo}>
-                        <Text style={styles.transactionCategory}>{transaction.category}</Text>
-                        <Text style={styles.transactionDescription}>
-                          {transaction.description}
+                {recentTransactions.map((transaction: any, index: number) => {
+                  // Format date and time
+                  const getFormattedDateTime = (dateObj: any) => {
+                    try {
+                      const date = dateObj?.toDate?.() || new Date(dateObj);
+                      if (isNaN(date.getTime())) return { date: "N/A", time: "N/A" };
+                      
+                      const day = String(date.getDate()).padStart(2, "0");
+                      const month = String(date.getMonth() + 1).padStart(2, "0");
+                      const year = date.getFullYear();
+                      const hours = String(date.getHours()).padStart(2, "0");
+                      const minutes = String(date.getMinutes()).padStart(2, "0");
+                      
+                      return {
+                        date: `${day}/${month}/${year}`,
+                        time: `${hours}:${minutes}`,
+                      };
+                    } catch {
+                      return { date: "N/A", time: "N/A" };
+                    }
+                  };
+
+                  const dateTime = getFormattedDateTime(transaction.date || transaction.createdAt);
+
+                  return (
+                    <TouchableOpacity
+                      key={`transaction-${index}-${transaction.id}`}
+                      style={styles.recentTransactionItem}
+                      onPress={() => navigation.push("EditTransaction", { transaction: transaction as any })}
+                    >
+                      {/* Header: Category + Amount */}
+                      <View style={styles.transactionHeader}>
+                        <View style={styles.transactionLeft}>
+                          <Text style={styles.transactionEmoji}>
+                            {getCategoryEmoji(transaction.categoryId)}
+                          </Text>
+                          <View style={styles.transactionInfo}>
+                            <Text style={styles.transactionCategory}>{transaction.category}</Text>
+                            <Text style={styles.transactionTime}>
+                              🕐 {dateTime.time} - 📅 {dateTime.date}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text
+                          style={[
+                            styles.transactionAmount,
+                            transaction.type === "expense"
+                              ? styles.amountExpense
+                              : styles.amountIncome,
+                          ]}
+                        >
+                          {transaction.type === "expense" ? "-" : "+"} ₫
+                          {Math.abs(transaction.amount).toLocaleString("vi-VN")}
                         </Text>
                       </View>
-                    </View>
-                    <Text
-                      style={[
-                        styles.transactionAmount,
-                        transaction.type === "expense"
-                          ? styles.amountExpense
-                          : styles.amountIncome,
-                      ]}
-                    >
-                      {transaction.type === "expense" ? "-" : "+"} ₫
-                      {Math.abs(transaction.amount).toLocaleString("vi-VN")}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+
+                      {/* Description */}
+                      {transaction.description && (
+                        <Text style={styles.transactionDescription}>
+                          📝 {transaction.description}
+                        </Text>
+                      )}
+
+                      {/* Items breakdown (if available) */}
+                      {transaction.items && transaction.items.length > 0 && (
+                        <View style={styles.itemsSection}>
+                          <Text style={styles.itemsTitle}>📦 Chi tiết:</Text>
+                          {transaction.items.map((item: any, itemIndex: number) => (
+                            <Text key={itemIndex} style={styles.itemRow}>
+                              • {item.item} - {item.amount?.toLocaleString("vi-VN") || "0"} ₫
+                            </Text>
+                          ))}
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -411,7 +463,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(99,102,241,0.3)",
   },
   balanceLabel: { fontSize: 14, color: "#999999", marginBottom: 8 },
-  balanceAmount: { fontSize: 36, fontWeight: "900", color: "#FFFFFF", marginBottom: 20 },
+  balanceAmount: { fontSize: 36, fontWeight: "900", color: "#00896B", marginBottom: 20 },
   balanceStats: { flexDirection: "row", justifyContent: "space-around" },
   balanceStat: { alignItems: "center" },
   statLabel: { fontSize: 12, color: "#999999", marginBottom: 4 },
@@ -555,15 +607,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   recentTransactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: "rgba(0, 137, 123, 0.06)",
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: "rgba(0, 137, 123, 0.12)",
+  },
+  transactionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
   transactionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   transactionEmoji: { fontSize: 24, marginRight: 12 },
@@ -574,9 +629,35 @@ const styles = StyleSheet.create({
     color: "#00796B",
     marginBottom: 2,
   },
+  transactionTime: {
+    fontSize: 11,
+    color: "#999999",
+    marginBottom: 2,
+  },
   transactionDescription: {
     fontSize: 12,
-    color: "#999999",
+    color: "#333333",
+    marginBottom: 8,
+    marginLeft: 36,
+    fontWeight: "500",
+  },
+  itemsSection: {
+    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 8,
+    marginLeft: 36,
+  },
+  itemsTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#00796B",
+    marginBottom: 4,
+  },
+  itemRow: {
+    fontSize: 11,
+    color: "#555555",
+    marginBottom: 2,
   },
   transactionAmount: {
     fontSize: 14,

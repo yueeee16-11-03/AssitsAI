@@ -283,4 +283,69 @@ export const useTransactionStore = create((set, get) => ({
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + (t.amount || 0), 0);
   },
+
+  /**
+   * 🎯 Tính tổng thu nhập + chi tiêu + balance theo period
+   * Dùng cho FinanceDashboard
+   */
+  getFinancialDataByPeriod: (period = 'month') => {
+    const transactions = get().transactions;
+    const now = new Date();
+    let startDate = new Date();
+
+    // Xác định range ngày theo period
+    switch (period) {
+      case 'day':
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        const dayOfWeek = now.getDay();
+        startDate.setDate(now.getDate() - dayOfWeek);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'month':
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'year':
+        startDate.setMonth(0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      default:
+        startDate.setDate(1);
+    }
+
+    // Lọc transactions trong khoảng thời gian
+    const filtered = transactions.filter(t => {
+      const txDate = t.date?.toDate?.() || new Date(t.date || t.createdAt);
+      return txDate >= startDate && txDate <= now;
+    });
+
+    // Tính toán
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    filtered.forEach(t => {
+      if (t.type === 'income') {
+        totalIncome += t.amount || 0;
+      } else if (t.type === 'expense') {
+        totalExpense += t.amount || 0;
+      }
+    });
+
+    const balance = totalIncome - totalExpense;
+    const savingRate = totalIncome > 0 
+      ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1)
+      : '0.0';
+
+    console.log(`💹 [STORE-PERIOD] ${period}: Income=${totalIncome}, Expense=${totalExpense}, Balance=${balance}, SavingRate=${savingRate}%`);
+
+    return {
+      totalIncome,
+      totalExpense,
+      balance,
+      savingRate,
+      transactionCount: filtered.length,
+    };
+  },
 }));

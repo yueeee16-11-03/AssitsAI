@@ -312,6 +312,9 @@ class TransactionService {
         description, 
         billImageUri,
         // 🤖 AI Processing fields
+        totalAmount,
+        items,
+        category,
         processedText,
         rawOCRText,
         processingTime,
@@ -352,15 +355,17 @@ class TransactionService {
 
       const transaction = {
         type,
-        amount: amount ? parseInt(amount, 10) : (aiParsedData?.totalAmount || 0),  // Use AI amount if available
+        amount: amount ? parseInt(amount, 10) : (totalAmount || (aiParsedData?.totalAmount || 0)),  // Use AI amount if available
         description: description.trim(),
-        category: categoryName || '📝 Ghi chú',      // Default category for note-only
+        category: category || categoryName || '📝 Ghi chú',      // Default category for note-only
         categoryId: categoryId || 'note-only',       // Default categoryId for note-only
         date: firestore.Timestamp.fromDate(now),
         time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
         billImageUri: billImageUri || null,
         createdAt: firestore.Timestamp.fromDate(now),
         // 🤖 AI Processing fields - ✅ LUÔN dùng null thay vì undefined
+        totalAmount: totalAmount || (aiParsedData?.totalAmount || 0),
+        items: items || (aiParsedData?.items || []),
         processedText: processedText || null,
         rawOCRText: rawOCRText || null,
         aiParsedData: aiParsedData || null,  // ✅ Thêm || null để tránh undefined

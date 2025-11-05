@@ -60,6 +60,100 @@ export async function generateGeminiText(prompt: string): Promise<string> {
 }
 
 /**
+ * Parse processedText từ Gemini để lấy description ngắn gọn
+ * Input: 
+ *   "---
+ *    🏪 Cửa hàng: NGUYEN THI TU UYEN
+ *    🕐 Giờ: 21:05:19
+ *    📅 Ngày: 04/11/2025
+ *    💰 Tổng: 300.000 VND
+ *    ..."
+ * Output: "Cửa hàng: NGUYEN THI TU UYEN - 300.000 VND"
+ */
+export function extractDescriptionFromProcessedText(processedText: string): string {
+  try {
+    console.log("📝 [GEMINI] Extracting description from processed text...");
+    
+    if (!processedText) return "";
+
+    // Extract merchant/cửa hàng
+    const merchantMatch = processedText.match(/🏪\s*Cửa hàng:\s*([^\n]+)/i);
+    const merchant = merchantMatch ? merchantMatch[1].trim() : "";
+
+    // Extract total/tổng
+    const totalMatch = processedText.match(/💰\s*Tổng:\s*([^\n]+)/i);
+    const total = totalMatch ? totalMatch[1].trim() : "";
+
+    // Extract time/giờ
+    const timeMatch = processedText.match(/🕐\s*Giờ:\s*([^\n]+)/i);
+    const time = timeMatch ? timeMatch[1].trim() : "";
+
+    // Combine vào description ngắn gọn
+    let description = "";
+    if (merchant) description += merchant;
+    if (time) description += ` - ${time}`;
+    if (total) description += ` (${total})`;
+
+    console.log("✅ [GEMINI] Extracted description:", description);
+    return description || processedText.substring(0, 100); // Fallback nếu không tìm thấy
+  } catch (error) {
+    console.error("❌ [GEMINI] Error extracting description:", error);
+    return processedText.substring(0, 100);
+  }
+}
+
+/**
+ * 💰 Extract số tiền từ processed text
+ * Input: "300.000 VND" hoặc "300000 VND" 
+ * Output: 300000 (số nguyên)
+ */
+export function extractAmountFromProcessedText(processedText: string): number {
+  try {
+    console.log("💰 [GEMINI] Extracting amount from processed text...");
+    
+    if (!processedText) return 0;
+
+    // Extract tổng tiền từ "💰 Tổng: 300.000 VND"
+    let totalMatch = processedText.match(/💰\s*Tổng:\s*([0-9.,]+)\s*(?:VND)?/i);
+    
+    if (!totalMatch) {
+      // Try alternative format: "Tổng: 300.000 VND" (without emoji)
+      totalMatch = processedText.match(/(?:Tổng|Total):\s*([0-9.,]+)\s*(?:VND)?/i);
+    }
+    
+    if (!totalMatch) {
+      // Try format: "300.000 VND" (anywhere in text)
+      totalMatch = processedText.match(/([0-9]{1,3}(?:[.,][0-9]{3})+)\s*VND/i);
+    }
+
+    if (!totalMatch) {
+      // Try format: "300000 VND" (without thousand separator)
+      totalMatch = processedText.match(/([0-9]+)\s*VND/i);
+    }
+    
+    if (totalMatch) {
+      const amountStr = totalMatch[1].trim();
+      console.log("📊 [GEMINI] Found amount string:", amountStr);
+      
+      // Remove dots and commas to get pure number
+      // "300.000" → "300000"
+      // "300,000" → "300000"
+      const cleanedAmount = amountStr.replace(/[.,]/g, "");
+      const amount = parseInt(cleanedAmount, 10);
+      
+      console.log("✅ [GEMINI] Parsed amount:", amount);
+      return isNaN(amount) ? 0 : amount;
+    }
+
+    console.warn("⚠️ [GEMINI] Could not find amount in processed text");
+    return 0;
+  } catch (error) {
+    console.error("❌ [GEMINI] Error extracting amount:", error);
+    return 0;
+  }
+}
+
+/**
  * Xử lý OCR text bằng Gemini AI
  * Flow: Raw OCR Text → Gemini AI → Processed Result
  * 
