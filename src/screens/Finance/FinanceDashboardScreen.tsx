@@ -13,6 +13,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useTransactionStore } from "../../store/transactionStore";
 import { useFinancialData } from "../../hooks/useFinancialData";
+import useIncomeChartData from "../../hooks/useIncomeChartData";
+import useExpenseCategories from "../../hooks/useExpenseCategories";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FinanceDashboard">;
 
@@ -68,21 +70,11 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
   // 🎯 Sử dụng custom hook để tính toán dữ liệu tài chính
   const financialData = useFinancialData(transactions, selectedPeriod);
 
-  const incomeData = [
-    { month: "T1", value: 15000000, percent: 85 },
-    { month: "T2", value: 18000000, percent: 100 },
-    { month: "T3", value: 16500000, percent: 92 },
-    { month: "T4", value: 20000000, percent: 110 },
-    { month: "T5", value: 17000000, percent: 94 },
-    { month: "T6", value: 22000000, percent: 122 },
-  ];
+  // Income chart data (last 6 months) — moved to hook for separation
+  const incomeData = useIncomeChartData(transactions);
 
-  const expenseCategories = [
-    { name: "Ăn uống", amount: 4500000, percent: 35, color: "#EC4899", trend: "+5%" },
-    { name: "Di chuyển", amount: 2000000, percent: 15, color: "#8B5CF6", trend: "-2%" },
-    { name: "Nhà cửa", amount: 5000000, percent: 39, color: "#6366F1", trend: "0%" },
-    { name: "Mua sắm", amount: 1400000, percent: 11, color: "#10B981", trend: "+8%" },
-  ];
+  // Expense categories computed from real transactions
+  const expenseCategories = useExpenseCategories(transactions, selectedPeriod);
 
   // 🟢 Xóa hardcoded values, dùng financialData thay vào
   const totalIncome = financialData.totalIncome;

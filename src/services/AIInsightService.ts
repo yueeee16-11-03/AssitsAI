@@ -38,6 +38,41 @@ function safeAmount(a: any): number {
   return Math.round(n);
 }
 
+// Simple in-memory cache for AI results keyed by startISO|endISO
+const AI_CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
+const aiCache = new Map<string, { ts: number; result: any; raw?: string }>();
+
+const CATEGORY_MAP: Record<string, string> = {
+  'ăn uống': 'Ăn uống',
+  'ăn': 'Ăn uống',
+  'food': 'Ăn uống',
+  'ăn-uống': 'Ăn uống',
+  'di chuyển': 'Di chuyển',
+  'di-chuyển': 'Di chuyển',
+  'transport': 'Di chuyển',
+  'mua sắm': 'Mua sắm',
+  'mua-sắm': 'Mua sắm',
+  'shopping': 'Mua sắm',
+  'giải trí': 'Giải trí',
+  'giai tri': 'Giải trí',
+  'entertainment': 'Giải trí',
+  'khác': 'Khác',
+};
+
+function normalizeCategory(name?: string): string {
+  if (!name) return 'Khác';
+  const key = String(name).trim().toLowerCase();
+  if (CATEGORY_MAP[key]) return CATEGORY_MAP[key];
+  // try to match by contains
+  for (const k of Object.keys(CATEGORY_MAP)) {
+    if (key.includes(k)) return CATEGORY_MAP[k];
+  }
+  // fallback: if it already looks like canonical, capitalize first letter
+  const canonical = ['Ăn uống', 'Di chuyển', 'Mua sắm', 'Giải trí', 'Khác'];
+  if (canonical.includes(name)) return name;
+  return 'Khác';
+}
+
 export async function analyzeTransactionsWithAI(
   transactions: Transaction[],
   _opts?: { periodLabel?: string; startDate?: string | Date; endDate?: string | Date }
@@ -137,6 +172,13 @@ export async function analyzeTransactionsWithAI(
       `\n6) anomalies: mảng mô tả giao dịch bất thường.` +
       `\n\nDữ liệu giao dịch (tối đa 200 dòng):\n${lines.join('\n')}\n\nTrả về duy nhất JSON hợp lệ.`;
 
+    const cacheKey = `${start ? start.toISOString() : 'all'}|${end ? end.toISOString() : 'all'}`;
+    const cached = aiCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < AI_CACHE_TTL_MS) {
+      console.log(`[AIInsightService] Cache hit for ${cacheKey}`);
+      return { success: true, data: cached.result, raw: cached.raw };
+    }
+
     console.log('🚀 [AIInsightService] Gọi Gemini với prompt:', prompt.substring(0, 200));
     const raw = await generateGeminiText(prompt);
     console.log('✅ [AIInsightService] Kết quả trả về:', raw.substring(0, 200));
@@ -147,12 +189,29 @@ export async function analyzeTransactionsWithAI(
       const jsonMatch = raw.match(/\{[\s\S]*\}/m);
       const jsonText = jsonMatch ? jsonMatch[0] : raw;
       parsed = JSON.parse(jsonText);
-    } catch {
+    } catch (err) {
+      console.error('[AIInsightService] JSON parse error:', err);
       return {
         success: false,
         raw,
         error: 'Không thể phân tích JSON trả về từ AI. Xem raw để debug.',
       };
+    }
+
+    // Normalize categoryBreakdown if present
+    if (parsed && Array.isArray(parsed.categoryBreakdown)) {
+      parsed.categoryBreakdown = parsed.categoryBreakdown.map((c: any) => ({
+        category: normalizeCategory(c?.category),
+        amount: safeAmount(c?.amount),
+        percent: typeof c?.percent === 'number' ? Math.round(c.percent * 10) / 10 : 0,
+      }));
+    }
+
+    // Store in cache
+    try {
+      aiCache.set(cacheKey, { ts: Date.now(), result: parsed, raw });
+    } catch {
+      // ignore cache set errors
     }
 
     return {
