@@ -319,7 +319,8 @@ class IncomeService {
         amount: amount ? parseInt(amount, 10) : (aiParsedData?.totalAmount || 0), // ✅ LẤY TỪ AI NẾU KHÔNG NHẬP TAY
         description: description.trim(),
         category: categoryName || '💰 Thu nhập',      // Default category for income
-        categoryId: categoryId || 'income-general',   // Default categoryId
+        // Resolve categoryId: map 'note-only' or missing id to a real id (fallback to '7' = Lương)
+        categoryId: this._resolveCategoryId ? this._resolveCategoryId(categoryId, categoryName, 'income') : (categoryId || '7'),
         date: firestore.Timestamp.fromDate(now),
         time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
         billImageUri: billImageUri || null,
@@ -360,6 +361,43 @@ class IncomeService {
       return date.toLocaleDateString('vi-VN');
     } catch {
       return 'Invalid date';
+    }
+  }
+
+  /**
+   * HELPER: Resolve categoryId for income (same strategy as TransactionService)
+   */
+  _resolveCategoryId(providedCategoryId, categoryNameOrLabel, type = 'income') {
+    try {
+      if (providedCategoryId && providedCategoryId !== 'note-only') return providedCategoryId;
+
+      const removeDiacritics = (str = '') =>
+        str
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+          .replace(/[\u0300-\u036f]/g, '');
+
+      const name = (categoryNameOrLabel || '').toString();
+      const normalized = removeDiacritics(name).toLowerCase().trim();
+
+      const map = {
+        'luong': '7',
+        'lương': '7',
+        'thuong': '8',
+        'thưởng': '8',
+        'dau tu': '9',
+        'đầu tư': '9',
+      };
+
+      if (map[normalized]) return map[normalized];
+      for (const key in map) {
+        if (normalized.includes(key)) return map[key];
+      }
+
+      return type === 'income' ? '7' : '1';
+    } catch (e) {
+      console.warn('⚠️ [INCOME SERVICE] _resolveCategoryId failed:', e);
+      return type === 'income' ? '7' : '1';
     }
   }
 

@@ -98,12 +98,16 @@ class TransactionService {
         throw new Error('❌ User not authenticated');
       }
 
-      // Step 1: Validate (Hàm _validateTransactionData của bạn)
-      this._validateTransactionData(transactionData); 
+      // Step 1: Normalize + Validate
+      // If caller omitted `type`, default to 'expense' to be safe (caller should still pass correct type)
+      const normalizedData = { ...transactionData, type: transactionData.type || 'expense' };
+      console.log('📝 [SERVICE] Normalized transaction data (type defaulted if missing):', normalizedData);
+
+      this._validateTransactionData(normalizedData);
 
       // Step 2: Chuẩn bị dữ liệu
       let dataToSave = {
-        ...transactionData,
+        ...normalizedData,
         userId: currentUser.uid,
         // ✅ FIX: Chỉ set createdAt/updatedAt nếu không có sẵn
         // transactionData đã có date từ createTransactionObject, chỉ cần createdAt/updatedAt server-side
@@ -358,7 +362,8 @@ class TransactionService {
         amount: amount ? parseInt(amount, 10) : (totalAmount || (aiParsedData?.totalAmount || 0)),  // Use AI amount if available
         description: description.trim(),
         category: category || categoryName || '📝 Ghi chú',      // Default category for note-only
-        categoryId: categoryId || 'note-only',       // Default categoryId for note-only
+        // Resolve categoryId: if caller left 'note-only' or omitted, map from name or fallback by type
+        categoryId: this._resolveCategoryId(categoryId, category || categoryName, type),
         date: firestore.Timestamp.fromDate(now),
         time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
         billImageUri: billImageUri || null,
@@ -406,6 +411,68 @@ class TransactionService {
       return date.toLocaleDateString('vi-VN');
     } catch {
       return 'Invalid date';
+    }
+  }
+
+  /**
+   * HELPER: Resolve categoryId when incoming data uses 'note-only' or missing id
+   * Strategy:
+   * - If a valid categoryId is provided (and not 'note-only'), return it
+   * - Else try to map from category name (or categoryName) using a small default map
+   * - Fallback: if type==='income' => default to '7' (Lương), else default to '1' (Ăn uống)
+   */
+  _resolveCategoryId(providedCategoryId, categoryNameOrLabel, type = 'expense') {
+    try {
+      if (providedCategoryId && providedCategoryId !== 'note-only') return providedCategoryId;
+
+      const removeDiacritics = (str = '') =>
+        str
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+          .replace(/[\u0300-\u036f]/g, '');
+
+      const name = (categoryNameOrLabel || '').toString();
+      const normalized = removeDiacritics(name).toLowerCase().trim();
+
+      // Minimal mapping based on default categories in CategoryManagementScreen
+      const map = {
+        'an uong': '1',
+        'ăn uống': '1',
+        'mua sam': '2',
+        'mua sắm': '2',
+        'di chuyen': '3',
+        'di chuyển': '3',
+        'nha o': '4',
+        'nhà ở': '4',
+        'y te': '5',
+        'y tế': '5',
+        'giai tri': '6',
+        'giải trí': '6',
+        'luong': '7',
+        'lương': '7',
+        'thuong': '8',
+        'thưởng': '8',
+        'dau tu': '9',
+        'đầu tư': '9',
+        'ca phe': '10',
+        'cà phê': '10',
+        'di cho': '11',
+        'đi chợ': '11',
+      };
+
+      // Exact match
+      if (map[normalized]) return map[normalized];
+
+      // Partial includes match
+      for (const key in map) {
+        if (normalized.includes(key)) return map[key];
+      }
+
+      // Fallback by type
+      return type === 'income' ? '7' : '1';
+    } catch (e) {
+      console.warn('⚠️ [SERVICE] _resolveCategoryId failed:', e);
+      return type === 'income' ? '7' : '1';
     }
   }
 }

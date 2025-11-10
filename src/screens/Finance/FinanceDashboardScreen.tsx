@@ -112,7 +112,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
         <Text style={styles.headerTitle}>Tài chính</Text>
         <TouchableOpacity
           style={styles.exportButton}
-          onPress={() => {}}
+          onPress={() => navigation.navigate("BudgetPlanner")}
         >
           <Text style={styles.exportIcon}>📊</Text>
         </TouchableOpacity>
