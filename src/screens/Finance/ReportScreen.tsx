@@ -10,22 +10,15 @@ import {
   Animated,
   Alert,
   Share,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
+import ReportExportService from '../../services/ReportExportService';
+import type { Transaction, Budget, Habit, Goal, ReportType, ExportFormat, PeriodType } from '../../types/report';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Report'>;
-
-interface Transaction {
-  id: string;
-  date: string;
-  type: 'income' | 'expense';
-  category: string;
-  description: string;
-  amount: number;
-  wallet: string;
-  note?: string;
-}
 
 interface ReportData {
   totalIncome: number;
@@ -35,8 +28,6 @@ interface ReportData {
   categoryBreakdown: Record<string, number>;
 }
 
-type PeriodType = 'week' | 'month' | 'quarter' | 'year' | 'custom';
-
 export default function ReportScreen({ navigation }: Props) {
   const [period, setPeriod] = useState<PeriodType>('month');
   const [_showDatePicker, _setShowDatePicker] = useState(false);
@@ -44,8 +35,10 @@ export default function ReportScreen({ navigation }: Props) {
   const [endDate] = useState(new Date());
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
-  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'pdf'>('csv');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
+  const [reportType, setReportType] = useState<ReportType>('summary');
   const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
@@ -64,56 +57,85 @@ export default function ReportScreen({ navigation }: Props) {
       date: '2024-10-21',
       type: 'expense',
       category: 'Ăn uống',
-      description: 'Cơm trưa ở nhà hàng',
-      amount: 150000,
-      wallet: 'Ví tiền mặt',
-      note: 'Ăn cùng đồng nghiệp',
+      description: 'Cà phê Trung Nguyên',
+      amount: 55000,
+      wallet: 'Tiền mặt',
+      note: 'Sáng nay',
     } as Transaction,
     {
       id: '2',
+      date: '2024-10-21',
+      type: 'expense',
+      category: 'Ăn uống',
+      description: 'Cơm trưa ở nhà hàng',
+      amount: 150000,
+      wallet: 'Tiền mặt',
+      note: 'Ăn cùng đồng nghiệp',
+    } as Transaction,
+    {
+      id: '3',
       date: '2024-10-20',
       type: 'income',
       category: 'Lương',
       description: 'Lương tháng 10',
       amount: 15000000,
-      wallet: 'Ngân hàng',
+      wallet: 'VCB',
     } as Transaction,
     {
-      id: '3',
+      id: '4',
       date: '2024-10-19',
       type: 'expense',
       category: 'Di chuyển',
       description: 'Xăng xe',
       amount: 250000,
-      wallet: 'Ví tiền mặt',
+      wallet: 'Tiền mặt',
     } as Transaction,
     {
-      id: '4',
+      id: '5',
       date: '2024-10-18',
       type: 'expense',
       category: 'Nhà cửa',
       description: 'Tiền điện',
       amount: 500000,
-      wallet: 'Ngân hàng',
+      wallet: 'VCB',
     } as Transaction,
     {
-      id: '5',
+      id: '6',
       date: '2024-10-17',
       type: 'expense',
       category: 'Mua sắm',
       description: 'Quần áo',
       amount: 800000,
-      wallet: 'Ví tiền mặt',
+      wallet: 'Tiền mặt',
     } as Transaction,
     {
-      id: '6',
+      id: '7',
       date: '2024-10-16',
       type: 'income',
-      category: 'Bổ sung',
+      category: 'Việc phụ',
       description: 'Tiền thưởng',
       amount: 2000000,
-      wallet: 'Ngân hàng',
+      wallet: 'VCB',
     } as Transaction,
+  ], []);
+
+  const budgets = useMemo((): Budget[] => [
+    { id: '1', category: 'Ăn uống', amount: 3000000, spent: 2800000 },
+    { id: '2', category: 'Di chuyển', amount: 1500000, spent: 1200000 },
+    { id: '3', category: 'Mua sắm', amount: 2000000, spent: 2100000 },
+    { id: '4', category: 'Nhà cửa', amount: 5000000, spent: 4500000 },
+  ], []);
+
+  const habits = useMemo((): Habit[] => [
+    { id: '1', name: 'Tập thể dục', completionRate: 85, totalCheckIns: 17, longestStreak: 12 },
+    { id: '2', name: 'Đọc sách', completionRate: 70, totalCheckIns: 14, longestStreak: 8 },
+    { id: '3', name: 'Thiền định', completionRate: 90, totalCheckIns: 18, longestStreak: 18 },
+  ], []);
+
+  const goals = useMemo((): Goal[] => [
+    { id: '1', name: 'Du lịch Nhật Bản', targetAmount: 50000000, amountSaved: 35000000, targetDate: '2025-12-31' },
+    { id: '2', name: 'Mua xe', targetAmount: 200000000, amountSaved: 85000000, targetDate: '2026-06-30' },
+    { id: '3', name: 'Quỹ khẩn cấp', targetAmount: 30000000, amountSaved: 28000000, targetDate: '2025-12-31' },
   ], []);
 
   const categories = ['Ăn uống', 'Di chuyển', 'Nhà cửa', 'Mua sắm', 'Lương', 'Bổ sung'];
@@ -158,83 +180,277 @@ export default function ReportScreen({ navigation }: Props) {
   }, [filteredTransactions]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(value);
+    return ReportExportService.formatCurrency(value);
   };
 
   const getPeriodLabel = () => {
-    switch (period) {
-      case 'week':
-        return 'Tuần này';
-      case 'month':
-        return 'Tháng này';
-      case 'quarter':
-        return 'Quý này';
-      case 'year':
-        return 'Năm này';
-      case 'custom':
-        return `${startDate.toLocaleDateString('vi-VN')} - ${endDate.toLocaleDateString('vi-VN')}`;
-      default:
-        return '';
-    }
+    return ReportExportService.getPeriodLabel(period, startDate, endDate);
   };
 
   const handleExport = async () => {
     try {
+      setIsExporting(true);
       let content = '';
+      let fileName = '';
 
       if (exportFormat === 'csv') {
         content = generateCSV();
+        fileName = `Báo cáo-${reportType}-${new Date().getTime()}.csv`;
       } else if (exportFormat === 'json') {
         content = generateJSON();
-      } else if (exportFormat === 'pdf') {
-        Alert.alert('PDF Export', 'Tính năng PDF export sẽ được cập nhật sớm');
+        fileName = `Báo cáo-${reportType}-${new Date().getTime()}.json`;
+      } else if (exportFormat === 'pdf' || exportFormat === 'detailed-pdf') {
+        const htmlContent = getHTMLForReport();
+        
+        // Chia sẻ nội dung HTML dưới dạng text
+        await Share.share({
+          message: 'HTML Report:\n\n' + htmlContent.substring(0, 500) + '\n...\n\nBáo cáo HTML đầy đủ được tạo. Sao chép nội dung để xem trong trình duyệt.',
+          title: `Báo cáo ${reportType}`,
+        });
+        
+        setIsExporting(false);
+        setShowExportModal(false);
+        Alert.alert('Thành công', 'Báo cáo đã được xuất. Bạn có thể sao chép nội dung HTML để xem trong trình duyệt hoặc Excel.');
         return;
       }
 
+      // Chia sẻ CSV hoặc JSON
       await Share.share({
         message: content,
-        title: `Báo cáo tài chính - ${getPeriodLabel()}`,
+        title: fileName,
+        url: Platform.OS === 'ios' ? undefined : 'file://' + fileName,
       });
 
-      Alert.alert('Thành công', `Đã xuất báo cáo thành ${exportFormat.toUpperCase()}`);
+      setIsExporting(false);
       setShowExportModal(false);
+      Alert.alert('Thành công', `Đã xuất báo cáo ${reportType} thành ${exportFormat.toUpperCase()}`);
     } catch (error) {
+      setIsExporting(false);
       console.log('Export error:', error);
-      Alert.alert('Lỗi', 'Không thể xuất báo cáo');
+      Alert.alert('Lỗi', 'Không thể xuất báo cáo. Vui lòng thử lại');
     }
   };
 
   const generateCSV = () => {
-    let csv = 'Ngày,Loại,Danh mục,Mô tả,Số tiền,Ví\n';
-    reportData.transactions.forEach(t => {
-      csv += `"${t.date}","${t.type}","${t.category}","${t.description}",${t.amount},"${t.wallet}"\n`;
-    });
-    csv += `\nTổng cộng,,,,\n`;
-    csv += `"Thu nhập",,,,${reportData.totalIncome}\n`;
-    csv += `"Chi tiêu",,,,${reportData.totalExpense}\n`;
-    csv += `"Số dư",,,,${reportData.balance}\n`;
-    return csv;
+    return ReportExportService.generateCSV(
+      reportType,
+      reportData,
+      budgets,
+      habits,
+      goals,
+      getPeriodLabel()
+    );
   };
 
   const generateJSON = () => {
-    return JSON.stringify(
-      {
-        period: getPeriodLabel(),
-        summary: {
-          totalIncome: reportData.totalIncome,
-          totalExpense: reportData.totalExpense,
-          balance: reportData.balance,
-        },
-        transactions: reportData.transactions,
-        categoryBreakdown: reportData.categoryBreakdown,
-        generatedAt: new Date().toISOString(),
-      },
-      null,
-      2
+    return ReportExportService.generateJSON(
+      reportType,
+      reportData,
+      budgets,
+      habits,
+      goals,
+      getPeriodLabel()
     );
+  };
+
+  const getHTMLForReport = () => {
+    const styles = `
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+        h1 { color: #6366F1; border-bottom: 2px solid #6366F1; padding-bottom: 10px; }
+        h2 { color: #6366F1; margin-top: 20px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th { background-color: #6366F1; color: white; padding: 10px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #ddd; }
+        tr:hover { background-color: #f0f0f0; }
+        .summary-card { 
+          display: inline-block; 
+          width: 30%; 
+          margin: 10px 1.5%; 
+          padding: 15px; 
+          background-color: #f5f5f5; 
+          border-radius: 5px;
+          text-align: center;
+        }
+        .summary-label { font-size: 12px; color: #666; }
+        .summary-amount { font-size: 24px; font-weight: bold; color: #6366F1; }
+        .income { color: #10B981; }
+        .expense { color: #EF4444; }
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+      </style>
+    `;
+
+    let htmlContent = `<html><head><meta charset="utf-8">${styles}</head><body>`;
+
+    if (reportType === 'detailed') {
+      htmlContent += `
+        <h1>📝 Báo cáo Chi tiết Giao dịch</h1>
+        <p>Khoảng thời gian: <strong>${getPeriodLabel()}</strong></p>
+        <p>Ngày tạo: ${new Date().toLocaleDateString('vi-VN')}</p>
+        
+        <h2>Bảng giao dịch</h2>
+        <table>
+          <tr>
+            <th>Ngày</th>
+            <th>Mô tả</th>
+            <th>Danh mục</th>
+            <th>Loại</th>
+            <th>Số tiền</th>
+            <th>Tài khoản</th>
+          </tr>
+          ${reportData.transactions.map(t => `
+            <tr>
+              <td>${t.date}</td>
+              <td>${t.description}</td>
+              <td>${t.category}</td>
+              <td>${t.type === 'income' ? '✓ Thu nhập' : '✗ Chi tiêu'}</td>
+              <td class="${t.type === 'income' ? 'income' : 'expense'}">
+                ${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}
+              </td>
+              <td>${t.wallet}</td>
+            </tr>
+          `).join('')}
+        </table>
+        
+        <h2>Tóm tắt</h2>
+        <div class="summary-card">
+          <div class="summary-label">Thu nhập</div>
+          <div class="summary-amount income">${formatCurrency(reportData.totalIncome)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Chi tiêu</div>
+          <div class="summary-amount expense">${formatCurrency(reportData.totalExpense)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Dòng tiền</div>
+          <div class="summary-amount">${formatCurrency(reportData.balance)}</div>
+        </div>
+      `;
+    } else if (reportType === 'budget') {
+      htmlContent += `
+        <h1>💰 Báo cáo Ngân sách</h1>
+        <p>Khoảng thời gian: <strong>${getPeriodLabel()}</strong></p>
+        <table>
+          <tr>
+            <th>Danh mục</th>
+            <th>Ngân sách</th>
+            <th>Đã chi</th>
+            <th>Còn lại</th>
+            <th>Tỷ lệ</th>
+          </tr>
+          ${budgets.map(b => {
+            const remaining = b.amount - b.spent;
+            const percentage = ((b.spent / b.amount) * 100).toFixed(1);
+            return `
+            <tr>
+              <td>${b.category}</td>
+              <td>${formatCurrency(b.amount)}</td>
+              <td class="expense">${formatCurrency(b.spent)}</td>
+              <td>${remaining > 0 ? '✓ ' : '✗ '}${formatCurrency(Math.abs(remaining))}</td>
+              <td>${percentage}%</td>
+            </tr>
+          `;
+          }).join('')}
+        </table>
+      `;
+    } else if (reportType === 'habits') {
+      htmlContent += `
+        <h1>🎯 Báo cáo Thói quen</h1>
+        <table>
+          <tr>
+            <th>Tên Thói quen</th>
+            <th>Tỷ lệ Hoàn thành</th>
+            <th>Tổng Check-ins</th>
+            <th>Chuỗi Dài nhất</th>
+          </tr>
+          ${habits.map(h => `
+            <tr>
+              <td>${h.name}</td>
+              <td>${h.completionRate}%</td>
+              <td>${h.totalCheckIns}</td>
+              <td>${h.longestStreak}</td>
+            </tr>
+          `).join('')}
+        </table>
+      `;
+    } else if (reportType === 'goals') {
+      htmlContent += `
+        <h1>🚀 Báo cáo Mục tiêu</h1>
+        <table>
+          <tr>
+            <th>Tên Mục tiêu</th>
+            <th>Mục tiêu</th>
+            <th>Đã tiết kiệm</th>
+            <th>Còn lại</th>
+            <th>Tiến độ</th>
+            <th>Thời hạn</th>
+          </tr>
+          ${goals.map(g => {
+            const remaining = g.targetAmount - g.amountSaved;
+            const progress = ((g.amountSaved / g.targetAmount) * 100).toFixed(1);
+            return `
+            <tr>
+              <td>${g.name}</td>
+              <td>${formatCurrency(g.targetAmount)}</td>
+              <td class="income">${formatCurrency(g.amountSaved)}</td>
+              <td>${formatCurrency(remaining)}</td>
+              <td>${progress}%</td>
+              <td>${g.targetDate}</td>
+            </tr>
+          `;
+          }).join('')}
+        </table>
+      `;
+    } else {
+      htmlContent += `
+        <h1>📊 Báo cáo Tài chính Tổng quan</h1>
+        <p>Khoảng thời gian: <strong>${getPeriodLabel()}</strong></p>
+        <p>Ngày tạo: ${new Date().toLocaleDateString('vi-VN')}</p>
+        
+        <h2>Tóm tắt Tài chính</h2>
+        <div class="summary-card">
+          <div class="summary-label">Tổng Thu nhập</div>
+          <div class="summary-amount income">${formatCurrency(reportData.totalIncome)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Tổng Chi tiêu</div>
+          <div class="summary-amount expense">${formatCurrency(reportData.totalExpense)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Dòng tiền ròng</div>
+          <div class="summary-amount">${formatCurrency(reportData.balance)}</div>
+        </div>
+        
+        <h2>Chi tiêu theo Danh mục</h2>
+        <table>
+          <tr>
+            <th>Danh mục</th>
+            <th>Số tiền</th>
+            <th>Tỷ lệ (%)</th>
+          </tr>
+          ${Object.entries(reportData.categoryBreakdown).map(([cat, amount]) => {
+            const percentage = reportData.totalExpense > 0 ? ((amount / reportData.totalExpense) * 100).toFixed(1) : 0;
+            return `
+            <tr>
+              <td>${cat}</td>
+              <td>${formatCurrency(amount)}</td>
+              <td>${percentage}%</td>
+            </tr>
+          `;
+          }).join('')}
+        </table>
+      `;
+    }
+
+    htmlContent += `
+      <div class="footer">
+        <p>Báo cáo này được tạo tự động bởi Assist AI</p>
+        <p>Vui lòng liên hệ hỗ trợ nếu có bất kỳ câu hỏi nào</p>
+      </div>
+      </body></html>
+    `;
+
+    return htmlContent;
   };
 
   const renderCategoryBreakdown = () => {
@@ -317,11 +533,14 @@ export default function ReportScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Quay lại</Text>
+          <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Báo cáo tài chính</Text>
-        <TouchableOpacity onPress={() => setShowExportModal(true)}>
-          <Text style={styles.exportButton}>📥 Xuất</Text>
+        <Text style={styles.headerTitle}>📥 Xuất Báo cáo</Text>
+        <TouchableOpacity 
+          style={styles.exportMainButton}
+          onPress={() => setShowExportModal(true)}
+        >
+          <Text style={styles.exportMainButtonText}>Xuất</Text>
         </TouchableOpacity>
       </View>
 
@@ -478,63 +697,107 @@ export default function ReportScreen({ navigation }: Props) {
         visible={showExportModal}
         animationType="slide"
         transparent
-        onRequestClose={() => setShowExportModal(false)}
+        onRequestClose={() => !isExporting && setShowExportModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn định dạng xuất</Text>
-              <TouchableOpacity onPress={() => setShowExportModal(false)}>
+              <Text style={styles.modalTitle}>Chọn loại & định dạng báo cáo</Text>
+              <TouchableOpacity 
+                onPress={() => setShowExportModal(false)}
+                disabled={isExporting}
+              >
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.exportOptions}>
-              {(['csv', 'json', 'pdf'] as const).map(format => (
-                <TouchableOpacity
-                  key={format}
-                  style={[
-                    styles.exportOption,
-                    exportFormat === format && styles.exportOptionActive,
-                  ]}
-                  onPress={() => setExportFormat(format)}
-                >
-                  <View style={styles.exportOptionContent}>
-                    <Text style={styles.exportOptionIcon}>
-                      {format === 'csv' ? '📄' : format === 'json' ? '📋' : '📑'}
+            {/* Report Type Selection */}
+            <View style={styles.reportTypeSection}>
+              <Text style={styles.sectionModalLabel}>Loại báo cáo</Text>
+              <View style={styles.reportTypeOptions}>
+                {([
+                  { id: 'summary', label: 'Tổng quan', icon: '📊' },
+                  { id: 'detailed', label: 'Chi tiết', icon: '📝' },
+                  { id: 'budget', label: 'Ngân sách', icon: '💰' },
+                  { id: 'habits', label: 'Thói quen', icon: '🎯' },
+                  { id: 'goals', label: 'Mục tiêu', icon: '🚀' },
+                ] as { id: ReportType; label: string; icon: string }[]).map(rt => (
+                  <TouchableOpacity
+                    key={rt.id}
+                    style={[
+                      styles.reportTypeOption,
+                      reportType === rt.id && styles.reportTypeOptionActive,
+                    ]}
+                    onPress={() => setReportType(rt.id)}
+                    disabled={isExporting}
+                  >
+                    <Text style={styles.reportTypeIcon}>{rt.icon}</Text>
+                    <Text
+                      style={[
+                        styles.reportTypeLabel,
+                        reportType === rt.id && styles.reportTypeLabelActive,
+                      ]}
+                    >
+                      {rt.label}
                     </Text>
-                    <View>
-                      <Text style={styles.exportOptionTitle}>
-                        {format.toUpperCase()} File
-                      </Text>
-                      <Text style={styles.exportOptionDesc}>
-                        {format === 'csv'
-                          ? 'Mở với Excel, Google Sheets'
-                          : format === 'json'
-                          ? 'Định dạng JSON tiêu chuẩn'
-                          : 'Tệp PDF chuyên nghiệp'}
-                      </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Export Format Selection */}
+            <View style={styles.exportFormatSection}>
+              <Text style={styles.sectionModalLabel}>Định dạng xuất</Text>
+              <View style={styles.exportOptions}>
+                {([
+                  { id: 'csv', label: 'CSV File', desc: 'Mở với Excel, Google Sheets', icon: '📄' },
+                  { id: 'json', label: 'JSON File', desc: 'Định dạng JSON tiêu chuẩn', icon: '📋' },
+                  { id: 'pdf', label: 'PDF Report', desc: 'Tệp PDF chuyên nghiệp', icon: '📑' },
+                ] as { id: ExportFormat; label: string; desc: string; icon: string }[]).map(format => (
+                  <TouchableOpacity
+                    key={format.id}
+                    style={[
+                      styles.exportOption,
+                      exportFormat === format.id && styles.exportOptionActive,
+                    ]}
+                    onPress={() => setExportFormat(format.id)}
+                    disabled={isExporting}
+                  >
+                    <View style={styles.exportOptionContent}>
+                      <Text style={styles.exportOptionIcon}>{format.icon}</Text>
+                      <View>
+                        <Text style={styles.exportOptionTitle}>{format.label}</Text>
+                        <Text style={styles.exportOptionDesc}>{format.desc}</Text>
+                      </View>
                     </View>
-                  </View>
-                  {exportFormat === format && (
-                    <Text style={styles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
+                    {exportFormat === format.id && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setShowExportModal(false)}
+                disabled={isExporting}
               >
                 <Text style={styles.cancelButtonText}>Hủy</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.confirmButton}
+                style={[styles.confirmButton, isExporting && styles.confirmButtonDisabled]}
                 onPress={handleExport}
+                disabled={isExporting}
               >
-                <Text style={styles.confirmButtonText}>Xuất {exportFormat.toUpperCase()}</Text>
+                {isExporting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>
+                    Xuất {exportFormat.toUpperCase()}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -547,44 +810,58 @@ export default function ReportScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E0F2F1',
+    backgroundColor: '#0F172A',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   backButton: {
-    color: '#6366F1',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 28,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
   },
-  exportButton: {
+  exportMainButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.3)',
+    borderWidth: 1,
+    borderColor: '#6366F1',
+  },
+  exportMainButtonText: {
     color: '#6366F1',
+    fontWeight: '700',
     fontSize: 14,
-    fontWeight: '600',
   },
   content: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 16,
+    letterSpacing: 0.3,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -594,29 +871,33 @@ const styles = StyleSheet.create({
   },
   transactionCount: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '600',
   },
   summaryContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 28,
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: 'rgba(99, 102, 241, 0.25)',
   },
   summaryLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 8,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginBottom: 10,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   summaryAmount: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   incomeText: {
     color: '#10B981',
@@ -632,16 +913,16 @@ const styles = StyleSheet.create({
   },
   periodButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     flexWrap: 'wrap',
   },
   periodButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   periodButtonActive: {
     backgroundColor: 'rgba(99, 102, 241, 0.2)',
@@ -649,32 +930,33 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '700',
   },
   periodButtonTextActive: {
-    color: '#6366F1',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   filterGroup: {
     marginBottom: 16,
   },
   filterLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 10,
   },
   filterButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   filterButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   filterButtonActive: {
     backgroundColor: 'rgba(99, 102, 241, 0.2)',
@@ -682,24 +964,25 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '700',
   },
   filterButtonTextActive: {
-    color: '#6366F1',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   categoryFilter: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   categoryFilterButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   categoryFilterButtonActive: {
     backgroundColor: 'rgba(99, 102, 241, 0.2)',
@@ -707,20 +990,23 @@ const styles = StyleSheet.create({
   },
   categoryFilterText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '700',
   },
   categoryFilterTextActive: {
-    color: '#6366F1',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
     borderRadius: 12,
-    padding: 12,
+    padding: 14,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.15)',
   },
   categoryInfo: {
     flex: 1,
@@ -728,9 +1014,9 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   progressBar: {
     height: 6,
@@ -745,39 +1031,42 @@ const styles = StyleSheet.create({
   },
   categoryAmount: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#FFFFFF',
   },
   transactionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.12)',
   },
   transactionLeft: {
     flex: 1,
   },
   transactionCategory: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   transactionDescription: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.6)',
     marginBottom: 4,
   },
   transactionDate: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(255, 255, 255, 0.4)',
   },
   transactionAmount: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   incomeAmount: {
     color: '#10B981',
@@ -790,38 +1079,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(255, 255, 255, 0.4)',
     fontSize: 14,
+    fontWeight: '600',
   },
   spacer: {
     height: 20,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#E0F2F1',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '85%',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#FFFFFF',
+    flex: 1,
   },
   modalClose: {
-    fontSize: 24,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 28,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontWeight: '600',
+    padding: 8,
   },
   exportOptions: {
     marginBottom: 20,
@@ -831,11 +1129,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   exportOptionActive: {
     backgroundColor: 'rgba(99, 102, 241, 0.15)',
@@ -844,7 +1142,7 @@ const styles = StyleSheet.create({
   exportOptionContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     flex: 1,
   },
   exportOptionIcon: {
@@ -852,35 +1150,40 @@ const styles = StyleSheet.create({
   },
   exportOptionTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   exportOptionDesc: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   checkmark: {
     fontSize: 20,
     color: '#10B981',
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   modalFooter: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    paddingTop: 20,
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   cancelButtonText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
   confirmButton: {
     flex: 1,
@@ -889,8 +1192,58 @@ const styles = StyleSheet.create({
     backgroundColor: '#6366F1',
     alignItems: 'center',
   },
+  confirmButtonDisabled: {
+    opacity: 0.6,
+  },
   confirmButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  reportTypeSection: {
+    marginBottom: 24,
+  },
+  sectionModalLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 12,
+    letterSpacing: 0.3,
+  },
+  reportTypeOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  reportTypeOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    minWidth: '30%',
+  },
+  reportTypeOptionActive: {
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: '#6366F1',
+  },
+  reportTypeIcon: {
+    fontSize: 28,
+    marginBottom: 6,
+  },
+  reportTypeLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  reportTypeLabelActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  exportFormatSection: {
+    marginBottom: 24,
   },
 });

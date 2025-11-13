@@ -5,113 +5,79 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Animated,
+  ActivityIndicator,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import auth from "@react-native-firebase/auth";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import {
+  generateDailyRecommendations,
+  loadTodayRecommendations,
+  DailyRecommendation,
+} from "../../services/AIRecommendationService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AIRecommendation">;
 
-interface Recommendation {
-  id: string;
-  title: string;
-  description: string;
-  impact: "high" | "medium" | "low";
-  category: "finance" | "health" | "productivity" | "lifestyle";
-  icon: string;
-  actionText: string;
-  estimatedBenefit: string;
-}
+// Use DailyRecommendation type from service
+type Recommendation = DailyRecommendation;
 
 export default function AIRecommendationScreen({ navigation }: Props) {
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadAndGenerateRecommendations();
+    }, [])
+  );
 
-  const recommendations: Recommendation[] = [
-    {
-      id: "1",
-      title: "Tiết kiệm 10% chi tiêu hôm nay",
-      description: "Giảm chi tiêu không cần thiết để đạt mục tiêu tiết kiệm tháng này",
-      impact: "high",
-      category: "finance",
-      icon: "💰",
-      actionText: "Xem chi tiết",
-      estimatedBenefit: "₫500,000/tháng",
-    },
-    {
-      id: "2",
-      title: "Đi ngủ sớm hơn 30 phút",
-      description: "Cải thiện chất lượng giấc ngủ và tăng năng suất làm việc",
-      impact: "high",
-      category: "health",
-      icon: "😴",
-      actionText: "Đặt nhắc nhở",
-      estimatedBenefit: "+2h năng suất",
-    },
-    {
-      id: "3",
-      title: "Uống 2 cốc nước nữa",
-      description: "Bạn mới uống 6/8 cốc nước hôm nay",
-      impact: "medium",
-      category: "health",
-      icon: "💧",
-      actionText: "Hoàn thành",
-      estimatedBenefit: "100% mục tiêu",
-    },
-    {
-      id: "4",
-      title: "Hoàn thành báo cáo trước 3PM",
-      description: "Tập trung vào công việc quan trọng nhất trong ngày",
-      impact: "high",
-      category: "productivity",
-      icon: "📝",
-      actionText: "Bắt đầu ngay",
-      estimatedBenefit: "3h tiết kiệm",
-    },
-    {
-      id: "5",
-      title: "Đi bộ 2000 bước nữa",
-      description: "Đạt mục tiêu 8000 bước hôm nay",
-      impact: "medium",
-      category: "health",
-      icon: "🚶",
-      actionText: "Theo dõi",
-      estimatedBenefit: "100% mục tiêu",
-    },
-    {
-      id: "6",
-      title: "Chuẩn bị bữa trưa tại nhà",
-      description: "Tiết kiệm ₫150,000 và ăn uống lành mạnh hơn",
-      impact: "medium",
-      category: "finance",
-      icon: "🍱",
-      actionText: "Lên kế hoạch",
-      estimatedBenefit: "₫150,000",
-    },
-  ];
+  const loadAndGenerateRecommendations = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-  const handleComplete = (id: string) => {
-    setCompletedIds(prev => [...prev, id]);
-  };
+      const user = auth().currentUser;
+      if (!user) {
+        setError("Vui lòng đăng nhập");
+        setIsLoading(false);
+        return;
+      }
 
-  const handleAction = (rec: Recommendation) => {
-    if (rec.category === "finance") {
-      navigation.navigate("AIInsight");
-    } else {
-      handleComplete(rec.id);
+      // First, try to load today's recommendations
+      const loadResult = await loadTodayRecommendations(user.uid);
+
+      if (loadResult.success && loadResult.recommendations.length > 0) {
+        // Already have recommendations for today
+        console.log("✅ Loaded today's recommendations:", loadResult.recommendations.length);
+        setRecommendations(loadResult.recommendations);
+        setIsLoading(false);
+      } else {
+        // No recommendations yet, generate new ones
+        console.log("📝 No recommendations found, generating new ones...");
+
+        const goal = "Tối ưu hóa chi tiêu và đạt mục tiêu tài chính";
+        const generateResult = await generateDailyRecommendations(user.uid, goal);
+
+        if (generateResult.success) {
+          console.log("✅ Generated recommendations:", generateResult.recommendations.length);
+          setRecommendations(generateResult.recommendations);
+        } else {
+          throw new Error(generateResult.error || "Không thể tạo gợi ý");
+        }
+
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      setError(err instanceof Error ? err.message : "Không thể tải gợi ý");
+      setIsLoading(false);
     }
   };
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
+  const getImpactColor = (priority: string) => {
+    switch (priority) {
       case "high": return "#EC4899";
       case "medium": return "#F59E0B";
       case "low": return "#10B981";
@@ -129,9 +95,6 @@ export default function AIRecommendationScreen({ navigation }: Props) {
     }
   };
 
-  const activeRecs = recommendations.filter(r => !completedIds.includes(r.id));
-  const completedRecs = recommendations.filter(r => completedIds.includes(r.id));
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -143,7 +106,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Gợi ý thông minh</Text>
-          <Text style={styles.headerSubtitle}>{activeRecs.length} gợi ý hôm nay</Text>
+          <Text style={styles.headerSubtitle}>{recommendations.length} gợi ý hôm nay</Text>
         </View>
         <TouchableOpacity style={styles.filterButton}>
           <Text style={styles.filterIcon}>⚙️</Text>
@@ -154,9 +117,25 @@ export default function AIRecommendationScreen({ navigation }: Props) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={{ opacity: fadeAnim }}>
-          {/* AI Summary */}
-          <View style={styles.summaryCard}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Đang tải gợi ý...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={loadAndGenerateRecommendations}
+            >
+              <Text style={styles.retryButtonText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* AI Summary */}
+            <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
               <Text style={styles.summaryIcon}>🎯</Text>
               <Text style={styles.summaryTitle}>Tổng quan hôm nay</Text>
@@ -167,18 +146,8 @@ export default function AIRecommendationScreen({ navigation }: Props) {
             </Text>
             <View style={styles.summaryStats}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>₫650K</Text>
-                <Text style={styles.statLabel}>Tiết kiệm</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>5h</Text>
-                <Text style={styles.statLabel}>Năng suất</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>85%</Text>
-                <Text style={styles.statLabel}>Hoàn thành</Text>
+                <Text style={styles.statValue}>{recommendations.length}</Text>
+                <Text style={styles.statLabel}>Gợi ý</Text>
               </View>
             </View>
           </View>
@@ -186,7 +155,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
           {/* Active Recommendations */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Gợi ý ưu tiên</Text>
-            {activeRecs.map((rec, _index) => (
+            {recommendations.map((rec, _index) => (
               <View
                 key={rec.id}
                 style={[
@@ -201,56 +170,36 @@ export default function AIRecommendationScreen({ navigation }: Props) {
                   <View
                     style={[
                       styles.impactBadge,
-                      { backgroundColor: `${getImpactColor(rec.impact)}22` },
+                      { backgroundColor: `${getImpactColor(rec.priority)}22` },
                     ]}
                   >
                     <Text
                       style={[
                         styles.impactText,
-                        { color: getImpactColor(rec.impact) },
+                        { color: getImpactColor(rec.priority) },
                       ]}
                     >
-                      {rec.impact === "high" ? "Cao" : rec.impact === "medium" ? "TB" : "Thấp"}
+                      {rec.priority === "high" ? "Cao" : rec.priority === "medium" ? "TB" : "Thấp"}
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.recTitle}>{rec.title}</Text>
                 <Text style={styles.recDescription}>{rec.description}</Text>
                 <View style={styles.recFooter}>
-                  <View style={styles.benefitContainer}>
-                    <Text style={styles.benefitLabel}>Lợi ích:</Text>
-                    <Text style={styles.benefitValue}>{rec.estimatedBenefit}</Text>
+                  <View style={styles.categoryBadge}>
+                    <Text
+                      style={[
+                        styles.categoryLabel,
+                        { color: getCategoryColor(rec.category) },
+                      ]}
+                    >
+                      {rec.category}
+                    </Text>
                   </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      { backgroundColor: getCategoryColor(rec.category) },
-                    ]}
-                    onPress={() => handleAction(rec)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.actionButtonText}>{rec.actionText}</Text>
-                  </TouchableOpacity>
                 </View>
               </View>
             ))}
           </View>
-
-          {/* Completed Recommendations */}
-          {completedRecs.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Đã hoàn thành</Text>
-              {completedRecs.map((rec) => (
-                <View key={rec.id} style={styles.completedCard}>
-                  <Text style={styles.completedIcon}>✓</Text>
-                  <View style={styles.completedContent}>
-                    <Text style={styles.completedTitle}>{rec.title}</Text>
-                    <Text style={styles.completedBenefit}>{rec.estimatedBenefit}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
 
           {/* Ask AI */}
           <TouchableOpacity
@@ -261,7 +210,8 @@ export default function AIRecommendationScreen({ navigation }: Props) {
             <Text style={styles.askAIIcon}>💬</Text>
             <Text style={styles.askAIText}>Hỏi AI về gợi ý khác</Text>
           </TouchableOpacity>
-        </Animated.View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -269,6 +219,60 @@ export default function AIRecommendationScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E0F2F1" },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "rgba(15,23,36,0.7)",
+    fontWeight: "600",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+    gap: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#EF4444",
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: "#6366F1",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#0f1724",
+    fontWeight: "700",
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: "rgba(15,23,36,0.6)",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -292,7 +296,7 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 12, color: "#999999" },
   filterButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   filterIcon: { fontSize: 20 },
-  content: { padding: 16 },
+  content: { padding: 16, paddingBottom: 24 },
   summaryCard: {
     backgroundColor: "rgba(99,102,241,0.1)",
     borderRadius: 16,
@@ -313,13 +317,12 @@ const styles = StyleSheet.create({
   highlight: { color: "#6366F1", fontWeight: "800" },
   summaryStats: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
     alignItems: "center",
   },
   statItem: { alignItems: "center" },
   statValue: { fontSize: 20, fontWeight: "800", color: "#333333", marginBottom: 4 },
   statLabel: { fontSize: 12, color: "#999999" },
-  statDivider: { width: 1, height: 30, backgroundColor: "rgba(0, 137, 123, 0.15)" },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
   recCard: {
@@ -329,7 +332,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
   },
-  recHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  recHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
   recIconContainer: {
     width: 48,
     height: 48,
@@ -343,30 +351,13 @@ const styles = StyleSheet.create({
   impactText: { fontSize: 12, fontWeight: "700" },
   recTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 8 },
   recDescription: { fontSize: 13, color: "#999999", lineHeight: 18, marginBottom: 12 },
-  recFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  benefitContainer: { flex: 1 },
-  benefitLabel: { fontSize: 11, color: "#999999", marginBottom: 2 },
-  benefitValue: { fontSize: 14, fontWeight: "700", color: "#333333" },
-  actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+  recFooter: { flexDirection: "row", justifyContent: "flex-start", alignItems: "center" },
+  categoryBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
   },
-  actionButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  completedCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(16,185,129,0.08)",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: "#10B981",
-  },
-  completedIcon: { fontSize: 20, marginRight: 12, color: "#10B981" },
-  completedContent: { flex: 1 },
-  completedTitle: { fontSize: 14, fontWeight: "700", color: "#00796B", marginBottom: 2 },
-  completedBenefit: { fontSize: 12, color: "#999999" },
+  categoryLabel: { fontSize: 12, fontWeight: "600" },
   askAIButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -376,6 +367,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1,
     borderColor: "rgba(99,102,241,0.3)",
+    marginBottom: 16,
   },
   askAIIcon: { fontSize: 20, marginRight: 8 },
   askAIText: { color: "#6366F1", fontSize: 16, fontWeight: "700" },

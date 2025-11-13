@@ -82,6 +82,10 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics' // Như ví dụ bạn cung cấp
 }
 
+// Copy icon fonts from react-native-vector-icons into app assets during Android build
+// This ensures vector icon fonts are bundled so icons render at runtime.
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+
 // =========================================================
 // KHỐI PLUGINS:
 // Trong cấu hình này, khối plugins {} bị dư và không cần thiết vì

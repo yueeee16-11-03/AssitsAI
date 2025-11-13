@@ -281,7 +281,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                 <Text style={styles.actionIcon}>➕</Text>
                 <Text style={styles.actionText}>Thêm thu nhập</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.actionCard}
                 onPress={() => navigation.navigate("AddTransaction", {})}
               >
@@ -295,13 +295,13 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                 <Text style={styles.actionIcon}>🎯</Text>
                 <Text style={styles.actionText}>Gợi ý tiết kiệm</Text>
               </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionCard}
-                  onPress={() => navigation.navigate("AddTransaction", {})}
-                >
-                  <Text style={styles.actionIcon}>📄</Text>
-                  <Text style={styles.actionText}>Xuất báo cáo</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionCard}
+                onPress={() => navigation.navigate("Report", undefined)}
+              >
+                <Text style={styles.actionIcon}>📄</Text>
+                <Text style={styles.actionText}>Xuất báo cáo</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
