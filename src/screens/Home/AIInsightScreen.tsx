@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 
@@ -16,7 +17,7 @@ import { useHabitStore } from "../../store/habitStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AIInsight">;
 
-const PALETTE = ["#EC4899", "#8B5CF6", "#6366F1", "#10B981", "#F59E0B", "#EF4444", "#06B6D4"];
+const PALETTE = ["#10B981", "#34D399", "#6EE7B7", "#059669", "#047857", "#065F46", "#064E3B"];
 
 export default function AIInsightScreen({ navigation }: Props) {
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
@@ -242,11 +243,11 @@ export default function AIInsightScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Insights</Text>
+        <Text style={styles.headerTitle}>Phân tích thông minh</Text>
         <TouchableOpacity style={styles.refreshButton}>
-          <Text style={styles.refreshIcon}>🔄</Text>
+          <MaterialCommunityIcons name="refresh" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -281,7 +282,7 @@ export default function AIInsightScreen({ navigation }: Props) {
           {/* AI Summary Card */}
           <View style={styles.summaryCard}>
             <View style={styles.aiIcon}>
-              <Text style={styles.aiIconText}>🤖</Text>
+              <MaterialCommunityIcons name="lightbulb-on" size={32} color="#10B981" />
             </View>
             <Text style={styles.summaryTitle}>Phân tích AI</Text>
             <Text style={styles.summaryText}>
@@ -392,7 +393,7 @@ export default function AIInsightScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#FFFFFF",
   },
   header: {
     flexDirection: "row",
@@ -401,31 +402,34 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     paddingHorizontal: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomWidth: 0,
+    borderBottomColor: "transparent",
+    backgroundColor: "#10B981",
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
   backIcon: {
     fontSize: 20,
-    color: "#00897B",
+    color: "#10B981",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#FFFFFF",
   },
   refreshButton: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 12,
   },
   refreshIcon: {
     fontSize: 20,
@@ -435,10 +439,12 @@ const styles = StyleSheet.create({
   },
   periodSelector: {
     flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 4,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.1)",
   },
   periodButton: {
     flex: 1,
@@ -447,28 +453,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   periodButtonActive: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "#10B981",
   },
   periodText: {
-    color: "#666666",
+    color: "#9CA3AF",
     fontWeight: "600",
   },
   periodTextActive: {
     color: "#FFFFFF",
   },
   summaryCard: {
-    backgroundColor: "rgba(99,102,241,0.1)",
+    backgroundColor: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(74, 222, 128, 0.05) 100%)",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "rgba(99,102,241,0.2)",
+    borderWidth: 1.5,
+    borderColor: "rgba(16, 185, 129, 0.15)",
   },
   aiIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "rgba(99,102,241,0.2)",
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -479,16 +485,16 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#111827",
     marginBottom: 8,
   },
   summaryText: {
     fontSize: 14,
-    color: "#333333",
+    color: "#111827",
     lineHeight: 20,
   },
   highlight: {
-    color: "#6366F1",
+    color: "#111827",
     fontWeight: "800",
   },
   section: {
@@ -497,13 +503,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#111827",
     marginBottom: 16,
   },
   spendingChart: {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.1)",
   },
   spendingItem: {
     marginBottom: 16,
@@ -521,7 +529,7 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     flex: 1,
-    color: "#00796B",
+    color: "#1F2937",
     fontWeight: "700",
   },
   spendingAmount: {
@@ -530,15 +538,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   amountText: {
-    color: "#333333",
+    color: "#111827",
     fontWeight: "600",
   },
   percentText: {
-    color: "#666666",
+    color: "#9CA3AF",
   },
   progressBar: {
     height: 6,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
     borderRadius: 3,
     overflow: "hidden",
   },
@@ -553,17 +561,19 @@ const styles = StyleSheet.create({
   habitCard: {
     flex: 1,
     minWidth: "45%",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.1)",
   },
   habitIcon: {
     fontSize: 32,
     marginBottom: 8,
   },
   habitName: {
-    color: "#00796B",
+    color: "#111827",
     fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
@@ -572,13 +582,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   streakText: {
-    color: "#666666",
+    color: "#9CA3AF",
     fontSize: 12,
   },
   habitProgressBar: {
     width: "100%",
     height: 4,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
     borderRadius: 2,
     marginBottom: 4,
     overflow: "hidden",
@@ -588,17 +598,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
   },
   habitPercent: {
-    color: "#666666",
+    color: "#9CA3AF",
     fontSize: 12,
   },
   insightCard: {
     flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: "#6366F1",
+    borderLeftColor: "#10B981",
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.1)",
   },
   insightWarning: {
     borderLeftColor: "#F59E0B",
@@ -616,12 +628,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   insightTitle: {
-    color: "#00796B",
+    color: "#111827",
     fontWeight: "700",
     marginBottom: 4,
   },
   insightDescription: {
-    color: "#333333",
+    color: "#111827",
     fontSize: 13,
     lineHeight: 18,
   },
@@ -629,27 +641,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#6366F1",
+    backgroundColor: "#10B981",
     borderRadius: 16,
     padding: 18,
-    shadowColor: "#6366F1",
+    shadowColor: "rgba(16, 185, 129, 0.3)",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 6,
   },
   actionIcon: {
     fontSize: 20,
     marginRight: 8,
+    color: "#FFFFFF",
   },
   actionText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
   },
   aiStatusText: {
     marginTop: 8,
-    color: "#666666",
+    color: "#9CA3AF",
     fontSize: 13,
   },
   aiErrorText: {

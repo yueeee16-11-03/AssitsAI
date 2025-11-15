@@ -25,6 +25,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [loading] = useState(false);
   const [cameraOptionsVisible, setCameraOptionsVisible] = useState(false);
   const [chatPulse] = useState(new Animated.Value(0));
+  const [activeTab, setActiveTab] = useState<'home' | 'habit' | 'finance' | 'ai'>('home');
   const SCREEN_WIDTH = Dimensions.get('window').width;
   const [sheetVisible, setSheetVisible] = React.useState(false);
   const sheetAnim = React.useRef(new Animated.Value(0)).current;
@@ -39,6 +40,10 @@ export default function HomeScreen({ navigation }: Props) {
     Animated.timing(sheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
       setSheetVisible(false);
     });
+  };
+
+  const getTabColor = (tab: 'home' | 'habit' | 'finance' | 'ai') => {
+    return activeTab === tab ? '#059669' : '#9CA3AF';
   };
 
   React.useEffect(() => {
@@ -148,7 +153,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.accountAmount}>0 vnd</Text>
 
             <View style={styles.accountIconsRow}>
-              <TouchableOpacity style={styles.accountIcon} onPress={() => {}}>
+              <TouchableOpacity style={styles.accountIcon} onPress={() => { setCameraOptionsVisible(true); }}>
                 <View style={styles.accountIconCircle}>
                   <Icon name="barcode-scan" size={24} color="#7C3AED" />
                 </View>
@@ -322,12 +327,12 @@ export default function HomeScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('AIRecommendation')}
             activeOpacity={0.9}
           >
-            <Icon name="lightbulb-on-outline" size={20} color="#7C3AED" style={styles.personalSuggestIcon} />
+            <Icon name="lightbulb-on-outline" size={20} color="#10B981" style={styles.personalSuggestIcon} />
             <View style={styles.personalSuggestContent}>
               <Text style={styles.personalSuggestTitle}>Gợi ý thông minh</Text>
               <Text style={styles.personalSuggestSubtitle}>Xem mẹo tiết kiệm và cải thiện thói quen</Text>
             </View>
-            <Icon name="chevron-right" size={18} color="#7C3AED" />
+            <Icon name="chevron-right" size={18} color="#10B981" />
           </TouchableOpacity>
         </View>
 
@@ -341,25 +346,49 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Background fill below tab bar */}
         <View style={styles.tabBarBg} />
         <View style={styles.bottomTabBar}>
-          <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('Home')}>
-            <Icon name="home" size={26} color="#7C3AED" style={styles.tabIconBold} />
+          <TouchableOpacity 
+            style={styles.tabButton} 
+            onPress={() => {
+              setActiveTab('home');
+              navigation.navigate('Home');
+            }}
+          >
+            <Icon name="home" size={26} color={getTabColor('home')} style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Trang chủ</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('HabitDashboard')}>
-            <Icon name="check-circle" size={26} color="#7C3AED" style={styles.tabIconBold} />
+          <TouchableOpacity 
+            style={styles.tabButton} 
+            onPress={() => {
+              setActiveTab('habit');
+              navigation.navigate('HabitDashboard');
+            }}
+          >
+            <Icon name="check-circle" size={26} color={getTabColor('habit')} style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Thói quen</Text>
           </TouchableOpacity>
 
           <View style={styles.tabCenterPlaceholder} />
 
-          <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('FinanceDashboard')}>
-            <Icon name="wallet" size={26} color="#7C3AED" style={styles.tabIconBold} />
+          <TouchableOpacity 
+            style={styles.tabButton} 
+            onPress={() => {
+              setActiveTab('finance');
+              navigation.navigate('FinanceDashboard');
+            }}
+          >
+            <Icon name="wallet" size={26} color={getTabColor('finance')} style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Tài chính</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('AIRecommendation')}>
-            <Icon name="lightbulb-on" size={26} color="#7C3AED" style={styles.tabIconBold} />
+          <TouchableOpacity 
+            style={styles.tabButton} 
+            onPress={() => {
+              setActiveTab('ai');
+              navigation.navigate('AIRecommendation');
+            }}
+          >
+            <Icon name="lightbulb-on" size={26} color={getTabColor('ai')} style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Gợi ý</Text>
           </TouchableOpacity>
         </View>
@@ -460,7 +489,8 @@ export default function HomeScreen({ navigation }: Props) {
 // Camera Screen Component with live preview and controls
 function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
   const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice("back");
+  const [cameraPosition, setCameraPosition] = React.useState<"back" | "front">("back");
+  const device = useCameraDevice(cameraPosition);
   const camera = React.useRef<Camera>(null);
   const [permissionRequested, setPermissionRequested] = React.useState(false);
   const [torchEnabled, setTorchEnabled] = React.useState(false);
@@ -488,7 +518,7 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
     if (camera.current) {
       try {
         const photo = await camera.current.takePhoto({
-          flash: torchEnabled ? "on" : "auto",
+          flash: cameraPosition === "back" && torchEnabled ? "on" : "off",
         });
         if (photo.path) {
           onCapture("file://" + photo.path);
@@ -525,6 +555,14 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
 
   const toggleFlash = () => {
     setTorchEnabled(!torchEnabled);
+  };
+
+  const toggleCameraPosition = () => {
+    setCameraPosition(cameraPosition === "back" ? "front" : "back");
+    // Disable torch when switching to front camera
+    if (cameraPosition === "back") {
+      setTorchEnabled(false);
+    }
   };
 
   if (!hasPermission) {
@@ -582,19 +620,20 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
         isActive={true}
         photo={true}
         format={format}
-        torch={torchEnabled ? "on" : "off"}
+        torch={cameraPosition === "back" && torchEnabled ? "on" : "off"}
       />
 
-      {/* Top Header with Close and Flash buttons */}
+      {/* Top Header with Close and Camera Flip buttons */}
       <View style={cameraStyles.cameraHeader}>
         <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={onClose}>
-          <Text style={cameraStyles.cameraHeaderIcon}>✕</Text>
+          <Icon name="close" size={18} color="#374151" />
         </TouchableOpacity>
-        <Text style={cameraStyles.cameraHeaderTitle}>📸 Quét Hóa Đơn</Text>
-        <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={toggleFlash}>
-          <Text style={cameraStyles.cameraHeaderIcon}>
-            {torchEnabled ? "💡" : "🌙"}
-          </Text>
+        <View style={cameraStyles.cameraHeaderTitleWrap}>
+          <Icon name="qrcode-scan" size={16} color="#6B7280" style={cameraStyles.cameraHeaderIconSpacing} />
+          <Text style={cameraStyles.cameraHeaderTitle}>Quét hóa đơn</Text>
+        </View>
+        <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={toggleCameraPosition}>
+          <Icon name="camera-flip" size={18} color="#374151" />
         </TouchableOpacity>
       </View>
 
@@ -611,7 +650,7 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
       <View style={cameraStyles.cameraStatusBar}>
         <View style={cameraStyles.statusIndicator}>
           <Text style={cameraStyles.statusText}>
-            {torchEnabled ? "💡 Đèn bật" : "🌙 Đèn tắt"}
+            {torchEnabled ? 'Đèn: Bật' : 'Đèn: Tắt'}
           </Text>
         </View>
       </View>
@@ -622,22 +661,27 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
           style={cameraStyles.galleryButton}
           onPress={handlePickFromGallery}
         >
-          <Text style={cameraStyles.galleryButtonText}>🖼️</Text>
+          <Icon name="image" size={28} color="#6B7280" />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={cameraStyles.cameraShootButton}
           onPress={handleTakePhoto}
         >
-          <View style={cameraStyles.cameraShootInner} />
+          <Icon name="qrcode-scan" size={36} color="#6B7280" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={cameraStyles.flashButton}
-          onPress={toggleFlash}
-        >
-          <Text style={cameraStyles.flashButtonText}>{torchEnabled ? "💡" : "🌙"}</Text>
-        </TouchableOpacity>
+        {cameraPosition === 'back' && (
+          <TouchableOpacity
+            style={cameraStyles.flashButton}
+            onPress={toggleFlash}
+          >
+            <Icon name={torchEnabled ? 'flash' : 'flash-off'} size={28} color="#6B7280" />
+          </TouchableOpacity>
+        )}
+        {cameraPosition === 'front' && (
+          <View style={cameraStyles.flashButton} />
+        )}
       </View>
     </View>
   );
@@ -646,7 +690,7 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
 const cameraStyles = StyleSheet.create({
   cameraContainer: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#FBF7F3",
     position: "absolute",
     left: 0,
     right: 0,
@@ -668,14 +712,14 @@ const cameraStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     paddingTop: 20,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(255,255,255,0.9)",
     zIndex: 10,
   },
   cameraHeaderButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -684,61 +728,37 @@ const cameraStyles = StyleSheet.create({
     fontWeight: "bold",
   },
   cameraHeaderTitle: {
-    color: "#FFFFFF",
+    color: "#6B7280",
     fontSize: 18,
     fontWeight: "700",
   },
+  cameraHeaderTitleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  cameraHeaderSide: { width: 40 },
+  cameraHeaderIconSpacing: { marginRight: 8 },
   billScanFrame: {
     position: "absolute",
-    left: "10%",
-    right: "10%",
-    top: "25%",
-    height: 300,
-    borderRadius: 8,
+    left: "8%",
+    right: "8%",
+    top: "20%",
+    height: 350,
+    borderRadius: 0,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: "#4CAF50",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 5,
   },
   billFrameCorner: {
-    position: "absolute",
-    width: 30,
-    height: 30,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderColor: "#4CAF50",
-    top: -6,
-    left: -6,
+    display: "none",
   },
   billFrameCornerTopRight: {
-    borderTopWidth: 3,
-    borderLeftWidth: 0,
-    borderRightWidth: 3,
-    borderColor: "#4CAF50",
-    top: -6,
-    left: undefined,
-    right: -6,
+    display: "none",
   },
   billFrameCornerBottomLeft: {
-    borderTopWidth: 0,
-    borderLeftWidth: 3,
-    borderBottomWidth: 3,
-    borderColor: "#4CAF50",
-    top: undefined,
-    bottom: -6,
-    left: -6,
+    display: "none",
   },
   billFrameCornerBottomRight: {
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-    borderRightWidth: 3,
-    borderBottomWidth: 3,
-    borderColor: "#4CAF50",
-    top: undefined,
-    bottom: -6,
-    right: -6,
-    left: undefined,
+    display: "none",
   },
   billFrameText: {
     color: "rgba(255,255,255,0.6)",
@@ -755,13 +775,13 @@ const cameraStyles = StyleSheet.create({
     zIndex: 5,
   },
   statusIndicator: {
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.06)",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   statusText: {
-    color: "#FFFFFF",
+    color: "#374151",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -774,19 +794,21 @@ const cameraStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     paddingBottom: 20,
     zIndex: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.04)'
   },
   galleryButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(0,0,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)",
   },
   galleryButtonText: {
     fontSize: 28,
@@ -795,27 +817,21 @@ const cameraStyles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 4,
-    borderColor: "rgba(255,255,255,0.5)",
-  },
-  cameraShootInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#7C3AED",
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   flashButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(0,0,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)",
   },
   flashButtonText: {
     fontSize: 28,
@@ -1236,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   tabLabelBold: {
     fontSize: 13,
-    color: '#7C3AED',
+    color: '#9CA3AF',
     marginTop: 4,
     fontWeight: 'bold',
     letterSpacing: 0.2,
@@ -1441,12 +1457,12 @@ const styles = StyleSheet.create({
   personalSuggestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(124,58,237,0.06)',
+    backgroundColor: '#F0FDF4',
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.12)'
+    borderColor: '#D1FAE5'
   },
   personalSuggestIcon: { marginRight: 10 },
   personalSuggestTitle: { color: '#000000', fontWeight: '800', fontSize: 14 },

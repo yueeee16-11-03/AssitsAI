@@ -7,7 +7,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // 1. LẤY CẤU HÌNH API KEY TỪ FILE "GeminiAIService.ts" ĐANG CHẠY
 // Đây là chìa khóa: Dùng chung một API_KEY đã được xác nhận là chạy được.
-const API_KEY = "AIzaSyBLCiOB6D52RkyaPIo6wDMcRk3eFOZ2t1E";
+const API_KEY = "AIzaSyDdOT4GOrEspBTjvv5YmAsOjxhQkYyJR_Y";
 
 if (!API_KEY) {
   throw new Error("⚠️ Thiếu GEMINI_API_KEY");
@@ -100,12 +100,70 @@ class TextAIProcessingServiceClass {
    * @private
    */
   _getTextProcessingPrompt(text, transactionType) {
-    const type = transactionType === 'income' ? 'THU NHẬP' : 'CHI TIÊU';
+    // 🟢 Prompt cho INCOME (Thu nhập)
+    if (transactionType === 'income') {
+      return `
+Bạn là trợ lý thông minh xử lý thông tin tài chính cho ứng dụng quản lý thu nhập.
+
+TASK: Phân tích ghi chú THU NHẬP này (có thể nhiều item), trích xuất thông tin và TÍNH TỔNG TIỀN:
+
+Ghi chú: "${text}"
+
+Hãy trích xuất và trả về JSON với các trường:
+{
+  "totalAmount": <TỔNG số tiền (chỉ số, VD: 5000000, KHÔNG có chữ)>,
+  "items": [
+    {
+      "item": "<Mô tả nguồn thu nhập>",
+      "amount": <số tiền của item này>
+    }
+  ],
+  "category": "<Danh mục THU NHẬP: Lương, Thưởng, Đầu tư, Thu nhập khác>",
+  "description": "<Mô tả chi tiết tổng hợp của giao dịch>",
+  "confidence": "<high/medium/low - độ chắc chắn>"
+}
+
+LƯU Ý:
+- QUAN TRỌNG: Tính tổng ALL items vào totalAmount
+- Nếu có nhiều item, liệt kê tất cả trong "items" array
+- Nếu không tìm thấy số tiền, set totalAmount = 0
+- Danh mục phải là một trong: Lương, Thưởng, Đầu tư, Thu nhập khác
+- Description nên rõ ràng, ngắn gọn
+- Confidence = "high" nếu rõ ràng, "low" nếu mơ hồ
+- CHỈ trả về JSON, không giải thích thêm
+
+Ví dụ 1 (Single item):
+Input: "Lương tháng 5 triệu"
+Output:
+{
+  "totalAmount": 5000000,
+  "items": [{"item": "Lương tháng", "amount": 5000000}],
+  "category": "Lương",
+  "description": "Lương tháng",
+  "confidence": "high"
+}
+
+Ví dụ 2 (Multiple items):
+Input: "lương 5 triệu thưởng 500k"
+Output:
+{
+  "totalAmount": 5500000,
+  "items": [
+    {"item": "Lương", "amount": 5000000},
+    {"item": "Thưởng", "amount": 500000}
+  ],
+  "category": "Lương",
+  "description": "Lương + Thưởng",
+  "confidence": "high"
+}
+      `.trim();
+    }
     
+    // 🔴 Prompt cho EXPENSE (Chi tiêu)
     return `
 Bạn là trợ lý thông minh xử lý thông tin tài chính cho ứng dụng quản lý chi tiêu.
 
-TASK: Phân tích ghi chú ${type} này (có thể nhiều item), trích xuất thông tin và TÍNH TỔNG TIỀN:
+TASK: Phân tích ghi chú CHI TIÊU này (có thể nhiều item), trích xuất thông tin và TÍNH TỔNG TIỀN:
 
 Ghi chú: "${text}"
 
@@ -118,7 +176,7 @@ Hãy trích xuất và trả về JSON với các trường:
       "amount": <số tiền của item này>
     }
   ],
-  "category": "<Danh mục CHÍNH: Ăn uống, Vận chuyển, Mua sắm, Giải trí, Sức khỏe, Giáo dục, Nhà cửa, Khác>",
+  "category": "<Danh mục CHI TIÊU: Ăn uống, Vận chuyển, Mua sắm, Giải trí, Sức khỏe, Giáo dục, Nhà cửa, Khác>",
   "description": "<Mô tả chi tiết tổng hợp của giao dịch>",
   "confidence": "<high/medium/low - độ chắc chắn>"
 }
@@ -208,15 +266,26 @@ Output:
    * @private
    */
   _mapCategory(geminiCategory, transactionType) {
+    if (!geminiCategory) {
+      return transactionType === 'income' ? '💰 Thu nhập' : '📝 Ghi chú';
+    }
+
+    // Loại bỏ emoji từ geminiCategory nếu có
+    const cleanCategory = geminiCategory.replace(/[🍔🚗🛍️🎮💊📚🏠💼🎁📈🌟✓]/g, '').trim();
+    
     const categoryMap = {
       // Expense categories
       'Ăn uống': 'Ăn uống 🍔',
       'Vận chuyển': 'Vận chuyển 🚗',
+      'Giao thông': 'Vận chuyển 🚗', // Alias
       'Mua sắm': 'Mua sắm 🛍️',
       'Giải trí': 'Giải trí 🎮',
       'Sức khỏe': 'Sức khỏe 💊',
+      'Y tế': 'Sức khỏe 💊', // Alias
       'Giáo dục': 'Giáo dục 📚',
       'Nhà cửa': 'Nhà cửa 🏠',
+      'Nhà ở': 'Nhà cửa 🏠', // Alias
+      'Tiện ích': 'Nhà cửa 🏠', // Dùng chung category
       'Khác': 'Khác 📦',
       // Income categories
       'Lương': 'Lương 💼',
@@ -225,8 +294,20 @@ Output:
       'Thu nhập khác': 'Khác 💰',
     };
 
-    return categoryMap[geminiCategory] || 
-            (transactionType === 'income' ? '💰 Thu nhập' : '📝 Ghi chú');
+    // Try exact match trước
+    if (categoryMap[cleanCategory]) {
+      return categoryMap[cleanCategory];
+    }
+
+    // Try lowercase match
+    for (const [key, value] of Object.entries(categoryMap)) {
+      if (key.toLowerCase() === cleanCategory.toLowerCase()) {
+        return value;
+      }
+    }
+
+    // Fallback: Return as is với emoji nếu không match
+    return transactionType === 'income' ? '💰 Thu nhập' : '📝 Ghi chú';
   }
 
   /**

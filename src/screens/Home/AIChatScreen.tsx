@@ -11,7 +11,8 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AIChat">;
 
@@ -99,7 +100,7 @@ export default function AIChatScreen({ navigation }: Props) {
       >
         {!isUser && (
           <View style={styles.aiAvatar}>
-            <Text style={styles.aiAvatarText}>AI</Text>
+            <Icon name="robot" size={16} color="#6366F1" />
           </View>
         )}
         <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.aiBubble]}>
@@ -115,7 +116,7 @@ export default function AIChatScreen({ navigation }: Props) {
         </View>
         {isUser && (
           <View style={styles.userAvatar}>
-            <Text style={styles.userAvatarText}>U</Text>
+            <Icon name="account" size={16} color="#8B5CF6" />
           </View>
         )}
       </View>
@@ -133,14 +134,14 @@ export default function AIChatScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <Icon name="chevron-left" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>AI Assistant</Text>
           <Text style={styles.headerSubtitle}>Luôn sẵn sàng hỗ trợ</Text>
         </View>
         <TouchableOpacity style={styles.menuButton}>
-          <Text style={styles.menuIcon}>⋮</Text>
+          <Icon name="dots-vertical" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -185,7 +186,7 @@ export default function AIChatScreen({ navigation }: Props) {
               onPress={handleVoice}
               activeOpacity={0.8}
             >
-              <Text style={styles.voiceIcon}>{isRecording ? "⏹" : "🎤"}</Text>
+                <Icon name={isRecording ? 'stop-circle' : 'microphone'} size={18} color={isRecording ? '#EF4444' : '#111827'} />
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -195,7 +196,7 @@ export default function AIChatScreen({ navigation }: Props) {
           disabled={!inputText.trim()}
           activeOpacity={0.8}
         >
-          <Text style={styles.sendIcon}>→</Text>
+          <Icon name="send" size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -219,7 +220,7 @@ export default function AIChatScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#FFFFFF",
   },
   header: {
     flexDirection: "row",
@@ -227,33 +228,34 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     paddingHorizontal: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    backgroundColor: '#10B981',
+    borderBottomWidth: 0,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: 'transparent',
     alignItems: "center",
     justifyContent: "center",
   },
   backIcon: {
     fontSize: 20,
-    color: "#00897B",
+    color: "#FFFFFF",
   },
   headerCenter: {
     flex: 1,
     marginLeft: 12,
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#FFFFFF",
   },
   headerSubtitle: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.9)",
   },
   menuButton: {
     width: 40,
@@ -263,10 +265,11 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 24,
-    color: "rgba(255,255,255,0.7)",
+    color: "#FFFFFF",
   },
   messagesContainer: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
   },
   messagesContent: {
     padding: 16,
@@ -286,7 +289,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(99,102,241,0.2)",
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
@@ -300,7 +303,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(139,92,246,0.2)",
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
@@ -316,11 +319,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   userBubble: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "#EEF2FF",
     borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#F3F4F6",
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -328,14 +331,14 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   userText: {
-    color: "#FFFFFF",
+    color: "#111827",
   },
   aiText: {
-    color: "rgba(255,255,255,0.9)",
+    color: "#111827",
   },
   timestamp: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.5)",
+    color: "#6B7280",
     marginTop: 4,
   },
   typingBubble: {
@@ -349,7 +352,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "#6B7280",
   },
   typingDotDelay1: {
     opacity: 0.7,
@@ -362,12 +365,12 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.05)",
+    borderTopColor: "rgba(0,0,0,0.06)",
   },
   inputWrapper: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#F3F4F6",
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -375,7 +378,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#333333",
+    color: "#111827",
     fontSize: 15,
     maxHeight: 100,
   },
@@ -383,13 +386,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
   },
   voiceButtonActive: {
-    backgroundColor: "#EF4444",
+    backgroundColor: "#FEE2E2",
   },
   voiceIcon: {
     fontSize: 18,
@@ -398,12 +401,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#6366F1",
+    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: "rgba(99,102,241,0.3)",
+    backgroundColor: "rgba(16,185,129,0.3)",
   },
   sendIcon: {
     fontSize: 20,
@@ -415,16 +418,16 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   suggestionChip: {
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "#F3F4F6",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "#E5E7EB",
   },
   suggestionText: {
-    color: "rgba(255,255,255,0.8)",
+    color: "#111827",
     fontSize: 13,
     fontWeight: "600",
   },

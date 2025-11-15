@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useTransactionStore } from "../../store/transactionStore";
@@ -102,19 +103,19 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.headerButton}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.iconLeft}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tài chính</Text>
+        <Text style={styles.headerTitleCentered}>Tài chính</Text>
         <TouchableOpacity
-          style={styles.exportButton}
+          style={styles.iconRight}
           onPress={() => navigation.navigate("BudgetPlanner")}
         >
-          <Text style={styles.exportIcon}>📊</Text>
+          <MaterialCommunityIcons name="chart-box" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -149,19 +150,19 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
           {/* Balance Overview */}
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>Số dư hiện tại</Text>
-            <Text style={styles.balanceAmount}>₫{balance.toLocaleString("vi-VN")}</Text>
+            <Text style={styles.balanceAmount}>{balance.toLocaleString("vi-VN")} VND</Text>
             <View style={styles.balanceStats}>
               <View style={styles.balanceStat}>
                 <Text style={styles.statLabel}>Thu nhập</Text>
                 <Text style={[styles.statValue, styles.incomeText]}>
-                  +₫{(totalIncome / 1000000).toFixed(1)}M
+                  +{(totalIncome / 1000000).toFixed(1)}M VND
                 </Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.balanceStat}>
                 <Text style={styles.statLabel}>Chi tiêu</Text>
                 <Text style={[styles.statValue, styles.expenseText]}>
-                  -₫{(totalExpense / 1000000).toFixed(1)}M
+                  -{(totalExpense / 1000000).toFixed(1)}M VND
                 </Text>
               </View>
               <View style={styles.statDivider} />
@@ -176,8 +177,21 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
 
           {/* Income Chart */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📈 Thu nhập 6 tháng</Text>
-            <View style={styles.chart}>
+            <TouchableOpacity 
+              style={styles.sectionHeaderButton}
+              onPress={() => navigation.navigate("AIInsight", undefined)}
+            >
+              <View style={styles.sectionTitleContainer}>
+                <MaterialCommunityIcons name="chart-line" size={24} color="#10B981" />
+                <Text style={styles.sectionTitleButton}>Thu nhập 6 tháng</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#10B981" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.chartContainer}
+              onPress={() => navigation.navigate("AIInsight", undefined)}
+            >
+              <View style={styles.chart}>
               {incomeData.map((item, index) => (
                 <View key={index} style={styles.chartColumn}>
                   <Text style={styles.chartValue}>
@@ -195,29 +209,47 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                   <Text style={styles.chartLabel}>{item.month}</Text>
                 </View>
               ))}
-            </View>
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Expense Breakdown */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>💳 Chi tiêu theo danh mục</Text>
-              <TouchableOpacity onPress={() => navigation.navigate("AIInsight", undefined)}>
-                <Text style={styles.viewAllLink}>Xem chi tiết →</Text>
-              </TouchableOpacity>
-            </View>
-            {expenseCategories.map((category, index) => (
+            <TouchableOpacity 
+              style={styles.sectionHeaderButton}
+              onPress={() => navigation.navigate("AIInsight", undefined)}
+            >
+              <View style={styles.sectionTitleContainer}>
+                <MaterialCommunityIcons name="wallet" size={24} color="#10B981" />
+                <Text style={styles.sectionTitleButton}>Chi tiêu theo danh mục</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#10B981" />
+            </TouchableOpacity>
+            {expenseCategories.filter((category) => category.name !== "Ghi chú").map((category, index) => {
+              const getCategoryIcon = (categoryName: string) => {
+                const iconMap: { [key: string]: { name: string; color: string } } = {
+                  "Ăn uống": { name: "food", color: "#EF4444" },
+                  "Di chuyển": { name: "car", color: "#F97316" },
+                  "Mua sắm": { name: "shopping", color: "#EC4899" },
+                  "Giải trí": { name: "gamepad-variant", color: "#8B5CF6" },
+                  "Sức khỏe": { name: "hospital-box", color: "#EF4444" },
+                  "Giáo dục": { name: "book", color: "#3B82F6" },
+                  "Nhà cửa": { name: "home", color: "#10B981" },
+                  "Khác": { name: "dots-horizontal", color: "#6B7280" },
+                };
+                return iconMap[categoryName] || { name: "wallet", color: "#6B7280" };
+              };
+              const icon = getCategoryIcon(category.name);
+              return (
               <View key={index} style={styles.categoryItem}>
                 <View style={styles.categoryHeader}>
                   <View style={styles.categoryInfo}>
-                    <View
-                      style={[styles.categoryDot, { backgroundColor: category.color }]}
-                    />
+                    <MaterialCommunityIcons name={icon.name} size={24} color={icon.color} style={styles.categoryIconMargin} />
                     <Text style={styles.categoryName}>{category.name}</Text>
                   </View>
                   <View style={styles.categoryAmount}>
                     <Text style={styles.amountText}>
-                      ₫{(category.amount / 1000000).toFixed(1)}M
+                      {(category.amount / 1000000).toFixed(1)}M VND
                     </Text>
                     <Text
                       style={[
@@ -233,34 +265,42 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                   <View
                     style={[
                       styles.progressFill,
-                      { width: `${category.percent}%`, backgroundColor: category.color },
+                      { width: `${category.percent}%`, backgroundColor: icon.color },
                     ]}
                   />
                 </View>
                 <Text style={styles.percentText}>{category.percent}% tổng chi tiêu</Text>
               </View>
-            ))}
+            );
+            })}
           </View>
 
           {/* AI Analysis */}
           <View style={styles.aiAnalysisCard}>
             <View style={styles.aiHeader}>
               <View style={styles.aiIconContainer}>
-                <Text style={styles.aiIcon}>🤖</Text>
+                <MaterialCommunityIcons name="robot" size={24} color="#10B981" />
               </View>
               <Text style={styles.aiTitle}>Phân tích AI</Text>
             </View>
-            <Text style={styles.aiText}>
-              💡 <Text style={styles.aiBold}>Chi tiêu ăn uống tăng 5%</Text> so với tháng trước.
-              Bạn nên giảm chi phí ăn ngoài và nấu ăn tại nhà nhiều hơn.
-            </Text>
-            <Text style={styles.aiText}>
-              ✅ <Text style={styles.aiBold}>Tiết kiệm tốt</Text>: Bạn đã tiết kiệm được{" "}
-              <Text style={styles.highlight}>{savingRate}%</Text> thu nhập tháng này.
-            </Text>
-            <Text style={styles.aiText}>
-              📊 <Text style={styles.aiBold}>Xu hướng tích cực</Text>: Thu nhập tăng 22% so với 3 tháng trước.
-            </Text>
+            <View style={styles.aiTextSection}>
+              <MaterialCommunityIcons name="alert-circle" size={16} color="#059669" style={styles.aiIcon} />
+              <Text style={styles.aiText}>
+                <Text style={styles.aiBold}>Chi tiêu ăn uống tăng 5%</Text> so với tháng trước. Bạn nên giảm chi phí ăn ngoài và nấu ăn tại nhà nhiều hơn.
+              </Text>
+            </View>
+            <View style={styles.aiTextSection}>
+              <MaterialCommunityIcons name="check-circle" size={16} color="#10B981" style={styles.aiIcon} />
+              <Text style={styles.aiText}>
+                <Text style={styles.aiBold}>Tiết kiệm tốt</Text>: Bạn đã tiết kiệm được <Text style={styles.highlight}>{savingRate}%</Text> thu nhập tháng này.
+              </Text>
+            </View>
+            <View style={styles.aiTextSection}>
+              <MaterialCommunityIcons name="trending-up" size={16} color="#059669" style={styles.aiIcon} />
+              <Text style={styles.aiText}>
+                <Text style={styles.aiBold}>Xu hướng tích cực</Text>: Thu nhập tăng 22% so với 3 tháng trước.
+              </Text>
+            </View>
             <TouchableOpacity
               style={styles.aiButton}
               onPress={() => navigation.navigate("AIChat", undefined)}
@@ -270,49 +310,20 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Thao tác nhanh</Text>
-            <View style={styles.actionsGrid}>
-              <TouchableOpacity 
-                style={styles.actionCard}
-                onPress={() => navigation.navigate("AddIncome", {})}
-              >
-                <Text style={styles.actionIcon}>➕</Text>
-                <Text style={styles.actionText}>Thêm thu nhập</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionCard}
-                onPress={() => navigation.navigate("AddTransaction", {})}
-              >
-                <Text style={styles.actionIcon}>➖</Text>
-                <Text style={styles.actionText}>Thêm chi tiêu</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionCard}
-                onPress={() => navigation.navigate("AIRecommendation", undefined)}
-              >
-                <Text style={styles.actionIcon}>🎯</Text>
-                <Text style={styles.actionText}>Gợi ý tiết kiệm</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionCard}
-                onPress={() => navigation.navigate("Report", undefined)}
-              >
-                <Text style={styles.actionIcon}>📄</Text>
-                <Text style={styles.actionText}>Xuất báo cáo</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+
 
           {/* Recent Transactions */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>📋 Giao dịch gần đây</Text>
-              <TouchableOpacity onPress={() => navigation.push("TransactionHistory", { newTransaction: undefined })}>
-                <Text style={styles.viewAllLink}>Xem tất cả →</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity 
+              style={styles.sectionHeaderButton}
+              onPress={() => navigation.push("TransactionHistory", { newTransaction: undefined })}
+            >
+              <View style={styles.sectionTitleContainer}>
+                <MaterialCommunityIcons name="history" size={24} color="#10B981" />
+                <Text style={styles.sectionTitleButton}>Giao dịch gần đây</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#10B981" />
+            </TouchableOpacity>
             {transactionsLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#6366F1" />
@@ -363,7 +374,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                           <View style={styles.transactionInfo}>
                             <Text style={styles.transactionCategory}>{transaction.category}</Text>
                             <Text style={styles.transactionTime}>
-                              🕐 {dateTime.time} - 📅 {dateTime.date}
+                              <MaterialCommunityIcons name="clock-outline" size={12} color="#9CA3AF" /> {dateTime.time} · <MaterialCommunityIcons name="calendar-outline" size={12} color="#9CA3AF" /> {dateTime.date}
                             </Text>
                           </View>
                         </View>
@@ -375,22 +386,21 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                               : styles.amountIncome,
                           ]}
                         >
-                          {transaction.type === "expense" ? "-" : "+"} ₫
-                          {Math.abs(transaction.amount).toLocaleString("vi-VN")}
+                          {transaction.type === "expense" ? "-" : "+"} {Math.abs(transaction.amount).toLocaleString("vi-VN")} VND
                         </Text>
                       </View>
 
                       {/* Description */}
                       {transaction.description && (
                         <Text style={styles.transactionDescription}>
-                          📝 {transaction.description}
+                          <MaterialCommunityIcons name="note-text-outline" size={14} color="#6B7280" /> {transaction.description}
                         </Text>
                       )}
 
                       {/* Items breakdown (if available) */}
                       {transaction.items && transaction.items.length > 0 && (
                         <View style={styles.itemsSection}>
-                          <Text style={styles.itemsTitle}>📦 Chi tiết:</Text>
+                          <Text style={styles.itemsTitle}><MaterialCommunityIcons name="package-variant-closed" size={14} color="#6B7280" /> Chi tiết:</Text>
                           {transaction.items.map((item: any, itemIndex: number) => (
                             <Text key={itemIndex} style={styles.itemRow}>
                               • {item.item} - {item.amount?.toLocaleString("vi-VN") || "0"} ₫
@@ -411,7 +421,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -430,9 +440,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#00897B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
+  backIcon: { fontSize: 20, color: "#000000" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#000000" },
+  headerButton: {
+    backgroundColor: "#10B981",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: 48,
+  },
+  headerButtonLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerButtonTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
+  headerTitleButton: { fontSize: 18, fontWeight: "800", color: "#FFFFFF", marginLeft: 8 },
+  headerTitleCentered: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
+  iconLeft: { position: "absolute", left: 12, top: 48, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  iconRight: { position: "absolute", right: 12, top: 48, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  headerButtonCenter: { 
+    flex: 1, 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "center",
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  headerSpacer: { width: 40, height: 40 },
   exportButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  exportButtonActive: { width: 40, height: 40, alignItems: "center", justifyContent: "center", backgroundColor: "#10B981", borderRadius: 8 },
   exportIcon: { fontSize: 20 },
   content: { padding: 16 },
   periodSelector: {
@@ -443,26 +484,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   periodButton: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
-  periodButtonActive: { backgroundColor: "#6366F1" },
+  periodButtonActive: { backgroundColor: "#10B981" },
   periodText: { color: "#999999", fontWeight: "600", fontSize: 13 },
   periodTextActive: { color: "#FFFFFF" },
   balanceCard: {
-    backgroundColor: "rgba(99,102,241,0.15)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 24,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: "rgba(99,102,241,0.3)",
   },
-  balanceLabel: { fontSize: 14, color: "#999999", marginBottom: 8 },
-  balanceAmount: { fontSize: 36, fontWeight: "900", color: "#00896B", marginBottom: 20 },
+  balanceLabel: { fontSize: 14, color: "#333333", marginBottom: 8 },
+  balanceAmount: { fontSize: 36, fontWeight: "900", color: "#333333", marginBottom: 20 },
   balanceStats: { flexDirection: "row", justifyContent: "space-around" },
   balanceStat: { alignItems: "center" },
-  statLabel: { fontSize: 12, color: "#999999", marginBottom: 4 },
-  statValue: { fontSize: 16, fontWeight: "800" },
-  incomeText: { color: "#10B981" },
-  expenseText: { color: "#EF4444" },
-  savingText: { color: "#F59E0B" },
+  statLabel: { fontSize: 12, color: "#000000", marginBottom: 4 },
+  statValue: { fontSize: 16, fontWeight: "800", color: "#333333" },
+  incomeText: { color: "#333333" },
+  expenseText: { color: "#333333" },
+  savingText: { color: "#333333" },
   statDivider: { width: 1, height: 40, backgroundColor: "rgba(255,255,255,0.1)" },
   section: { marginBottom: 24 },
   sectionHeader: {
@@ -471,13 +512,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
-  viewAllLink: { fontSize: 13, color: "#6366F1", fontWeight: "700" },
+  sectionTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 16 },
+  sectionTitleButton: { fontSize: 16, fontWeight: "800", color: "#000000" },
+  sectionHeaderButton: { 
+    backgroundColor: "transparent",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  viewAllLink: { fontSize: 13, color: "#000000", fontWeight: "700" },
+  chartContainer: {
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    backgroundColor: "transparent",
+  },
   chart: {
     flexDirection: "row",
     alignItems: "flex-end",
     height: 180,
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     gap: 8,
@@ -485,14 +547,14 @@ const styles = StyleSheet.create({
   chartColumn: { flex: 1, alignItems: "center", height: "100%" },
   chartValue: {
     fontSize: 10,
-    color: "#999999",
+    color: "#000000",
     marginBottom: 4,
     fontWeight: "700",
   },
   chartBar: { width: "100%", borderRadius: 6, marginBottom: 8 },
-  chartLabel: { fontSize: 11, color: "#999999", fontWeight: "600" },
+  chartLabel: { fontSize: 11, color: "#000000", fontWeight: "600" },
   categoryItem: {
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -504,10 +566,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   categoryInfo: { flexDirection: "row", alignItems: "center" },
+  categoryIconMargin: { marginRight: 8 },
   categoryDot: { width: 12, height: 12, borderRadius: 6, marginRight: 10 },
-  categoryName: { fontSize: 15, fontWeight: "700", color: "#00796B" },
+  categoryName: { fontSize: 15, fontWeight: "700", color: "#000000" },
   categoryAmount: { alignItems: "flex-end" },
-  amountText: { fontSize: 15, fontWeight: "800", color: "#00796B", marginBottom: 2 },
+  amountText: { fontSize: 15, fontWeight: "800", color: "#000000", marginBottom: 2 },
   trendText: { fontSize: 11, fontWeight: "700" },
   trendUp: { color: "#EF4444" },
   trendDown: { color: "#10B981" },
@@ -519,9 +582,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressFill: { height: "100%", borderRadius: 3 },
-  percentText: { fontSize: 11, color: "#999999" },
+  percentText: { fontSize: 11, color: "#000000" },
   aiAnalysisCard: {
-    backgroundColor: "rgba(139,92,246,0.1)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
@@ -538,42 +601,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  aiIcon: { fontSize: 20 },
-  aiTitle: { fontSize: 16, fontWeight: "800", color: "#00796B" },
+  aiIcon: { marginRight: 8 },
+  aiTitle: { fontSize: 16, fontWeight: "800", color: "#000000" },
+  aiTextSection: { marginBottom: 12 },
   aiText: {
     fontSize: 14,
-    color: "#333333",
+    color: "#000000",
     lineHeight: 22,
     marginBottom: 12,
   },
-  aiBold: { fontWeight: "800", color: "#00796B" },
+  aiBold: { fontWeight: "800", color: "#000000" },
   highlight: { color: "#8B5CF6", fontWeight: "900" },
   aiButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#8B5CF6",
+    backgroundColor: "#10B981",
     borderRadius: 12,
     padding: 14,
     marginTop: 8,
   },
   aiButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
   aiButtonIcon: { color: "#FFFFFF", fontSize: 16, marginLeft: 8, fontWeight: "700" },
-  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  actionCard: {
-    flex: 1,
-    minWidth: "45%",
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0, 137, 123, 0.15)",
-  },
-  actionIcon: { fontSize: 28, marginBottom: 8 },
-  actionText: { fontSize: 13, color: "#00796B", fontWeight: "600", textAlign: "center" },
   loadingContainer: {
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
@@ -582,24 +633,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: "#999999",
+    color: "#000000",
     fontSize: 13,
     fontWeight: "600",
   },
   emptyContainer: {
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   emptyText: {
-    color: "#999999",
+    color: "#000000",
     fontSize: 13,
     fontWeight: "600",
   },
   recentTransactionItem: {
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -618,17 +669,17 @@ const styles = StyleSheet.create({
   transactionCategory: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#00796B",
+    color: "#000000",
     marginBottom: 2,
   },
   transactionTime: {
     fontSize: 11,
-    color: "#999999",
+    color: "#000000",
     marginBottom: 2,
   },
   transactionDescription: {
     fontSize: 12,
-    color: "#333333",
+    color: "#000000",
     marginBottom: 8,
     marginLeft: 36,
     fontWeight: "500",
@@ -643,12 +694,12 @@ const styles = StyleSheet.create({
   itemsTitle: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#00796B",
+    color: "#000000",
     marginBottom: 4,
   },
   itemRow: {
     fontSize: 11,
-    color: "#555555",
+    color: "#000000",
     marginBottom: 2,
   },
   transactionAmount: {

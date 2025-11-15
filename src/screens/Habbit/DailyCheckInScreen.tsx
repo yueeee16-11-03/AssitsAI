@@ -14,6 +14,7 @@ import type { RootStackParamList } from "../../navigation/types";
 import { useHabitStore } from "../../store/habitStore";
 import { useCheckInStore } from "../../store/checkInStore";
 import { useFocusEffect } from "@react-navigation/native";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "DailyCheckIn">;
 
@@ -104,38 +105,89 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
   const getAIMotivation = () => {
     if (completionRate === 100 && habits.length > 0) {
-      return {
-        message: "🏆 Hoàn hảo! Bạn đã hoàn thành tất cả thói quen hôm nay. Đây là một ngày tuyệt vời!",
-        color: "#10B981",
-        icon: "🏆",
-      };
+      return { message: "Hoàn hảo! Bạn đã hoàn thành tất cả thói quen hôm nay. Đây là một ngày tuyệt vời!", color: "#10B981", iconName: "trophy" };
     } else if (completionRate >= 80) {
-      return {
-        message: "⭐ Xuất sắc! Bạn gần hoàn thành rồi. Hãy duy trì động lực này!",
-        color: "#3B82F6",
-        icon: "⭐",
-      };
+      return { message: "Xuất sắc! Bạn gần hoàn thành rồi. Hãy duy trì động lực này!", color: "#3B82F6", iconName: "star" };
     } else if (completionRate >= 50) {
-      return {
-        message: "💪 Đang làm tốt! Hãy tiếp tục hoàn thành các thói quen còn lại nhé!",
-        color: "#F59E0B",
-        icon: "💪",
-      };
+      return { message: "Đang làm tốt! Hãy tiếp tục hoàn thành các thói quen còn lại nhé!", color: "#F59E0B", iconName: "arm-flex" };
     } else if (completionRate > 0) {
-      return {
-        message: "🌱 Bắt đầu tốt rồi! Mỗi bước nhỏ đều quan trọng. Hãy tiếp tục!",
-        color: "#8B5CF6",
-        icon: "🌱",
-      };
+      return { message: "Bắt đầu tốt rồi! Mỗi bước nhỏ đều quan trọng. Hãy tiếp tục!", color: "#8B5CF6", iconName: "leaf" };
     }
-    return {
-      message: "🎯 Hãy bắt đầu ngày mới với những thói quen tích cực! Bạn làm được!",
-      color: "#EC4899",
-      icon: "🎯",
-    };
+    return { message: "Hãy bắt đầu ngày mới với những thói quen tích cực! Bạn làm được!", color: "#EC4899", iconName: "bullseye" };
   };
 
   const motivation = getAIMotivation();
+
+  const getMotivationStyles = (color: string) => {
+    switch (color) {
+      case "#10B981": // green
+        return { cardBg: "#ECFDF5", textColor: "#065F46" };
+      case "#3B82F6": // blue
+        return { cardBg: "#EFF6FF", textColor: "#1E3A8A" };
+      case "#F59E0B": // amber
+        return { cardBg: "#FFFBEB", textColor: "#92400E" };
+      case "#8B5CF6": // purple
+        return { cardBg: "#F5F3FF", textColor: "#5B21B6" };
+      case "#EC4899": // pink
+        return { cardBg: "#FFF1F2", textColor: "#9F1239" };
+      default:
+        return { cardBg: "#FFFFFF", textColor: "#111827" };
+    }
+  };
+
+  const motivationStyles = getMotivationStyles(motivation.color);
+
+  const getHabitIconName = (iconStr: string) => {
+    const map: { [key: string]: string } = {
+      "🎯": "bullseye",
+      "💧": "water",
+      "🚶": "walk",
+      "📚": "book-open-variant",
+      "🧘": "meditation",
+      "💪": "arm-flex",
+      "🥗": "food-apple",
+      "😴": "bed",
+      "✍️": "pencil",
+      "🎵": "music",
+      "🏃": "run",
+      "🧠": "brain",
+    };
+    // Default to a single filled circle to avoid rendering two concentric circles
+    if (!iconStr) return 'circle';
+    return map[iconStr] || iconStr || 'circle';
+  };
+
+  const getHabitColor = (habit: any) => {
+    // Use explicit color if provided on the habit object
+    if (habit && habit.color) return habit.color;
+    // Fallback palette
+    const palette = [
+      '#EF4444', // red
+      '#F59E0B', // amber
+      '#10B981', // green
+      '#3B82F6', // blue
+      '#8B5CF6', // purple
+      '#EC4899', // pink
+      '#F97316', // orange
+      '#6366F1', // indigo
+    ];
+    const key = (habit && (habit.id || habit.name)) || Math.random().toString();
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash << 5) - hash + key.charCodeAt(i);
+      hash |= 0;
+    }
+    return palette[Math.abs(hash) % palette.length];
+  };
+
+  const hexToRgba = (hex: string, alpha = 1) => {
+    const h = hex.replace('#', '');
+    const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
 
   const handleCompleteAll = () => {
     if (checkedCount === habits.length && habits.length > 0) {
@@ -163,15 +215,16 @@ export default function DailyCheckInScreen({ navigation }: Props) {
   if (habits.length === 0) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Check-in hôm nay</Text>
-          <View style={styles.pointsBadge}>
-            <Text style={styles.pointsText}>🎯 0</Text>
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
+          <View style={styles.headerInner}>
+            <Icon name="chevron-left" size={20} color="#FFFFFF" />
+            <Text style={styles.headerTitle}>Check-in hôm nay</Text>
+            <View style={styles.pointsBadgeInline}>
+              <Icon name="bullseye" size={20} color="#FFFFFF" />
+              <Text style={[styles.pointsText, { marginLeft: 8, color: '#FFFFFF' }]}>0</Text>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={[styles.content, styles.emptyContainer]}>
           <Text style={styles.emptyText}>
             Bạn chưa có thói quen nào.{"\n"}Hãy thêm thói quen để bắt đầu!
@@ -189,15 +242,16 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Check-in hôm nay</Text>
-        <View style={styles.pointsBadge}>
-          <Text style={styles.pointsText}>🎯 {totalPointsToday}</Text>
+      <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
+        <View style={styles.headerInner}>
+          <Icon name="chevron-left" size={20} color="#FFFFFF" />
+          <Text style={styles.headerTitle}>Check-in hôm nay</Text>
+          <View style={styles.pointsBadgeInline}>
+            <Icon name="bullseye" size={20} color="#FFFFFF" />
+            <Text style={[styles.pointsText, { marginLeft: 8, color: '#FFFFFF' }]}> {totalPointsToday}</Text>
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -215,12 +269,17 @@ export default function DailyCheckInScreen({ navigation }: Props) {
           </View>
 
           {/* AI Motivation */}
-          <View style={[styles.motivationCard, { borderColor: `${motivation.color}44` }]}>
-            <View style={styles.motivationHeader}>
-              <Text style={styles.motivationIcon}>{motivation.icon}</Text>
-              <Text style={styles.motivationTitle}>AI Động viên</Text>
-            </View>
-            <Text style={[styles.motivationText, { color: motivation.color }]}>
+          <View style={[styles.motivationCard, { borderColor: '#F59E0B', backgroundColor: '#FFFFFF' }]}>
+              <View style={styles.motivationHeader}>
+                <Icon name={motivation.iconName} size={24} color="#F59E0B" style={{ marginRight: 8 }} />
+                <Text style={styles.motivationTitle}>AI Động viên</Text>
+              </View>
+            <Text
+              style={[
+                styles.motivationText,
+                { color: motivation.message && motivation.message.startsWith('Hãy bắt đầu ngày mới') ? '#333333' : motivationStyles.textColor },
+              ]}
+            >
               {motivation.message}
             </Text>
           </View>
@@ -231,6 +290,8 @@ export default function DailyCheckInScreen({ navigation }: Props) {
             {habits.map((habit: any) => {
               const checkIn = todayCheckIns[habit.id] || { completed: false, points: 0, streak: 0 };
               const isToggling = isTogglingHabit[habit.id];
+              const iconColor = getHabitColor(habit);
+              const iconBg = hexToRgba(iconColor, 0.12);
 
               return (
                 <TouchableOpacity
@@ -239,14 +300,22 @@ export default function DailyCheckInScreen({ navigation }: Props) {
                   onPress={() => handleCheckIn(habit.id)}
                   disabled={isToggling}
                   activeOpacity={0.8}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  testID={`habit-card-${habit.id}`}
                 >
                   <View style={styles.habitLeft}>
                     <View style={[styles.checkbox, checkIn.completed && styles.checkboxChecked]}>
-                      {checkIn.completed && <Text style={styles.checkmark}>✓</Text>}
-                      {isToggling && <ActivityIndicator size="small" color="#00897B" />}
+                      {isToggling ? (
+                        <ActivityIndicator size="small" color="#00897B" />
+                      ) : checkIn.completed ? (
+                        <Icon name="check" size={14} color="#FFFFFF" />
+                      ) : (
+                        <Icon name="checkbox-blank-circle-outline" size={16} color="#9CA3AF" />
+                      )}
                     </View>
-                    <View style={styles.habitIconContainer}>
-                      <Text style={styles.habitIcon}>{habit.icon}</Text>
+                    <View style={[styles.habitIconContainer, { backgroundColor: iconBg }] }>
+                      <Icon name={getHabitIconName(habit.icon)} size={20} color={iconColor} />
                     </View>
                     <View style={styles.habitDetails}>
                       <Text style={[styles.habitName, checkIn.completed && styles.habitNameChecked]}>
@@ -275,24 +344,30 @@ export default function DailyCheckInScreen({ navigation }: Props) {
           <View style={styles.statsCard}>
             <Text style={styles.statsTitle}>Thống kê hôm nay</Text>
             <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>⭐</Text>
-                <Text style={styles.statValue}>{totalPointsToday}</Text>
-                <Text style={styles.statLabel}>Điểm</Text>
+              <View style={styles.statColumn}>
+                <View style={styles.statItem}>
+                  <Icon name="star" size={20} color="#F59E0B" style={{ marginBottom: 8 }} />
+                  <Text style={styles.statValue}>{totalPointsToday}</Text>
+                  <Text style={styles.statLabel}>Điểm</Text>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>✓</Text>
-                <Text style={styles.statValue}>{checkedCount}</Text>
-                <Text style={styles.statLabel}>Hoàn thành</Text>
+
+              <View style={styles.statColumn}>
+                <View style={styles.statItem}>
+                  <Icon name="check" size={20} color="#10B981" style={{ marginBottom: 8 }} />
+                  <Text style={styles.statValue}>{checkedCount}</Text>
+                  <Text style={styles.statLabel}>Hoàn thành</Text>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>🔥</Text>
-                <Text style={styles.statValue}>
-                  {Math.max(...Object.values(todayCheckIns).map((c: any) => c.streak || 0), 0)}
-                </Text>
-                <Text style={styles.statLabel}>Streak cao nhất</Text>
+
+              <View style={styles.statColumn}>
+                <View style={styles.statItem}>
+                  <Icon name="fire" size={20} color="#EF4444" style={{ marginBottom: 8 }} />
+                  <Text style={styles.statValue}>
+                    {Math.max(...Object.values(todayCheckIns).map((c: any) => c.streak || 0), 0)}
+                  </Text>
+                  <Text style={styles.statLabel}>Streak cao nhất</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -306,9 +381,17 @@ export default function DailyCheckInScreen({ navigation }: Props) {
             onPress={handleCompleteAll}
             activeOpacity={0.9}
           >
-            <Text style={styles.completeButtonText}>
-              {checkedCount === habits.length ? "🎉 Hoàn thành ngày mới" : "⏳ Chưa hoàn thành"}
-            </Text>
+            {checkedCount === habits.length ? (
+              <View style={styles.completeButtonInline}>
+                <Icon name="trophy" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={[styles.completeButtonText, { color: '#FFFFFF' }]}>Hoàn thành ngày mới</Text>
+              </View>
+            ) : (
+              <View style={styles.completeButtonInline}>
+                <Icon name="timer-sand" size={16} color="#F59E0B" style={{ marginRight: 8 }} />
+                <Text style={styles.completeButtonText}>Chưa hoàn thành</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
@@ -317,61 +400,66 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00897B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
-  pointsBadge: { backgroundColor: "rgba(99,102,241,0.2)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
-  pointsText: { fontSize: 14, fontWeight: "800", color: "#6366F1" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.08)" },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: "#000000" },
+  headerButton: { paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: '#10B981', borderBottomWidth: 0 },
+  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF", flex: 1, textAlign: 'center' },
+  pointsBadge: { backgroundColor: "transparent", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
+  pointsBadgeInline: { backgroundColor: 'transparent', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' },
+  pointsText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
   content: { padding: 16 },
-  progressCard: { backgroundColor: "rgba(99,102,241,0.15)", borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderWidth: 1, borderColor: "rgba(99,102,241,0.3)" },
-  progressLabel: { fontSize: 14, color: "rgba(255,255,255,0.7)", marginBottom: 16 },
-  progressCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(99,102,241,0.2)", alignItems: "center", justifyContent: "center", marginBottom: 16, borderWidth: 3, borderColor: "#6366F1" },
+  progressCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
+  progressLabel: { fontSize: 14, color: "#333333", marginBottom: 16 },
+  progressCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", marginBottom: 16, borderWidth: 3, borderColor: "#E5E7EB" },
   progressValue: { fontSize: 32, fontWeight: "900", color: "#333333" },
-  progressSubtext: { fontSize: 12, color: "rgba(255,255,255,0.6)" },
-  progressBar: { width: "100%", height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
+  progressSubtext: { fontSize: 12, color: "#333333" },
+  progressBar: { width: "100%", height: 8, backgroundColor: "#F3F4F6", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
   progressFill: { height: "100%", backgroundColor: "#6366F1", borderRadius: 4 },
-  progressPercentage: { fontSize: 13, color: "rgba(255,255,255,0.7)" },
-  motivationCard: { backgroundColor: "rgba(139,92,246,0.08)", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 2 },
+  progressPercentage: { fontSize: 13, color: "#333333" },
+  motivationCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "#E5E7EB", overflow: 'hidden', shadowColor: 'transparent', shadowOpacity: 0, elevation: 0 },
   motivationHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   motivationIcon: { fontSize: 28, marginRight: 8 },
-  motivationTitle: { fontSize: 16, fontWeight: "800", color: "#00796B" },
-  motivationText: { fontSize: 15, lineHeight: 22, fontWeight: "700" },
+  motivationTitle: { fontSize: 16, fontWeight: "800", color: "#000000" },
+  motivationText: { fontSize: 15, lineHeight: 22, fontWeight: "700", color: "#333333" },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
-  habitCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  habitCardChecked: { backgroundColor: "rgba(16,185,129,0.08)", borderWidth: 1, borderColor: "rgba(16,185,129,0.2)" },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 16 },
+  habitCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#E5E7EB" },
+  habitCardChecked: { backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "rgba(16,185,129,0.2)" },
   habitLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  checkbox: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  checkbox: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center", marginRight: 12 },
   checkboxChecked: { backgroundColor: "#10B981", borderColor: "#10B981" },
   checkmark: { fontSize: 16, fontWeight: "900", color: "#FFFFFF" },
-  habitIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(99,102,241,0.15)", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  habitIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", marginRight: 12 },
   habitIcon: { fontSize: 20 },
   habitDetails: { flex: 1 },
-  habitName: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 4 },
-  habitNameChecked: { textDecorationLine: "line-through", color: "rgba(255,255,255,0.6)" },
+  habitName: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 4 },
+  habitNameChecked: { textDecorationLine: "line-through", color: "#000000" },
   habitMeta: { flexDirection: "row", gap: 12 },
-  habitPoints: { fontSize: 12, color: "#F59E0B", fontWeight: "700" },
-  habitStreak: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "700" },
-  habitTarget: { fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: "600" },
+  habitPoints: { fontSize: 12, color: "#000000", fontWeight: "700" },
+  habitStreak: { fontSize: 12, color: "#000000", fontWeight: "700" },
+  habitTarget: { fontSize: 12, color: "#000000", fontWeight: "600" },
   completedBadge: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
   completedText: { fontSize: 18, color: "#FFFFFF", fontWeight: "900" },
-  statsCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 20, marginBottom: 24 },
-  statsTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16, textAlign: "center" },
-  statsGrid: { flexDirection: "row", justifyContent: "space-around" },
-  statItem: { alignItems: "center" },
-  statIcon: { fontSize: 28, marginBottom: 8 },
-  statValue: { fontSize: 24, fontWeight: "900", color: "#6366F1", marginBottom: 4 },
-  statLabel: { fontSize: 11, color: "rgba(255,255,255,0.6)" },
-  statDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.1)" },
-  completeButton: { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 16, padding: 18, alignItems: "center", marginBottom: 20 },
+  statsCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: "#E5E7EB" },
+  statsTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 12, textAlign: "center" },
+  statsGrid: { flexDirection: "row", justifyContent: "space-between", alignItems: 'center' },
+  statItem: { alignItems: "center", flex: 1 },
+  statIcon: { fontSize: 28, marginBottom: 6 },
+  statValue: { fontSize: 22, fontWeight: "900", color: "#000000", marginBottom: 4 },
+  statLabel: { fontSize: 12, color: "#333333" },
+  statDivider: { width: 1, height: 48, backgroundColor: "rgba(0,0,0,0.06)", marginHorizontal: 8, alignSelf: 'center' },
+  statColumn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  completeButtonInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  completeButton: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 18, alignItems: "center", marginBottom: 20, borderWidth: 1, borderColor: "#E5E7EB" },
   completeButtonActive: { backgroundColor: "#10B981", shadowColor: "#10B981", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
-  completeButtonText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
+  completeButtonText: { color: "#000000", fontSize: 17, fontWeight: "800" },
   centerContent: { justifyContent: "center", alignItems: "center" },
-  loadingText: { color: "#00796B", marginTop: 16, fontSize: 14 },
+  loadingText: { color: "#333333", marginTop: 16, fontSize: 14 },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyText: { fontSize: 18, color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 20 },
+  emptyText: { fontSize: 18, color: "#333333", textAlign: "center", marginBottom: 20 },
   addHabitButton: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: "#6366F1", borderRadius: 12 },
   addHabitButtonText: { color: "#FFFFFF", fontWeight: "700" },
 });

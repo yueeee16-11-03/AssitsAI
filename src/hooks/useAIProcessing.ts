@@ -1,6 +1,15 @@
 import { useState, useCallback } from "react";
 import { OCRService } from "../services/OCRService";
-import { processOCRTextWithGemini, extractDescriptionFromProcessedText, extractAmountFromProcessedText } from "../services/GeminiAIService";
+import { 
+  processOCRTextWithGemini, 
+  extractDescriptionFromProcessedText, 
+  extractAmountFromProcessedText,
+  extractCategoryFromProcessedText,
+  extractItemsFromProcessedText,
+  extractConfidenceFromProcessedText,
+  extractMerchantFromProcessedText,
+  extractDateFromProcessedText,
+} from "../services/GeminiAIService";
 
 export interface ProcessedData {
   rawText?: string;
@@ -14,11 +23,14 @@ export interface ProcessedData {
   category?: string;
   description?: string;
   confidence?: 'high' | 'medium' | 'low';
+  merchant?: string;
+  date?: string;
 }
 
 interface UseAIProcessingProps {
   imageUri?: string;
   enableGeminiProcessing?: boolean;
+  transactionType?: 'income' | 'expense';
 }
 
 interface UseAIProcessingReturn {
@@ -33,6 +45,7 @@ interface UseAIProcessingReturn {
 export const useAIProcessing = ({
   imageUri,
   enableGeminiProcessing = true,
+  transactionType = 'expense',
 }: UseAIProcessingProps): UseAIProcessingReturn => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
@@ -82,17 +95,35 @@ export const useAIProcessing = ({
       // Step 2: Optional Gemini AI Processing
       if (enableGeminiProcessing && rawOCRText.trim().length > 0) {
         console.log('\n🤖 [OCR_PROCESSOR] Step 2: Starting Gemini AI processing...');
-        const geminiResult = await processOCRTextWithGemini(rawOCRText);
+        console.log('📊 [OCR_PROCESSOR] Transaction type:', transactionType);
+        const geminiResult = await processOCRTextWithGemini(rawOCRText, transactionType);
 
         if (geminiResult.success) {
           console.log('✅ [OCR_PROCESSOR] Gemini processing completed');
           processingResult.processedText = geminiResult.processedText;
-          // 🔥 Extract short description từ processed text thay vì lưu toàn bộ
           processingResult.description = extractDescriptionFromProcessedText(geminiResult.processedText);
-          // 💰 Extract amount từ processed text
           processingResult.totalAmount = extractAmountFromProcessedText(geminiResult.processedText);
+          processingResult.category = extractCategoryFromProcessedText(geminiResult.processedText);
+          processingResult.items = extractItemsFromProcessedText(geminiResult.processedText);
+          processingResult.confidence = extractConfidenceFromProcessedText(geminiResult.processedText);
+          processingResult.merchant = extractMerchantFromProcessedText(geminiResult.processedText);
+          processingResult.date = extractDateFromProcessedText(geminiResult.processedText);
           processingResult.processingTime = (processingResult.processingTime || 0) + geminiResult.processingTime;
+          
+          // 🎯 AUTO-REPAIR: Nếu category miss nhưng items có category, lấy từ items
+          if ((!processingResult.category || processingResult.category === 'Khác') && 
+              processingResult.items && processingResult.items.length > 0 &&
+              processingResult.items[0].category) {
+            console.log('🔧 [OCR_PROCESSOR] Auto-repairing category from items...');
+            processingResult.category = processingResult.items[0].category;
+            console.log('✅ [OCR_PROCESSOR] Category repaired to:', processingResult.category);
+          }
+          
           console.log('💰 [OCR_PROCESSOR] Extracted amount:', processingResult.totalAmount);
+          console.log('📦 [OCR_PROCESSOR] Extracted category:', processingResult.category);
+          console.log('📋 [OCR_PROCESSOR] Extracted items:', processingResult.items);
+          console.log('🏪 [OCR_PROCESSOR] Extracted merchant:', processingResult.merchant);
+          console.log('📅 [OCR_PROCESSOR] Extracted date:', processingResult.date);
         } else {
           console.warn('⚠️ [OCR_PROCESSOR] Gemini processing failed:', geminiResult.error);
           // Tiếp tục dù Gemini failed, vẫn có rawText
@@ -111,7 +142,7 @@ export const useAIProcessing = ({
       setError(errorMessage);
       setIsProcessing(false);
     }
-  }, [imageUri, enableGeminiProcessing]);
+  }, [imageUri, enableGeminiProcessing, transactionType]);
 
   return {
     isProcessing,

@@ -15,6 +15,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useHabitStore } from "../../store/habitStore";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddHabit">;
 
@@ -43,7 +44,7 @@ export default function AddHabitScreen({ navigation }: Props) {
   const [habitName, setHabitName] = useState("");
   const [target, setTarget] = useState("");
   const [unit, setUnit] = useState("");
-  const [selectedIcon, setSelectedIcon] = useState("⭐");
+  const [selectedIcon, setSelectedIcon] = useState("star");
   const [selectedColor, setSelectedColor] = useState("#6366F1");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [schedule, setSchedule] = useState<ScheduleItem[]>([
@@ -62,21 +63,21 @@ export default function AddHabitScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const icons = ["💧", "🚶", "📚", "🧘", "💪", "🥗", "😴", "🎯", "✍️", "🎵", "🏃", "🧠"];
+  // icon list removed — unused. If you want an icon picker UI, I can re-add and render it here.
   const colors = ["#6366F1", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444"];
 
   const categories = [
-    { id: "health", name: "Sức khỏe", icon: "💪" },
-    { id: "productivity", name: "Năng suất", icon: "🎯" },
-    { id: "learning", name: "Học tập", icon: "📚" },
-    { id: "wellness", name: "Tinh thần", icon: "🧘" },
+    { id: "health", name: "Sức khỏe", icon: 'arm-flex' },
+    { id: "productivity", name: "Năng suất", icon: 'bullseye' },
+    { id: "learning", name: "Học tập", icon: 'book-open-variant' },
+    { id: "wellness", name: "Tinh thần", icon: 'meditation' },
   ];
 
   const suggestions: HabitSuggestion[] = [
     {
       id: "1",
       name: "Đọc sách mỗi sáng",
-      icon: "📚",
+      icon: 'book-open-variant',
       target: 10,
       unit: "phút",
       category: "learning",
@@ -86,7 +87,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     {
       id: "2",
       name: "Uống đủ nước",
-      icon: "💧",
+      icon: 'water',
       target: 8,
       unit: "cốc",
       category: "health",
@@ -96,7 +97,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     {
       id: "3",
       name: "Thiền buổi tối",
-      icon: "🧘",
+      icon: 'meditation',
       target: 15,
       unit: "phút",
       category: "wellness",
@@ -106,7 +107,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     {
       id: "4",
       name: "Tập thể dục",
-      icon: "💪",
+      icon: 'arm-flex',
       target: 30,
       unit: "phút",
       category: "health",
@@ -116,7 +117,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     {
       id: "5",
       name: "Viết nhật ký",
-      icon: "✍️",
+      icon: 'pencil',
       target: 5,
       unit: "phút",
       category: "wellness",
@@ -126,7 +127,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     {
       id: "6",
       name: "Đi bộ sau bữa tối",
-      icon: "🚶",
+      icon: 'walk',
       target: 20,
       unit: "phút",
       category: "health",
@@ -217,80 +218,54 @@ export default function AddHabitScreen({ navigation }: Props) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
+        <TouchableOpacity style={styles.headerTile} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-left" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thêm thói quen</Text>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveText}>Lưu</Text>
+        <Text style={styles.headerTitle}>Thói quen</Text>
+        <TouchableOpacity style={styles.headerTile} onPress={handleSave}>
+          <Icon name="plus" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* AI Suggestions */}
-          <View style={styles.aiCard}>
-            <View style={styles.aiHeader}>
-              <Text style={styles.aiIcon}>🤖</Text>
-              <Text style={styles.aiTitle}>Gợi ý từ AI</Text>
-            </View>
-            <Text style={styles.aiText}>
-              Dựa trên mục tiêu của bạn, AI gợi ý các thói quen sau:
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestionsScroll}>
-              {suggestions.map((suggestion) => (
-                <TouchableOpacity
-                  key={suggestion.id}
-                  style={styles.suggestionCard}
-                  onPress={() => handleSelectSuggestion(suggestion)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.suggestionIcon}>{suggestion.icon}</Text>
-                  <Text style={styles.suggestionName}>{suggestion.name}</Text>
-                  <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
-                  <View style={styles.suggestionBadge}>
-                    <Text style={styles.suggestionBenefits}>{suggestion.benefits}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+
 
           {/* Habit Details */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Thông tin thói quen</Text>
 
-            {/* Icon Selection */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Biểu tượng</Text>
-              <View style={styles.iconsGrid}>
-                {icons.map((icon) => (
+            {/* AI Suggestions */}
+            <View style={styles.aiCard}>
+              <View style={styles.aiHeader}>
+                <Icon name="robot" size={24} color="#8B5CF6" style={styles.iconMarginRight} />
+                <Text style={styles.aiTitle}>Gợi ý từ AI</Text>
+              </View>
+              <Text style={styles.aiText}>
+                Dựa trên mục tiêu của bạn, AI gợi ý các thói quen sau:
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestionsScroll}>
+                {suggestions.map((suggestion) => (
                   <TouchableOpacity
-                    key={icon}
-                    style={[styles.iconButton, selectedIcon === icon && styles.iconButtonActive]}
-                    onPress={() => setSelectedIcon(icon)}
+                    key={suggestion.id}
+                    style={styles.suggestionCard}
+                    onPress={() => handleSelectSuggestion(suggestion)}
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.iconText}>{icon}</Text>
+                    <Icon name={suggestion.icon} size={32} color="#8B5CF6" style={styles.suggestionIcon} />
+                    <Text style={styles.suggestionName}>{suggestion.name}</Text>
+                    <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
+                    <View style={styles.suggestionBadge}>
+                      <Text style={styles.suggestionBenefits}>{suggestion.benefits}</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
-              </View>
-            </View>
-
-            {/* Habit Name */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Tên thói quen</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ví dụ: Đọc sách mỗi sáng"
-                placeholderTextColor="#999"
-                value={habitName}
-                onChangeText={setHabitName}
-              />
+              </ScrollView>
             </View>
 
             {/* Target & Unit */}
             <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1 }]}>
+              <View style={[styles.inputContainer, styles.flex1]}>
                 <Text style={styles.label}>Mục tiêu</Text>
                 <TextInput
                   style={styles.input}
@@ -301,7 +276,7 @@ export default function AddHabitScreen({ navigation }: Props) {
                   keyboardType="numeric"
                 />
               </View>
-              <View style={[styles.inputContainer, { flex: 1 }]}>
+              <View style={[styles.inputContainer, styles.flex1]}>
                 <Text style={styles.label}>Đơn vị</Text>
                 <TextInput
                   style={styles.input}
@@ -344,7 +319,7 @@ export default function AddHabitScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setSelectedCategory(category.id)}
                   >
-                    <Text style={styles.categoryIcon}>{category.icon}</Text>
+                    <Icon name={category.icon} size={20} color={selectedCategory === category.id ? selectedColor : '#9CA3AF'} style={styles.iconMarginRight} />
                     <Text
                       style={[
                         styles.categoryName,
@@ -385,14 +360,15 @@ export default function AddHabitScreen({ navigation }: Props) {
                           setShowScheduleModal(true);
                         }}
                       >
-                        <Text style={styles.timeText}>⏰ {item.time}</Text>
+                        <Icon name="clock-outline" size={16} color="#00796B" />
+                        <Text style={[styles.timeText, styles.ml8]}>{item.time}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
                         style={styles.deleteScheduleButton}
                         onPress={() => removeSchedule(item.id)}
                       >
-                        <Text style={styles.deleteScheduleText}>🗑️</Text>
+                        <Icon name="trash-can-outline" size={18} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
 
@@ -434,9 +410,8 @@ export default function AddHabitScreen({ navigation }: Props) {
                         )
                       }
                     >
-                      <Text style={styles.reminderText}>
-                        {item.reminder ? "🔔" : "🔕"} Nhắc nhở
-                      </Text>
+                      <Icon name={item.reminder ? 'bell' : 'bell-off'} size={16} color="#10B981" />
+                      <Text style={[styles.reminderText, styles.ml8]}>Nhắc nhở</Text>
                     </TouchableOpacity>
                   </View>
                 ))
@@ -449,7 +424,7 @@ export default function AddHabitScreen({ navigation }: Props) {
             <Text style={styles.previewTitle}>Xem trước</Text>
             <View style={[styles.previewHabit, { borderColor: selectedColor }]}>
               <View style={[styles.previewIconContainer, { backgroundColor: `${selectedColor}22` }]}>
-                <Text style={styles.previewIcon}>{selectedIcon}</Text>
+                <Icon name={selectedIcon} size={24} color={selectedColor} />
               </View>
               <View style={styles.previewDetails}>
                 <Text style={styles.previewName}>{habitName || "Tên thói quen"}</Text>
@@ -462,7 +437,11 @@ export default function AddHabitScreen({ navigation }: Props) {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: selectedColor, opacity: isLoading ? 0.6 : 1 }]}
+            style={[
+              styles.createButton,
+              styles.createButtonActive,
+              isLoading ? styles.disabledOpacity : null,
+            ]}
             onPress={handleSave}
             activeOpacity={0.9}
             disabled={isLoading}
@@ -470,7 +449,7 @@ export default function AddHabitScreen({ navigation }: Props) {
             <Text style={styles.createButtonText}>
               {isLoading ? "Đang lưu..." : "Tạo thói quen"}
             </Text>
-            <Text style={styles.createButtonIcon}>✓</Text>
+            <Icon name="check" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
@@ -554,53 +533,53 @@ export default function AddHabitScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00897B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
-  saveButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, backgroundColor: "#6366F1" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: "#10B981" },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: "#00796B" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
+  headerTile: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
+  saveButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: '#10B981', borderWidth: 1, borderColor: '#10B981', flexDirection: 'row', alignItems: 'center' },
   saveText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
   content: { padding: 16 },
-  aiCard: { backgroundColor: "rgba(139,92,246,0.1)", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "rgba(139,92,246,0.3)" },
+  aiCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "#E5E7EB" },
   aiHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   aiIcon: { fontSize: 24, marginRight: 8 },
-  aiTitle: { fontSize: 16, fontWeight: "800", color: "#00796B" },
-  aiText: { fontSize: 14, color: "rgba(255,255,255,0.8)", marginBottom: 16 },
+  aiTitle: { fontSize: 16, fontWeight: "800", color: "#000000" },
+  aiText: { fontSize: 14, color: "#333333", marginBottom: 16 },
   suggestionsScroll: { marginHorizontal: -20 },
-  suggestionCard: { width: 180, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 16, marginLeft: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  suggestionIcon: { fontSize: 32, marginBottom: 8 },
-  suggestionName: { fontSize: 14, fontWeight: "800", color: "#00796B", marginBottom: 4 },
-  suggestionDescription: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 8 },
-  suggestionBadge: { backgroundColor: "rgba(139,92,246,0.2)", borderRadius: 8, padding: 6 },
+  suggestionCard: { width: 180, backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, marginLeft: 20, borderWidth: 1, borderColor: "#E5E7EB" },
+  suggestionIconOld: { fontSize: 32, marginBottom: 8 },
+  suggestionName: { fontSize: 14, fontWeight: "800", color: "#000000", marginBottom: 4 },
+  suggestionDescription: { fontSize: 12, color: "#333333", marginBottom: 8 },
+  suggestionBadge: { backgroundColor: "#F3F4F6", borderRadius: 8, padding: 6 },
   suggestionBenefits: { fontSize: 10, color: "#8B5CF6", fontWeight: "700" },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 16 },
   inputContainer: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.8)", marginBottom: 8 },
-  input: { backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 16, color: "#333333", fontSize: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  label: { fontSize: 14, fontWeight: "700", color: "#000000", marginBottom: 8 },
+  input: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, color: "#000000", fontSize: 16, borderWidth: 1, borderColor: "#E5E7EB" },
   row: { flexDirection: "row", gap: 12 },
   iconsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  iconButton: { width: 56, height: 56, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "transparent" },
-  iconButtonActive: { borderColor: "#6366F1", backgroundColor: "rgba(99,102,241,0.1)" },
-  iconText: { fontSize: 28 },
+  iconButton: { width: 56, height: 56, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "transparent" },
+  iconButtonActive: { borderColor: "#6366F1", backgroundColor: "#F3F4F6" },
   colorsGrid: { flexDirection: "row", gap: 12 },
   colorButton: { width: 48, height: 48, borderRadius: 24, borderWidth: 3, borderColor: "transparent" },
   colorButtonActive: { borderColor: "#00897B" },
   categoriesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  categoryButton: { flex: 1, minWidth: "45%", flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 12, borderWidth: 2, borderColor: "transparent" },
-  categoryButtonActive: { borderColor: "#6366F1", backgroundColor: "rgba(99,102,241,0.1)" },
+  categoryButton: { flex: 1, minWidth: "45%", flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, borderWidth: 2, borderColor: "transparent" },
+  categoryButtonActive: { borderColor: "#6366F1", backgroundColor: "#F3F4F6" },
   categoryIcon: { fontSize: 24, marginRight: 8 },
-  categoryName: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
-  categoryNameActive: { color: "#00796B" },
+  categoryName: { fontSize: 14, fontWeight: "700", color: "#333333" },
+  categoryNameActive: { color: "#000000" },
   scheduleHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   addScheduleButton: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#6366F1", borderRadius: 8 },
   addScheduleText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
   emptyText: { color: "rgba(255,255,255,0.5)", fontSize: 13, fontStyle: "italic" },
   scheduleCard: { backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
   scheduleTimeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  timeDisplay: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: "rgba(99,102,241,0.15)", borderRadius: 8 },
-  timeText: { color: "#00796B", fontWeight: "700", fontSize: 14 },
+  timeDisplay: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: "#FFFFFF", borderRadius: 8, flexDirection: 'row', alignItems: 'center' },
+  timeText: { color: "#000000", fontWeight: "700", fontSize: 14, marginLeft: 6 },
   deleteScheduleButton: { paddingHorizontal: 12, paddingVertical: 8 },
   deleteScheduleText: { fontSize: 18 },
   daysGrid: { flexDirection: "row", gap: 8, marginBottom: 12, justifyContent: "space-between" },
@@ -608,19 +587,25 @@ const styles = StyleSheet.create({
   dayButtonActive: { backgroundColor: "rgba(99,102,241,0.2)", borderColor: "#6366F1" },
   dayText: { color: "rgba(255,255,255,0.6)", fontWeight: "700", fontSize: 11 },
   dayTextActive: { color: "#00796B" },
-  reminderToggle: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "rgba(16,185,129,0.15)", borderRadius: 8, alignItems: "center" },
-  reminderText: { color: "#10B981", fontWeight: "700", fontSize: 13 },
-  previewCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 20, marginBottom: 24 },
-  previewTitle: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: 12 },
-  previewHabit: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 16, borderWidth: 2 },
+  reminderToggle: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "#FFFFFF", borderRadius: 8, flexDirection: 'row', alignItems: 'center' },
+  reminderText: { color: "#10B981", fontWeight: "700", fontSize: 13, marginLeft: 6 },
+  previewCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#E5E7EB' },
+  previewTitle: { fontSize: 14, fontWeight: "700", color: "#333333", marginBottom: 12 },
+  previewHabit: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#E5E7EB' },
   previewIconContainer: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginRight: 12 },
   previewIcon: { fontSize: 24 },
   previewDetails: { flex: 1 },
-  previewName: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 4 },
-  previewTarget: { fontSize: 13, color: "rgba(255,255,255,0.6)" },
-  createButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 16, padding: 18, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
+  previewName: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 4 },
+  previewTarget: { fontSize: 13, color: "#333333" },
+  createButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 16, padding: 18 },
   createButtonText: { color: "#FFFFFF", fontSize: 17, fontWeight: "700", marginRight: 8 },
   createButtonIcon: { color: "#FFFFFF", fontSize: 20, fontWeight: "700" },
+  iconMarginRight: { marginRight: 8 },
+  suggestionIcon: { marginBottom: 8 },
+  flex1: { flex: 1 },
+  ml8: { marginLeft: 8 },
+  createButtonActive: { backgroundColor: '#10B981', borderWidth: 1, borderColor: '#10B981' },
+  disabledOpacity: { opacity: 0.6 },
 
   // Modal styles
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },

@@ -8,7 +8,9 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Notification">;
 
@@ -44,7 +46,7 @@ export default function NotificationScreen({ navigation }: Props) {
       message: "Chi tiêu 'Mua sắm' đã vượt ₫500K so với ngân sách tháng này",
       timestamp: new Date(Date.now() - 300000),
       read: false,
-      icon: "🚨",
+      icon: 'alert-circle-outline',
       color: "#EF4444",
       actionRoute: "BudgetPlanner",
     },
@@ -55,7 +57,7 @@ export default function NotificationScreen({ navigation }: Props) {
       message: "Bạn có thể tiết kiệm thêm ₫2M nếu giảm chi tiêu ăn uống 20%",
       timestamp: new Date(Date.now() - 1800000),
       read: false,
-      icon: "🤖",
+      icon: 'robot',
       color: "#8B5CF6",
       actionRoute: "AIRecommendation",
     },
@@ -66,7 +68,7 @@ export default function NotificationScreen({ navigation }: Props) {
       message: "Đã đến giờ hoàn thành thói quen 'Uống nước' hôm nay",
       timestamp: new Date(Date.now() - 3600000),
       read: false,
-      icon: "⏰",
+      icon: 'clock-outline',
       color: "#F59E0B",
       actionRoute: "DailyCheckIn",
     },
@@ -77,7 +79,7 @@ export default function NotificationScreen({ navigation }: Props) {
       message: "Bạn đã duy trì thói quen 'Đọc sách' được 15 ngày liên tiếp 🔥",
       timestamp: new Date(Date.now() - 7200000),
       read: true,
-      icon: "🏆",
+      icon: 'trophy',
       color: "#10B981",
       actionRoute: "HabitDashboard",
     },
@@ -88,7 +90,7 @@ export default function NotificationScreen({ navigation }: Props) {
       message: "AI phát hiện bạn đã giảm 15% chi tiêu so với tuần trước. Làm tốt lắm!",
       timestamp: new Date(Date.now() - 86400000),
       read: true,
-      icon: "📊",
+      icon: 'chart-bar',
       color: "#8B5CF6",
       actionRoute: "AIInsight",
     },
@@ -99,7 +101,7 @@ export default function NotificationScreen({ navigation }: Props) {
       message: "Chỉ còn ₫1.2M trong ngân sách 'Giải trí' - còn 10 ngày",
       timestamp: new Date(Date.now() - 172800000),
       read: true,
-      icon: "⚠️",
+      icon: 'alert-outline',
       color: "#F59E0B",
     },
     {
@@ -109,7 +111,7 @@ export default function NotificationScreen({ navigation }: Props) {
       message: "Hãy đóng góp thêm ₫500K để đạt mục tiêu chung gia đình",
       timestamp: new Date(Date.now() - 259200000),
       read: true,
-      icon: "🎯",
+      icon: 'bullseye',
       color: "#6366F1",
       actionRoute: "SharedGoal",
     },
@@ -151,7 +153,7 @@ export default function NotificationScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
+          <Icon name="chevron-left" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Thông báo</Text>
@@ -192,7 +194,7 @@ export default function NotificationScreen({ navigation }: Props) {
         <Animated.View style={{ opacity: fadeAnim }}>
           {filteredNotifications.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>🔔</Text>
+              <Icon name="bell-outline" size={64} color="#00796B" style={styles.emptyIcon} />
               <Text style={styles.emptyTitle}>Không có thông báo</Text>
               <Text style={styles.emptyText}>
                 {selectedTab === "unread"
@@ -209,7 +211,7 @@ export default function NotificationScreen({ navigation }: Props) {
                 activeOpacity={0.8}
               >
                 <View style={[styles.notificationIcon, { backgroundColor: `${notif.color}22` }]}>
-                  <Text style={styles.notificationEmoji}>{notif.icon}</Text>
+                  <Icon name={notif.icon as any} size={22} color={notif.color} />
                   {!notif.read && <View style={styles.unreadDot} />}
                 </View>
                 <View style={styles.notificationContent}>
@@ -241,16 +243,16 @@ export default function NotificationScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0, 137, 123, 0.08)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00897B" },
-  headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: '#10B981', borderBottomWidth: 0 },
+  backButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'transparent', alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: "#FFFFFF" },
+  headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", marginLeft: 12, justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
   unreadBadge: { backgroundColor: "#EF4444", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 },
   unreadBadgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
-  markAllButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: "rgba(99,102,241,0.2)" },
-  markAllText: { color: "#6366F1", fontSize: 13, fontWeight: "700" },
+  markAllButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.12)' },
+  markAllText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
   tabSelector: { flexDirection: "row", backgroundColor: "rgba(0, 137, 123, 0.08)", margin: 16, borderRadius: 12, padding: 4 },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
   tabActive: { backgroundColor: "#6366F1" },

@@ -188,48 +188,77 @@ async function saveRecommendations(
  */
 function buildPrompt(goal: string, spending: { [key: string]: number }, habits: string[]): string {
   const spendingSummary = Object.entries(spending)
+    .sort((a, b) => b[1] - a[1])
     .map(([category, amount]) => `${category}: ${amount.toLocaleString("vi-VN")} VND`)
     .join("\n") || "No transactions recorded";
 
   const habitsSummary = habits.length > 0 ? habits.join("\n") : "No active habits";
 
-  return `Bạn là một chuyên gia tài chính cá nhân và lập kế hoạch tương lai.
+  return `Bạn là một tư vấn tài chính và phát triển cá nhân có kinh nghiệm, chuyên đưa ra lời khuyên THỰC TỊ, HÀNH ĐỘNG rõ ràng.
 
-**Mục tiêu của người dùng:** ${goal}
+**MỤC TIÊU NGƯỜI DÙNG:** ${goal}
 
-**Dữ liệu 7 ngày gần nhất:**
+**DỮ LIỆU 7 NGÀY:**
 Chi tiêu theo danh mục:
 ${spendingSummary}
 
-Các thói quen đang theo dõi:
+Thói quen đang theo dõi:
 ${habitsSummary}
 
 ---
 
-**Nhiệm vụ:** Tạo 5 gợi ý CỤ THỂ, HÀNH ĐỘNG CHI TIẾT cho HÔM NAY để giúp người dùng đạt mục tiêu.
-Mỗi gợi ý nên:
-1. Cụ thể và có thể thực hiện trong 1 ngày
-2. Liên quan đến mục tiêu và dữ liệu 7 ngày
-3. Có mức ưu tiên (cao/trung bình/thấp)
-4. Thuộc một danh mục (tài chính/thói quen/lối sống/sức khỏe/năng suất)
+**YÊU CẦU:** Tạo 5 gợi ý CỤ THỂ, NGẮN GỌN, KHÔNG CHUNG CHUNG cho HÔM NAY.
+
+**TIÊU CHUAN CHO MỖI GỢI Ý:**
+1. **Tiêu đề (Title)**: Một câu hành động cụ thể, không mơ hồ
+   - ❌ SAIS: "Tiết kiệm tiền"
+   - ✅ ĐÚNG: "Cắt chi phí ăn uống: Dùng thực phẩm có sẵn thay cà phê ngoài"
+
+2. **Mô tả (Description)**: Ngắn gọn 1-2 dòng, chỉ ghi:
+   - TÍNH CÁCH (dữ liệu cụ thể từ 7 ngày)
+   - CÁCH LÀM (hành động cụ thể, dễ thực hiện hôm nay)
+   - LỢI ỊCH (con số, kết quả cụ thể)
+   - Ví dụ: "Bạn đã chi 1.5M cho ăn uống. Hôm nay: chuẩn bị cơm nhà + mang nước từ nhà, tiết kiệm ~200k"
+
+3. **Ưu tiên (Priority)**:
+   - "high" = liên quan trực tiếp đến khoản chi lớn nhất 7 ngày hoặc rủi ro sức khỏe
+   - "medium" = liên quan đến thói quen hoặc chi phí trung bình
+   - "low" = gợi ý bổ sung, tối ưu hóa
+
+4. **Danh mục (Category)**: Chỉ dùng 1 trong 5: finance/habit/lifestyle/health/productivity
+
+5. **Biểu tượng (Icon)**: Dùng emoji NGẮN, RÕ RÀNG (wallet, heart, zap, leaf, star)
 
 ---
 
-**QUAN TRỌNG:** Trả về CHỈ một JSON array hợp lệ (không markdown, không giải thích thêm):
+**KHÔNG ĐƯỢC:**
+- Giải thích dài dòng "dựa trên dữ liệu..."
+- Dùng từ mơ hồ "có thể", "nên", "cần"
+- Lặp lại dữ liệu đã cho
+- Gợi ý chung chung như "lên kế hoạch", "theo dõi chi phí"
+
+**PHẢI:**
+- Nêu con số cụ thể (bao nhiêu tiền, mấy tiếng)
+- Hành động NGAY HÔM NAY (không phải tương lai mơ hồ)
+- Dựa trên DỮ LIỆU THỰC của người dùng
+
+---
+
+**ĐỊNH DẠNG TRUYỀN VỀ**: CHỈ JSON array, hợp lệ 100%, không markdown, không giải thích:
 [
   {
     "id": "rec-1",
-    "title": "Tiêu đề gợi ý",
-    "description": "Mô tả chi tiết cách thực hiện và lợi ích",
-    "priority": "high",
-    "category": "finance",
-    "icon": "💡"
-  },
-  ...
+    "title": "Hành động cụ thể: chi tiết cách làm",
+    "description": "Cơ sở dữ liệu (con số) + Cách thực hiện + Lợi ích cụ thể",
+    "priority": "high|medium|low",
+    "category": "finance|habit|lifestyle|health|productivity",
+    "icon": "💰" hoặc "❤️" hoặc "⚡" hoặc "🍃" hoặc "⭐"
+  }
 ]
 
-Gợi ý:`;
+Trả về JSON ngay bây giờ:`;
 }
+
 
 /**
  * Parse Gemini response để extract JSON

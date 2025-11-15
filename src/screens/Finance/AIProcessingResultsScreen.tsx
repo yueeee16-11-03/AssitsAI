@@ -16,7 +16,9 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import type { ProcessedData } from "../../hooks/useAIProcessing";
 import TransactionService from "../../services/TransactionService";
+import IncomeService from "../../services/IncomeService";
 import { useTransactionStore } from "../../store/transactionStore";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -24,6 +26,27 @@ type Props = NativeStackScreenProps<
 >;
 
 const { height } = Dimensions.get("window");
+
+// Helper component để render icon + label
+const DataRow = ({
+  icon,
+  iconColor,
+  label,
+  value,
+}: {
+  icon: string;
+  iconColor: string;
+  label: string;
+  value: string;
+}) => (
+  <View style={styles.aiDataRow}>
+    <View style={styles.labelWithIcon}>
+      <MaterialCommunityIcons name={icon} size={18} color={iconColor} style={styles.icon} />
+      <Text style={styles.aiDataLabel}>{label}</Text>
+    </View>
+    <Text style={styles.aiDataValue}>{value}</Text>
+  </View>
+);
 
 export default function AIProcessingResultsScreen({
   route,
@@ -58,6 +81,9 @@ export default function AIProcessingResultsScreen({
       items: editedDataState.items || [],
       category: editedDataState.category,
       description: editedDataState.description, // 🟢 Gửi description để AddTransactionScreen dùng
+      merchant: editedDataState.merchant,
+      date: editedDataState.date,
+      confidence: editedDataState.confidence,
       processingTime: editedDataState.processingTime || 0,
     };
 
@@ -87,9 +113,12 @@ export default function AIProcessingResultsScreen({
         description: editedDataState.description || editedDataState.rawText || "📝 Ghi chú từ AI",
         billImageUri: null,
         amount: editedDataState.totalAmount || 0,
-        category: editedDataState.category || "📝 Ghi chú",
+        category: editedDataState.category || (transactionType === 'income' ? "💰 Thu nhập" : "📝 Ghi chú"),
         items: editedDataState.items || [],
         totalAmount: editedDataState.totalAmount || 0,
+        merchant: editedDataState.merchant,
+        date: editedDataState.date,
+        confidence: editedDataState.confidence,
         processedText: editedDataState.processedText,
         rawOCRText: editedDataState.rawText,
         processingTime: editedDataState.processingTime || 0,
@@ -97,14 +126,23 @@ export default function AIProcessingResultsScreen({
       };
 
       console.log('💾 [RESULT_SCREEN] Auto-saving with formData:', formData);
+      console.log('📊 [RESULT_SCREEN] Transaction type:', transactionType);
 
-      const transactionObj = TransactionService.createTransactionObject(formData);
-      const addTransaction = useTransactionStore.getState().addTransaction;
-      await addTransaction(transactionObj);
+      // 🟢 CHỌN SERVICE DỰA VÀO LOẠI GIAO DỊCH
+      if (transactionType === 'income') {
+        console.log('💰 [RESULT_SCREEN] Saving as INCOME using IncomeService...');
+        const incomeObj = IncomeService.createIncomeObject(formData);
+        await IncomeService.addIncome(incomeObj);
+        console.log('💾 [RESULT_SCREEN] Income auto-saved successfully');
+      } else {
+        console.log('💸 [RESULT_SCREEN] Saving as EXPENSE using TransactionService...');
+        const transactionObj = TransactionService.createTransactionObject(formData);
+        const addTransaction = useTransactionStore.getState().addTransaction;
+        await addTransaction(transactionObj);
+        console.log('💾 [RESULT_SCREEN] Transaction auto-saved successfully');
+      }
 
-      console.log('💾 [RESULT_SCREEN] Transaction auto-saved successfully');
-
-      Alert.alert("Thành công", "Đã lưu giao dịch", [
+      Alert.alert("Thành công", transactionType === 'income' ? "Đã lưu thu nhập" : "Đã lưu giao dịch", [
         {
           text: "OK",
           onPress: () => {
@@ -114,7 +152,7 @@ export default function AIProcessingResultsScreen({
         },
       ]);
     } catch (error) {
-      console.error("❌ [RESULT_SCREEN] Error saving transaction:", error);
+      console.error("❌ [RESULT_SCREEN] Error saving:", error);
       Alert.alert("Lỗi", error instanceof Error ? error.message : "Không thể lưu. Vui lòng thử lại");
     } finally {
       setIsAutoSaving(false);
@@ -129,15 +167,27 @@ export default function AIProcessingResultsScreen({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>← Quay lại</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {transactionType === 'income' ? '💰 THÔNG TIN THU NHẬP' : '📊 THÔNG TIN CHI TIÊU'}
-          </Text>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButtonIcon}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.headerCenter}>
+              <MaterialCommunityIcons 
+                name={transactionType === 'income' ? 'cash-multiple' : 'shopping'} 
+                size={28} 
+                color="#FFFFFF" 
+              />
+              <Text style={styles.headerTitle}>
+                {transactionType === 'income' ? 'THU NHẬP' : 'CHI TIÊU'}
+              </Text>
+            </View>
+            
+            <View style={styles.headerPlaceholder} />
+          </View>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -150,8 +200,9 @@ export default function AIProcessingResultsScreen({
                 resizeMode="cover"
               />
               <View style={styles.imageOverlay}>
+                <MaterialCommunityIcons name="camera" size={16} color="#00796B" style={styles.smallIcon} />
                 <Text style={styles.imageLabel}>
-                  📸 {transactionType === 'income' ? 'Bill thu nhập' : 'Bill chi tiêu'}
+                  {transactionType === 'income' ? 'Bill thu nhập' : 'Bill chi tiêu'}
                 </Text>
               </View>
             </View>
@@ -162,41 +213,69 @@ export default function AIProcessingResultsScreen({
             editedDataState?.processedText ? (
               <View style={styles.processedTextSection}>
                 <View style={styles.processedTextHeader}>
-                  <Text style={styles.processedTextTitle}>🤖 Thông tin giao dịch</Text>
+                  <MaterialCommunityIcons name="robot" size={20} color="#1E40AF" style={styles.mediumIcon} />
+                  <Text style={styles.processedTextTitle}>Thông tin giao dịch</Text>
                 </View>
                 
                 {/* Display formatted AI data (not raw JSON) */}
                 <View style={styles.aiDataContainer}>
+                  {/* Merchant */}
+                  {editedDataState.merchant && (
+                    <DataRow
+                      icon="store"
+                      iconColor="#DC2626"
+                      label="Cửa hàng:"
+                      value={editedDataState.merchant}
+                    />
+                  )}
+
+                  {/* Date */}
+                  {editedDataState.date && (
+                    <DataRow
+                      icon="calendar-clock"
+                      iconColor="#2563EB"
+                      label="Ngày giờ:"
+                      value={editedDataState.date}
+                    />
+                  )}
+
                   {/* Total Amount */}
                   {editedDataState.totalAmount !== undefined && editedDataState.totalAmount > 0 && (
-                    <View style={styles.aiDataRow}>
-                      <Text style={styles.aiDataLabel}>💰 Tổng tiền:</Text>
-                      <Text style={styles.aiDataValue}>
-                        ₫ {editedDataState.totalAmount.toLocaleString("vi-VN")}
-                      </Text>
-                    </View>
+                    <DataRow
+                      icon="cash"
+                      iconColor="#059669"
+                      label="Tổng tiền:"
+                      value={`₫ ${editedDataState.totalAmount.toLocaleString("vi-VN")}`}
+                    />
                   )}
 
                   {/* Category */}
                   {editedDataState.category && (
-                    <View style={styles.aiDataRow}>
-                      <Text style={styles.aiDataLabel}>📦 Danh mục:</Text>
-                      <Text style={styles.aiDataValue}>{editedDataState.category}</Text>
-                    </View>
+                    <DataRow
+                      icon="tag"
+                      iconColor="#7C3AED"
+                      label="Danh mục:"
+                      value={editedDataState.category}
+                    />
                   )}
 
                   {/* Description */}
                   {editedDataState.description && (
-                    <View style={styles.aiDataRow}>
-                      <Text style={styles.aiDataLabel}>📝 Mô tả:</Text>
-                      <Text style={styles.aiDataValue}>{editedDataState.description}</Text>
-                    </View>
+                    <DataRow
+                      icon="note-text"
+                      iconColor="#0891B2"
+                      label="Mô tả:"
+                      value={editedDataState.description}
+                    />
                   )}
 
                   {/* Items Breakdown */}
                   {editedDataState.items && editedDataState.items.length > 0 && (
                     <View style={styles.itemsBreakdownSection}>
-                      <Text style={styles.itemsBreakdownTitle}>📋 Chi tiết các mục:</Text>
+                      <View style={styles.itemsBreakdownTitleRow}>
+                        <MaterialCommunityIcons name="format-list-bulleted" size={16} color="#6366F1" style={styles.mediumIcon} />
+                        <Text style={styles.itemsBreakdownTitle}>Chi tiết các mục</Text>
+                      </View>
                       {editedDataState.items.map((item: any, index: number) => (
                         <View key={index} style={styles.itemBreakdownRow}>
                           <Text style={styles.itemBreakdownName}>• {item.item}</Text>
@@ -208,24 +287,39 @@ export default function AIProcessingResultsScreen({
                     </View>
                   )}
 
-                  {/* Confidence */}
-                  {editedDataState.confidence && (
-                    <View style={styles.confidenceRow}>
-                      <Text style={styles.aiDataLabel}>✓ Độ chắc chắn:</Text>
-                      <Text style={[styles.aiDataValue, styles.confidenceBadge]}>
-                        {editedDataState.confidence === 'high' ? '✓ Cao' : editedDataState.confidence === 'medium' ? '≈ Trung bình' : '? Thấp'}
-                      </Text>
+                  {/* Categories from Items */}
+                  {editedDataState.items && editedDataState.items.length > 0 && (
+                    <View style={styles.categoriesSection}>
+                      <View style={styles.categoriesTitleRow}>
+                        <MaterialCommunityIcons name="folder-multiple" size={16} color="#6366F1" style={styles.mediumIcon} />
+                        <Text style={styles.categoriesTitle}>Danh mục sản phẩm</Text>
+                      </View>
+                      <View style={styles.categoriesList}>
+                        {Array.from(new Set(
+                          editedDataState.items
+                            .filter((item: any) => item.category)
+                            .map((item: any) => item.category)
+                        )).map((category: string, index: number) => (
+                          <View key={index} style={styles.categoryBadge}>
+                            <Text style={styles.categoryBadgeText}>{category}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
                   )}
                 </View>
 
-                <Text style={styles.processingTimeInfo}>
-                  ⏱️ Thời gian xử lý: {editedDataState.processingTime || 0}ms
-                </Text>
+                <View style={styles.processingTimeRow}>
+                  <MaterialCommunityIcons name="clock-outline" size={14} color="#0284C7" style={styles.smallIcon} />
+                  <Text style={styles.processingTimeInfo}>
+                    Thời gian xử lý: {editedDataState.processingTime || 0}ms
+                  </Text>
+                </View>
               </View>
             ) : (
               <View style={styles.noDataSection}>
-                <Text style={styles.noDataText}>⏳ Đang xử lý...</Text>
+                <MaterialCommunityIcons name="progress-clock" size={48} color="#D1D5DB" />
+                <Text style={styles.noDataText}>Đang xử lý...</Text>
                 <Text style={styles.noDataSubtext}>
                   Vui lòng chờ AI xử lý dữ liệu
                 </Text>
@@ -233,14 +327,13 @@ export default function AIProcessingResultsScreen({
             )
           ) : (
             <View style={styles.noDataSection}>
-              <Text style={styles.noDataText}>❌ Không có dữ liệu OCR</Text>
+              <MaterialCommunityIcons name="image-not-found" size={48} color="#D1D5DB" />
+              <Text style={styles.noDataText}>Không có dữ liệu OCR</Text>
               <Text style={styles.noDataSubtext}>
                 Vui lòng chụp/chọn ảnh để trích xuất text
               </Text>
             </View>
           )}
-
-          <View style={styles.spacer} />
         </ScrollView>
 
         {/* Action Buttons */}
@@ -255,6 +348,7 @@ export default function AIProcessingResultsScreen({
             }}
             disabled={isAutoSaving}
           >
+            <MaterialCommunityIcons name="close" size={18} color="#1F2937" />
             <Text style={styles.cancelButtonText}>Huỷ</Text>
           </TouchableOpacity>
           
@@ -263,7 +357,8 @@ export default function AIProcessingResultsScreen({
             onPress={handleConfirm}
             disabled={isAutoSaving}
           >
-            <Text style={styles.editButtonText}>✏️ Chỉnh sửa</Text>
+            <MaterialCommunityIcons name="pencil" size={18} color="#FFFFFF" />
+            <Text style={styles.editButtonText}>Chỉnh sửa</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -274,7 +369,10 @@ export default function AIProcessingResultsScreen({
             {isAutoSaving ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.confirmButtonText}>✓ Lưu ngay</Text>
+              <>
+                <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
+                <Text style={styles.confirmButtonText}>Lưu ngay</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -289,37 +387,69 @@ export default function AIProcessingResultsScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F3F4F6",
   },
   header: {
-    backgroundColor: "#00897B",
+    backgroundColor: "#059669",
     paddingTop: Platform.OS === "ios" ? 60 : 16,
     paddingHorizontal: 16,
     paddingBottom: 16,
-    elevation: 4,
+    elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
   },
-  backButton: {
-    marginBottom: 12,
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  backButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
+  backButtonIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
+  headerCenter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "800",
     color: "#FFFFFF",
-    marginBottom: 4,
+  },
+  headerPlaceholder: {
+    width: 44,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginLeft: 8,
+  },
+  headerTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   content: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 0,
+    backgroundColor: "#F3F4F6",
   },
 
   // Image Preview
@@ -327,61 +457,80 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
-    elevation: 2,
+    backgroundColor: "#F9FAFB",
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   previewImage: {
     width: "100%",
     height: height * 0.25,
-    backgroundColor: "rgba(0, 137, 123, 0.05)",
+    backgroundColor: "#F3F4F6",
   },
   imageOverlay: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(0, 137, 123, 0.1)",
+    backgroundColor: "#F3F4F6",
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 137, 123, 0.2)",
+    borderTopColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
   },
   imageLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#00796B",
+    color: "#6B7280",
   },
 
   // Processed Text by AI
   processedTextSection: {
     marginBottom: 20,
-    backgroundColor: "#F0F9FF",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
-    elevation: 2,
-    shadowColor: "#3B82F6",
+    elevation: 1,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   processedTextHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
   processedTextTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1E40AF",
+    color: "#1F2937",
   },
   aiDataContainer: {
-    backgroundColor: "rgba(59, 130, 246, 0.05)",
+    backgroundColor: "#F9FAFB",
     borderRadius: 8,
     padding: 12,
     borderLeftWidth: 3,
     borderLeftColor: "#3B82F6",
     marginBottom: 10,
+  },
+  labelWithIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  smallIcon: {
+    marginRight: 6,
+  },
+  mediumIcon: {
+    marginRight: 8,
   },
   aiDataRow: {
     flexDirection: "row",
@@ -390,12 +539,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(59, 130, 246, 0.1)",
+    borderBottomColor: "#E5E7EB",
   },
   aiDataLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#0284C7",
+    color: "#4B5563",
     flex: 1,
   },
   aiDataValue: {
@@ -406,17 +555,23 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   itemsBreakdownSection: {
-    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    backgroundColor: "#F3F4F6",
     borderRadius: 8,
     padding: 10,
     marginTop: 12,
     marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: "#6366F1",
+  },
+  itemsBreakdownTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
   },
   itemsBreakdownTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#6366F1",
-    marginBottom: 8,
+    color: "#4B5563",
   },
   itemBreakdownRow: {
     flexDirection: "row",
@@ -432,7 +587,7 @@ const styles = StyleSheet.create({
   itemBreakdownAmount: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#00796B",
+    color: "#059669",
   },
   confidenceRow: {
     flexDirection: "row",
@@ -441,33 +596,59 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   confidenceBadge: {
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    color: "#10B981",
+    fontSize: 12,
   },
-  processedTextBox: {
-    backgroundColor: "rgba(59, 130, 246, 0.05)",
+  categoriesSection: {
+    backgroundColor: "rgba(99, 102, 241, 0.08)",
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: "#3B82F6",
-    marginBottom: 10,
-    minHeight: 150,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 0,
   },
-  processedText: {
+  categoriesTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  categoriesTitle: {
     fontSize: 13,
-    color: "#1F2937",
-    lineHeight: 20,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontWeight: "700",
+    color: "#6366F1",
+    marginLeft: 6,
+  },
+  categoriesList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryBadge: {
+    backgroundColor: "rgba(99, 102, 241, 0.15)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#A5B4FC",
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#4F46E5",
+  },
+  processingTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
   },
   processingTimeInfo: {
     fontSize: 12,
-    color: "#0284C7",
+    color: "#6B7280",
     fontStyle: "italic",
-    textAlign: "right",
     fontWeight: "600",
   },
 
@@ -480,21 +661,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 200,
-    elevation: 2,
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   noDataText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#999",
+    color: "#9CA3AF",
     marginBottom: 8,
+    marginTop: 12,
   },
   noDataSubtext: {
     fontSize: 14,
-    color: "#BBB",
+    color: "#B4B8BF",
   },
 
   // Action Buttons
@@ -504,50 +688,66 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingBottom: Platform.OS === "ios" ? 32 : 16,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 137, 123, 0.1)",
+    backgroundColor: "#F3F4F6",
+    borderTopWidth: 0,
   },
   cancelButton: {
     flex: 1,
-    borderWidth: 2,
-    borderColor: "#00796B",
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    backgroundColor: "#F9FAFB",
   },
   cancelButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#00796B",
+    color: "#1F2937",
   },
   editButton: {
     flex: 1,
-    backgroundColor: "#FFA500",
+    backgroundColor: "#059669",
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    elevation: 2,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   editButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#FFFFFF",
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: "#00897B",
+    backgroundColor: "#059669",
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    elevation: 3,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   confirmButtonDisabled: {
     opacity: 0.6,
   },
   confirmButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#FFFFFF",
   },

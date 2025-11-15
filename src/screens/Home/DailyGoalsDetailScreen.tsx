@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DailyGoalsDetail'>;
 
@@ -96,11 +97,11 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
 
   const getCategoryIcon = (category: DailyGoal['category']) => {
     const icons: Record<DailyGoal['category'], string> = {
-      health: '🏃',
-      finance: '💰',
-      habit: '✨',
-      learning: '📚',
-      other: '🎯',
+      health: 'run',
+      finance: 'cash',
+      habit: 'sparkles',
+      learning: 'book-open-variant',
+      other: 'target',
     };
     return icons[category];
   };
@@ -224,7 +225,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={styles.goalHeader}>
-          <View style={styles.goalCheckbox}>
+            <View style={styles.goalCheckbox}>
             <View
               style={[
                 styles.checkboxInner,
@@ -232,16 +233,17 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
               ]}
             >
               {goal.isCompleted && (
-                <Text style={styles.checkmark}>✓</Text>
+                <Icon name="check" size={14} color="#FFFFFF" />
               )}
             </View>
           </View>
 
           <View style={styles.goalInfo}>
             <View style={styles.goalTitleRow}>
-              <Text style={styles.goalCategory}>
-                {getCategoryIcon(goal.category)} {getCategoryLabel(goal.category)}
-              </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name={getCategoryIcon(goal.category)} size={14} color="#6366F1" style={{ marginRight: 8 }} />
+                  <Text style={styles.goalCategory}>{getCategoryLabel(goal.category)}</Text>
+                </View>
               <View
                 style={[
                   styles.priorityBadge,
@@ -287,9 +289,10 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
             )}
 
             {goal.dueTime && (
-              <Text style={styles.dueTime}>
-                ⏰ Hạn chót: {goal.dueTime}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <Icon name="clock-outline" size={14} color="#F59E0B" />
+                <Text style={[styles.dueTime, { marginLeft: 8 }]}>Hạn chót: {goal.dueTime}</Text>
+              </View>
             )}
           </View>
 
@@ -298,13 +301,13 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
               style={styles.editButton}
               onPress={() => handleEditGoal(goal)}
             >
-              <Text style={styles.actionIcon}>✏️</Text>
+              <Icon name="pencil" size={16} color="#111827" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => handleDeleteGoal(goal.id)}
             >
-              <Text style={styles.actionIcon}>🗑️</Text>
+              <Icon name="trash-can-outline" size={16} color="#EF4444" />
             </TouchableOpacity>
           </View>
         </View>
@@ -320,14 +323,19 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backIcon}>← Quay lại</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Icon name="chevron-left" size={18} color="#10B981" />
+            <Text style={styles.backIconText}>Quay lại</Text>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mục tiêu hôm nay</Text>
         <TouchableOpacity
-          style={styles.addButton}
+          style={styles.addButtonContainer}
           onPress={() => setShowAddModal(true)}
         >
-          <Text style={styles.addIcon}>+</Text>
+          <View style={styles.addButtonBubble}>
+            <Icon name="plus" size={20} color="#FFFFFF" />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -376,7 +384,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowAddModal(false)}>
-              <Text style={styles.modalCloseText}>✕</Text>
+              <Icon name="close" size={20} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Thêm mục tiêu mới</Text>
             <TouchableOpacity onPress={handleAddGoal}>
@@ -421,10 +429,8 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setNewGoalCategory(cat)}
                   >
-                    <Text style={styles.categoryButtonIcon}>
-                      {getCategoryIcon(cat)}
-                    </Text>
-                    <Text style={styles.categoryButtonLabel}>
+                    <Icon name={getCategoryIcon(cat)} size={20} color={newGoalCategory === cat ? '#FFFFFF' : '#10B981'} style={{ marginBottom: 6 }} />
+                    <Text style={[styles.categoryButtonLabel, newGoalCategory === cat && styles.categoryButtonLabelActive]}>
                       {getCategoryLabel(cat)}
                     </Text>
                   </TouchableOpacity>
@@ -445,7 +451,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setNewGoalPriority(priority)}
                   >
-                    <Text style={styles.priorityButtonLabel}>
+                    <Text style={[styles.priorityButtonLabel, newGoalPriority === priority && styles.priorityButtonLabelActive]}>
                       {priority === 'high' ? 'Cao' : priority === 'medium' ? 'Trung' : 'Thấp'}
                     </Text>
                   </TouchableOpacity>
@@ -465,7 +471,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowEditModal(false)}>
-              <Text style={styles.modalCloseText}>✕</Text>
+              <Icon name="close" size={20} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Chỉnh sửa mục tiêu</Text>
             <TouchableOpacity onPress={handleSaveEdit}>
@@ -510,10 +516,8 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setNewGoalCategory(cat)}
                   >
-                    <Text style={styles.categoryButtonIcon}>
-                      {getCategoryIcon(cat)}
-                    </Text>
-                    <Text style={styles.categoryButtonLabel}>
+                    <Icon name={getCategoryIcon(cat)} size={20} color={newGoalCategory === cat ? '#FFFFFF' : '#10B981'} style={{ marginBottom: 6 }} />
+                    <Text style={[styles.categoryButtonLabel, newGoalCategory === cat && styles.categoryButtonLabelActive]}>
                       {getCategoryLabel(cat)}
                     </Text>
                   </TouchableOpacity>
@@ -534,7 +538,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setNewGoalPriority(priority)}
                   >
-                    <Text style={styles.priorityButtonLabel}>
+                    <Text style={[styles.priorityButtonLabel, newGoalPriority === priority && styles.priorityButtonLabelActive]}>
                       {priority === 'high' ? 'Cao' : priority === 'medium' ? 'Trung' : 'Thấp'}
                     </Text>
                   </TouchableOpacity>
@@ -551,7 +555,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E0F2F1',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -560,21 +564,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   backButton: {
     flex: 1,
   },
-  backIcon: {
-    color: '#6366F1',
+  backIconText: {
+    color: '#111827',
     fontSize: 14,
     fontWeight: '600',
+    marginLeft: 8,
   },
   headerTitle: {
     flex: 1,
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: '#111827',
     textAlign: 'center',
   },
   addButton: {
@@ -583,8 +588,20 @@ const styles = StyleSheet.create({
   },
   addIcon: {
     fontSize: 28,
-    color: '#6366F1',
+    color: '#111827',
     fontWeight: 'bold',
+  },
+  addButtonContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  addButtonBubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -594,22 +611,22 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: '#E5E7EB',
   },
   statLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#6B7280',
     marginBottom: 8,
   },
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333333',
+    color: '#111827',
   },
   progressCircleContainer: {
     alignItems: 'center',
@@ -619,7 +636,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: '#F9FAFB',
     borderWidth: 3,
     borderColor: '#6366F1',
     alignItems: 'center',
@@ -632,7 +649,7 @@ const styles = StyleSheet.create({
   },
   progressCircleLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#6B7280',
     marginTop: 4,
   },
   goalsList: {
@@ -640,16 +657,16 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   goalCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E5E7EB',
   },
   goalCardCompleted: {
     borderColor: 'rgba(16, 185, 129, 0.3)',
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    backgroundColor: '#ECFDF5',
   },
   goalHeader: {
     flexDirection: 'row',
@@ -703,16 +720,16 @@ const styles = StyleSheet.create({
   goalTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#00796B',
+    color: '#111827',
     marginBottom: 4,
   },
   goalTitleCompleted: {
     textDecorationLine: 'line-through',
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
   },
   goalDescription: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     marginBottom: 8,
   },
   progressContainer: {
@@ -720,7 +737,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#F3F4F6',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 6,
@@ -731,12 +748,12 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
   },
   dueTime: {
     fontSize: 12,
     color: '#F59E0B',
-    marginTop: 6,
+    marginTop: 0,
   },
   goalActions: {
     justifyContent: 'flex-start',
@@ -745,7 +762,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -754,7 +771,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: '#FFF1F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -763,7 +780,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#E0F2F1',
+    backgroundColor: '#FFFFFF',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -772,21 +789,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: '#E5E7EB',
   },
   modalCloseText: {
     fontSize: 24,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#111827',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#111827',
   },
   modalSaveText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6366F1',
+    color: '#10B981',
   },
   modalBody: {
     flex: 1,
@@ -798,17 +815,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 12,
   },
   formInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 15,
   },
   textArea: {
@@ -821,25 +838,28 @@ const styles = StyleSheet.create({
   },
   categoryButton: {
     width: '30%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     gap: 8,
   },
   categoryButtonActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-    borderColor: '#6366F1',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: '#10B981',
   },
   categoryButtonIcon: {
     fontSize: 24,
   },
   categoryButtonLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#10B981',
     fontWeight: '600',
+  },
+  categoryButtonLabelActive: {
+    color: '#FFFFFF',
   },
   priorityGroup: {
     flexDirection: 'row',
@@ -851,15 +871,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F3F4F6',
   },
   priorityButtonActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
   },
   priorityButtonLabel: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontWeight: '600',
     fontSize: 13,
+  },
+  priorityButtonLabelActive: {
+    color: '#FFFFFF',
   },
   progressFillColor: {
     backgroundColor: '#6366F1',

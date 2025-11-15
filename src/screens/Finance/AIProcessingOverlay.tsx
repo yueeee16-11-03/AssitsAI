@@ -23,7 +23,7 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
     error: imageError,
     processData: processImageData,
     setError: setImageError,
-  } = useAIProcessing({ imageUri, enableGeminiProcessing: true });
+  } = useAIProcessing({ imageUri, enableGeminiProcessing: true, transactionType });
 
   // ===== EFFECT: Trigger text processing once =====
   useEffect(() => {
