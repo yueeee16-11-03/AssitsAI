@@ -10,13 +10,14 @@ import {
   Platform,
   Alert,
   Animated,
-  Modal,
   ActivityIndicator,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useHabitStore } from "../../store/habitStore";
 import AIHabitSuggestionService from "../../services/AIHabitSuggestionService";
+import NotificationService from '../../services/NotificationService';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddHabit">;
@@ -54,9 +55,9 @@ export default function AddHabitScreen({ navigation }: Props) {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([
     { id: "1", time: "06:00", daysOfWeek: [1, 2, 3, 4, 5, 6, 0], reminder: true },
   ]);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [tempTime, setTempTime] = useState("06:00");
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [selectedFromSuggestion, setSelectedFromSuggestion] = useState(false);
@@ -90,6 +91,11 @@ export default function AddHabitScreen({ navigation }: Props) {
       setSuggestionsState([]);
     }
   }, [selectedCategory]);
+
+  // Request notification permission on screen mount
+  React.useEffect(() => {
+    NotificationService.requestPermission().catch(() => {});
+  }, []);
 
   const suggestions = suggestionsState;
 
@@ -140,14 +146,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     setSchedule(schedule.filter((s) => s.id !== scheduleId));
   };
 
-  const handleSaveSchedule = (scheduleId: string) => {
-    setSchedule(
-      schedule.map((s) =>
-        s.id === scheduleId ? { ...s, time: tempTime } : s
-      )
-    );
-    setEditingScheduleId(null);
-  };
+  // handleSaveSchedule removed - schedule is updated directly by DateTimePicker
 
   const handleSave = async () => {
     // Validation: Tên thói quen, danh mục luôn bắt buộc
@@ -178,7 +177,17 @@ export default function AddHabitScreen({ navigation }: Props) {
       const finalTarget = isMeasurable ? parseInt(target, 10) : 1;
       const finalUnit = isMeasurable ? unit : "lần";
 
-      await addHabit({
+      // create an id for the habit so we can schedule notifications using it
+      const habitId = Date.now().toString();
+
+      // Determine reminder metadata
+      const reminders = finalSchedule.filter(s => s.reminder);
+      const hasReminder = reminders.length > 0;
+      const reminderTime = hasReminder ? reminders[0].time : null;
+
+      // Save habit and get authoritative ID from backend
+      const result = await addHabit({
+        id: habitId,
         name: habitName,
         icon: selectedIcon,
         color: selectedColor,
@@ -189,7 +198,28 @@ export default function AddHabitScreen({ navigation }: Props) {
         description: "",
         isMeasurable,
         isDaily,
+        hasReminder,
+        reminderTime,
       });
+
+      const savedId = (result && result.addedId) ? result.addedId : habitId;
+
+      // Schedule notifications for reminder entries (if any) using savedId
+      try {
+        if (hasReminder) {
+          await NotificationService.requestPermission();
+          for (const r of reminders) {
+            await NotificationService.scheduleHabitReminder({
+              id: savedId,
+              name: habitName,
+              reminderTime: r.time,
+              timeZone: 'Asia/Ho_Chi_Minh',
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('AddHabitScreen: scheduling reminders failed', e);
+      }
 
       Alert.alert("Thành công", "Đã thêm thói quen mới!", [
         { text: "OK", onPress: () => navigation.goBack() }
@@ -520,7 +550,7 @@ export default function AddHabitScreen({ navigation }: Props) {
                             onPress={() => {
                               setEditingScheduleId(item.id);
                               setTempTime(item.time);
-                              setShowScheduleModal(true);
+                              setShowTimePicker(true);
                             }}
                           >
                             <Icon name="clock-outline" size={16} color="#00796B" />
@@ -629,80 +659,36 @@ export default function AddHabitScreen({ navigation }: Props) {
         </Animated.View>
       </ScrollView>
 
-      {/* Time Picker Modal */}
-      <Modal
-        visible={showScheduleModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowScheduleModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Chọn giờ</Text>
-
-            <View style={styles.timePickerContainer}>
-              <View style={styles.timeInput}>
-                <Text style={styles.timeLabel}>Giờ</Text>
-                <TextInput
-                  style={styles.timeInputField}
-                  placeholder="00"
-                  placeholderTextColor="#999"
-                  maxLength={2}
-                  keyboardType="number-pad"
-                  value={tempTime.split(":")[0]}
-                  onChangeText={(value) => {
-                    const minutes = tempTime.split(":")[1];
-                    const hour = value.padStart(2, "0");
-                    if (parseInt(hour, 10) <= 23) {
-                      setTempTime(`${hour}:${minutes}`);
-                    }
-                  }}
-                />
-              </View>
-
-              <Text style={styles.timeSeparator}>:</Text>
-
-              <View style={styles.timeInput}>
-                <Text style={styles.timeLabel}>Phút</Text>
-                <TextInput
-                  style={styles.timeInputField}
-                  placeholder="00"
-                  placeholderTextColor="#999"
-                  maxLength={2}
-                  keyboardType="number-pad"
-                  value={tempTime.split(":")[1]}
-                  onChangeText={(value) => {
-                    const hour = tempTime.split(":")[0];
-                    const minute = value.padStart(2, "0");
-                    if (parseInt(minute, 10) <= 59) {
-                      setTempTime(`${hour}:${minute}`);
-                    }
-                  }}
-                />
-              </View>
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButtonCancel}
-                onPress={() => setShowScheduleModal(false)}
-              >
-                <Text style={styles.modalButtonText}>Hủy</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.modalButtonSave}
-                onPress={() => {
-                  handleSaveSchedule(editingScheduleId!);
-                  setShowScheduleModal(false);
-                }}
-              >
-                <Text style={styles.modalButtonTextWhite}>Lưu</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Native TimePicker */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={(() => {
+            const [hh, mm] = (tempTime || '06:00').split(':').map(Number);
+            const d = new Date();
+            d.setHours(hh, mm, 0, 0);
+            return d;
+          })()}
+          mode="time"
+          is24Hour={true}
+          display={'spinner'}
+          onChange={(event: any, selectedDate?: Date) => {
+            // On Android, onChange is called once and picker closes; on iOS it's called repeatedly
+            if (event?.type === 'dismissed') {
+              setShowTimePicker(false);
+              setEditingScheduleId(null);
+              return;
+            }
+            if (!selectedDate) return;
+            const hh = String(selectedDate.getHours()).padStart(2, '0');
+            const mm = String(selectedDate.getMinutes()).padStart(2, '0');
+            const newTime = `${hh}:${mm}`;
+            setSchedule((prev) => prev.map((s) => s.id === editingScheduleId ? { ...s, time: newTime } : s));
+            setTempTime(newTime);
+            setShowTimePicker(false);
+            setEditingScheduleId(null);
+          }}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -818,7 +804,7 @@ const styles = StyleSheet.create({
   timePickerContainer: { flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 8, marginBottom: 24 },
   timeInput: { alignItems: "center" },
   timeLabel: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginBottom: 6, fontWeight: "700" },
-  timeInputField: { width: 60, height: 50, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", color: "#333333", fontSize: 20, fontWeight: "700", textAlign: "center" },
+  timeInputField: { width: 60, height: 50, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", color: "#FFFFFF", fontSize: 20, fontWeight: "700", textAlign: "center" },
   timeSeparator: { fontSize: 24, color: "#00796B", fontWeight: "700", marginBottom: 8 },
   modalButtons: { flexDirection: "row", gap: 12 },
   modalButtonCancel: { flex: 1, paddingVertical: 12, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 8, alignItems: "center" },

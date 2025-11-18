@@ -186,6 +186,12 @@ export default function HabitDashboardScreen({ navigation }: Props) {
                         <View style={styles.habitDetails}>
                           <Text style={styles.habitName}>{habit.name}</Text>
                           <Text style={styles.habitTarget}>{habit.target} {habit.unit}</Text>
+                          {habit.hasReminder && habit.reminderTime ? (
+                            <View style={styles.reminderRow}>
+                              <MaterialCommunityIcons name="alarm" size={14} color={habit.color} />
+                              <Text style={styles.habitReminder}>{habit.reminderTime}</Text>
+                            </View>
+                          ) : null}
                         </View>
                       </View>
                       <View style={styles.habitRight}>
@@ -305,6 +311,8 @@ const styles = StyleSheet.create({
   marginRight4: { marginRight: 4 },
   barCompleted: { backgroundColor: "#10B981" },
   barIncomplete: { backgroundColor: "#6366F1" },
+  reminderRow: { flexDirection: "row", alignItems: "center", marginTop: 6 },
+  habitReminder: { fontSize: 12, color: "#6B7280", marginLeft: 8, fontWeight: "700" },
   checkbox: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: "#D1D5DB", alignItems: "center", justifyContent: "center" },
   checkboxCompleted: { backgroundColor: "#D1FAE5", borderColor: "#10B981" },
   checkmark: { fontSize: 18, fontWeight: "900", color: "#10B981" },

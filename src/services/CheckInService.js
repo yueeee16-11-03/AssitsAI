@@ -1,5 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import NotificationService from './NotificationService';
 
 /**
  * CheckInService: Business logic cho daily check-in
@@ -289,6 +290,27 @@ class CheckInService {
         date: today,
         ...newData,
       };
+
+      // Notification behavior:
+      // - If user just completed the habit, cancel today's reminder for this habit
+      // - If user just un-completed the habit, reschedule reminder (if habitData.reminderTime exists)
+      try {
+        if (freshCheckIn.completed) {
+          await NotificationService.cancelReminder(habitId);
+        } else {
+          // only schedule if user has reminders enabled and a reminderTime
+          if (habitData && habitData.hasReminder && habitData.reminderTime) {
+            // pass habit info for notification body/title
+            await NotificationService.scheduleHabitReminder({
+              id: habitId,
+              name: habitData.name || habitId,
+              reminderTime: habitData.reminderTime,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ [CHECK-IN SERVICE] Notification update failed', e);
+      }
 
       return {
         success: true,

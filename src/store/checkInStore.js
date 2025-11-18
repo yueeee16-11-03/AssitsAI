@@ -105,7 +105,17 @@ export const useCheckInStore = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const result = await CheckInService.toggleCheckInToday(habitId, habitData);
+      // Attach full habit info so service can cancel/reschedule notifications
+      const habit = useHabitStore.getState().habits.find(h => h.id === habitId) || {};
+      const fullHabitData = {
+        ...habitData,
+        name: habit.name,
+        color: habit.color,
+        hasReminder: habit.hasReminder,
+        reminderTime: habit.reminderTime,
+      };
+
+      const result = await CheckInService.toggleCheckInToday(habitId, fullHabitData);
 
       // Update state
       set(state => ({

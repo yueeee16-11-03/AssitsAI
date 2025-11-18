@@ -11,10 +11,12 @@ import {
   Alert,
   Modal,
 } from "react-native";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useHabitStore } from "../../store/habitStore";
+import NotificationService from '../../services/NotificationService';
 import { useFocusEffect } from "@react-navigation/native";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditHabit">;
@@ -44,9 +46,9 @@ export default function EditHabitScreen({ navigation, route }: Props) {
   const [selectedColor, setSelectedColor] = useState("#6366F1");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [tempTime, setTempTime] = useState("06:00");
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Lấy thói quen từ store
@@ -115,14 +117,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
     setSchedule(schedule.filter((s) => s.id !== scheduleId));
   };
 
-  const handleSaveSchedule = (scheduleId: string) => {
-    setSchedule(
-      schedule.map((s) =>
-        s.id === scheduleId ? { ...s, time: tempTime } : s
-      )
-    );
-    setEditingScheduleId(null);
-  };
+  // schedule updated directly by native DateTimePicker
 
   const handleSave = async () => {
     if (!habitName.trim() || !target || !unit.trim() || !selectedCategory) {
@@ -136,7 +131,13 @@ export default function EditHabitScreen({ navigation, route }: Props) {
     }
 
     try {
-      await updateHabit(habitId, {
+      // Determine reminder metadata from schedule
+      const reminders = schedule.filter(s => s.reminder);
+      const hasReminder = reminders.length > 0;
+      const reminderTime = hasReminder ? reminders[0].time : null;
+
+      // Call updateHabit which returns result containing updatedId and freshData
+      const result = await updateHabit(habitId, {
         name: habitName,
         icon: selectedIcon,
         color: selectedColor,
@@ -144,7 +145,31 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         target: parseInt(target, 10),
         unit,
         schedule,
+        hasReminder,
+        reminderTime,
       });
+
+      const savedId = (result && result.updatedId) ? result.updatedId : habitId;
+
+      // Update notifications: cancel then reschedule if needed
+      try {
+        // Always cancel existing trigger for this habit id first to avoid duplicates
+        await NotificationService.cancelReminder(savedId);
+
+        if (hasReminder) {
+          await NotificationService.requestPermission();
+          for (const r of reminders) {
+            await NotificationService.scheduleHabitReminder({
+              id: savedId,
+              name: habitName,
+              reminderTime: r.time,
+              timeZone: 'Asia/Ho_Chi_Minh',
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('EditHabitScreen: notification update failed', e);
+      }
 
       Alert.alert("Thành công", "Đã cập nhật thói quen!", [
         { text: "OK", onPress: () => navigation.goBack() }
@@ -338,7 +363,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                     onPress={() => {
                       setEditingScheduleId(item.id);
                       setTempTime(item.time);
-                      setShowScheduleModal(true);
+                      setShowTimePicker(true);
                     }}
                   >
                     <View style={styles.flexRow}>
@@ -461,81 +486,35 @@ export default function EditHabitScreen({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Time Picker Modal */}
-      <Modal
-        visible={showScheduleModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowScheduleModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Chọn giờ</Text>
-
-            <View style={styles.timePickerContainer}>
-              <View style={styles.timeInput}>
-                <Text style={styles.timeLabel}>Giờ</Text>
-                <TextInput
-                  style={styles.timeInputField}
-                  placeholder="00"
-                  placeholderTextColor="#999"
-                  maxLength={2}
-                  keyboardType="number-pad"
-                  value={tempTime.split(":")[0]}
-                  onChangeText={(value) => {
-                    const minutes = tempTime.split(":")[1];
-                    const hour = value.padStart(2, "0");
-                    if (parseInt(hour, 10) <= 23) {
-                      setTempTime(`${hour}:${minutes}`);
-                    }
-                  }}
-                />
-              </View>
-
-              <Text style={styles.timeSeparator}>:</Text>
-
-              <View style={styles.timeInput}>
-                <Text style={styles.timeLabel}>Phút</Text>
-                <TextInput
-                  style={styles.timeInputField}
-                  placeholder="00"
-                  placeholderTextColor="#999"
-                  maxLength={2}
-                  keyboardType="number-pad"
-                  value={tempTime.split(":")[1]}
-                  onChangeText={(value) => {
-                    const hour = tempTime.split(":")[0];
-                    const minute = value.padStart(2, "0");
-                    if (parseInt(minute, 10) <= 59) {
-                      setTempTime(`${hour}:${minute}`);
-                    }
-                  }}
-                />
-              </View>
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButtonCancel}
-                onPress={() => setShowScheduleModal(false)}
-              >
-                <Text style={styles.modalButtonText}>Hủy</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.modalButtonSave}
-                onPress={() => {
-                  handleSaveSchedule(editingScheduleId!);
-                  setShowScheduleModal(false);
-                }}
-              >
-                <Text style={styles.modalButtonTextWhite}>Lưu</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Native TimePicker */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={(() => {
+            const [hh, mm] = (tempTime || '06:00').split(':').map(Number);
+            const d = new Date();
+            d.setHours(hh, mm, 0, 0);
+            return d;
+          })()}
+          mode="time"
+          is24Hour={true}
+          display={'spinner'}
+          onChange={(event: any, selectedDate?: Date) => {
+            if (event?.type === 'dismissed') {
+              setShowTimePicker(false);
+              setEditingScheduleId(null);
+              return;
+            }
+            if (!selectedDate) return;
+            const hh = String(selectedDate.getHours()).padStart(2, '0');
+            const mm = String(selectedDate.getMinutes()).padStart(2, '0');
+            const newTime = `${hh}:${mm}`;
+            setSchedule((prev) => prev.map((s) => s.id === editingScheduleId ? { ...s, time: newTime } : s));
+            setTempTime(newTime);
+            setShowTimePicker(false);
+            setEditingScheduleId(null);
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <Modal
