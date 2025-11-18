@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -34,14 +34,38 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isTogglingHabit, setIsTogglingHabit] = useState<{ [key: string]: boolean }>({});
+  // debug helper to force re-render when store update seems not reflected
+  const [, setDebugVersion] = useState(0);
+  // Local overrides to reflect immediate UI changes after toggle
+  const [localOverrides, setLocalOverrides] = useState<{ [key: string]: any }>({});
 
   // Load data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      console.log("📋 [DAILY-CHECK-IN] Screen focused - loading data");
-      fetchHabits();
-      getTodayAllCheckIns();
-      getTodayTotalPoints();
+      console.log("📋 [DAILY-CHECK-IN] Screen focused - loading all data from Firebase");
+      
+      // Load both habits and check-ins to ensure data sync
+      const loadAllData = async () => {
+        try {
+          // Step 1: Fetch all habits first
+          await fetchHabits();
+          console.log("✅ [DAILY-CHECK-IN] Habits loaded");
+
+          // Step 2: Fetch today's check-ins
+          await getTodayAllCheckIns();
+          console.log("✅ [DAILY-CHECK-IN] Today's check-ins loaded");
+
+          // Step 3: Update total points
+          await getTodayTotalPoints();
+          console.log("✅ [DAILY-CHECK-IN] Total points updated");
+          // Clear any local UI overrides after a full reload from store
+          setLocalOverrides({});
+        } catch (error) {
+          console.error("❌ [DAILY-CHECK-IN] Error loading data:", error);
+        }
+      };
+
+      loadAllData();
     }, [fetchHabits, getTodayAllCheckIns, getTodayTotalPoints])
   );
 
@@ -53,9 +77,43 @@ export default function DailyCheckInScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  // Calculate completion metrics
-  const checkedCount = Object.values(todayCheckIns).filter((c: any) => c.completed).length;
+  // Merge store check-ins with local overrides so UI updates instantly
+  const mergedCheckIns = useMemo(() => ({ ...todayCheckIns, ...localOverrides }), [todayCheckIns, localOverrides]);
+  const checkedCount = Object.values(mergedCheckIns).filter((c: any) => c?.completed).length;
   const completionRate = habits.length > 0 ? (checkedCount / habits.length) * 100 : 0;
+
+  // Data validation: Ensure all habits have check-in records
+  const validateCheckInData = React.useCallback(async () => {
+    console.log("🔍 [DAILY-CHECK-IN] Validating check-in data");
+    
+    const missingHabits = habits.filter((h: any) => !mergedCheckIns[h.id]);
+    
+    if (missingHabits.length > 0) {
+      console.warn(
+        `⚠️ [DAILY-CHECK-IN] Found ${missingHabits.length} habits without check-in records:`,
+        missingHabits.map((h: any) => h.name)
+      );
+      
+      // Reload check-in data
+      await getTodayAllCheckIns();
+      console.log("✅ [DAILY-CHECK-IN] Check-in data reloaded");
+    }
+  }, [habits, mergedCheckIns, getTodayAllCheckIns]);
+
+  // Validate whenever habits or check-ins change
+  React.useEffect(() => {
+    if (habits.length > 0) {
+      validateCheckInData();
+    }
+  }, [habits, validateCheckInData]);
+
+  // Clear local overrides on focus (we reload from store on focus)
+  React.useEffect(() => {
+    const unsubscribe = () => {
+      setLocalOverrides({});
+    };
+    return unsubscribe;
+  }, []);
 
   const handleCheckIn = async (habitId: string) => {
     try {
@@ -67,23 +125,39 @@ export default function DailyCheckInScreen({ navigation }: Props) {
         return;
       }
 
-      // Call toggleCheckInToday with habit data for points calculation
-      await toggleCheckInToday(habitId, {
+      // Step 1: Toggle check-in (store will update its state)
+      const toggleResult = await toggleCheckInToday(habitId, {
         target: habit.target || 10,
         currentStreak: todayCheckIns[habitId]?.streak || 0,
         bestStreak: habit.bestStreak || 0,
       });
+      console.log(`✅ [DAILY-CHECK-IN] ${habit.name} toggled`, toggleResult);
 
-      // Refresh total points
+      // log store snapshot immediately after toggle
+      console.log('🔎 [DAILY-CHECK-IN] after toggle - store todayCheckIns (immediate):', todayCheckIns);
+
+      // Don't call getTodayAllCheckIns() here — it can overwrite the store with
+      // an incomplete map (firestore documents for parent habit docs may not
+      // exist). Rely on the toggle result (service returns freshData) and the
+      // store update already performed inside `toggleCheckInToday`.
+      const newCheckIn = toggleResult?.freshData || todayCheckIns[habitId] || null;
+
+      // Apply local override so UI reflects change immediately
+      if (newCheckIn) {
+        setLocalOverrides(prev => ({ ...prev, [habitId]: newCheckIn }));
+      }
+
+      // Force a tiny state bump so component re-renders even if selector doesn't
+      // reflect the update immediately on some devices / RN bridge timings.
+      setDebugVersion(v => v + 1);
+
+      // Refresh total points (this will set `totalPointsToday` in the store)
       await getTodayTotalPoints();
-
-      // Get new check-in status
-      const newCheckIn = todayCheckIns[habitId];
+      console.log(`✅ [DAILY-CHECK-IN] Total points updated -`, { totalPointsToday });
       if (newCheckIn?.completed) {
         showEncouragement(habit, newCheckIn.points);
       }
 
-      console.log(`✅ [DAILY-CHECK-IN] ${habit.name} toggled`);
     } catch (error) {
       Alert.alert("Lỗi", error instanceof Error ? error.message : "Không thể cập nhật");
       console.error("❌ [DAILY-CHECK-IN] Error checking in:", error);
@@ -138,23 +212,8 @@ export default function DailyCheckInScreen({ navigation }: Props) {
   const motivationStyles = getMotivationStyles(motivation.color);
 
   const getHabitIconName = (iconStr: string) => {
-    const map: { [key: string]: string } = {
-      "🎯": "bullseye",
-      "💧": "water",
-      "🚶": "walk",
-      "📚": "book-open-variant",
-      "🧘": "meditation",
-      "💪": "arm-flex",
-      "🥗": "food-apple",
-      "😴": "bed",
-      "✍️": "pencil",
-      "🎵": "music",
-      "🏃": "run",
-      "🧠": "brain",
-    };
-    // Default to a single filled circle to avoid rendering two concentric circles
-    if (!iconStr) return 'circle';
-    return map[iconStr] || iconStr || 'circle';
+    // Return icon name directly, fallback to 'circle' if not provided
+    return iconStr || 'circle';
   };
 
   const getHabitColor = (habit: any) => {
@@ -174,18 +233,18 @@ export default function DailyCheckInScreen({ navigation }: Props) {
     const key = (habit && (habit.id || habit.name)) || Math.random().toString();
     let hash = 0;
     for (let i = 0; i < key.length; i++) {
-      hash = (hash << 5) - hash + key.charCodeAt(i);
-      hash |= 0;
+      hash = hash * 31 + key.charCodeAt(i);
     }
     return palette[Math.abs(hash) % palette.length];
   };
 
   const hexToRgba = (hex: string, alpha = 1) => {
     const h = hex.replace('#', '');
-    const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
+    const fullHex = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const bigint = parseInt(fullHex, 16);
+    const r = Math.floor(bigint / 65536) % 256;
+    const g = Math.floor(bigint / 256) % 256;
+    const b = bigint % 256;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
@@ -221,7 +280,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
             <Text style={styles.headerTitle}>Check-in hôm nay</Text>
             <View style={styles.pointsBadgeInline}>
               <Icon name="bullseye" size={20} color="#FFFFFF" />
-              <Text style={[styles.pointsText, { marginLeft: 8, color: '#FFFFFF' }]}>0</Text>
+              <Text style={[styles.pointsText, styles.pointsTextMargin]}>0</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -248,7 +307,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
           <Text style={styles.headerTitle}>Check-in hôm nay</Text>
           <View style={styles.pointsBadgeInline}>
             <Icon name="bullseye" size={20} color="#FFFFFF" />
-            <Text style={[styles.pointsText, { marginLeft: 8, color: '#FFFFFF' }]}> {totalPointsToday}</Text>
+            <Text style={[styles.pointsText, styles.pointsTextMargin]}> {totalPointsToday}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -269,15 +328,15 @@ export default function DailyCheckInScreen({ navigation }: Props) {
           </View>
 
           {/* AI Motivation */}
-          <View style={[styles.motivationCard, { borderColor: '#F59E0B', backgroundColor: '#FFFFFF' }]}>
-              <View style={styles.motivationHeader}>
-                <Icon name={motivation.iconName} size={24} color="#F59E0B" style={{ marginRight: 8 }} />
-                <Text style={styles.motivationTitle}>AI Động viên</Text>
-              </View>
+          <View style={[styles.motivationCard, styles.motivationCardBorder, styles.motivationCardBg]}>
+            <View style={styles.motivationHeader}>
+              <Icon name={motivation.iconName} size={24} color="#F59E0B" style={styles.motivationIconMargin} />
+              <Text style={styles.motivationTitle}>AI Động viên</Text>
+            </View>
             <Text
               style={[
                 styles.motivationText,
-                { color: motivation.message && motivation.message.startsWith('Hãy bắt đầu ngày mới') ? '#333333' : motivationStyles.textColor },
+                motivation.message && motivation.message.startsWith('Hãy bắt đầu ngày mới') ? styles.motivationTextColor : { color: motivationStyles.textColor }
               ]}
             >
               {motivation.message}
@@ -286,9 +345,9 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
           {/* Habits Checklist */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Danh sách thói quen</Text>
+            <Text style={styles.sectionTitle}>Danh sách thói quen - Bấm để check-in</Text>
             {habits.map((habit: any) => {
-              const checkIn = todayCheckIns[habit.id] || { completed: false, points: 0, streak: 0 };
+              const checkIn = mergedCheckIns[habit.id] || { completed: false, points: 0, streak: 0 };
               const isToggling = isTogglingHabit[habit.id];
               const iconColor = getHabitColor(habit);
               const iconBg = hexToRgba(iconColor, 0.12);
@@ -346,7 +405,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
             <View style={styles.statsGrid}>
               <View style={styles.statColumn}>
                 <View style={styles.statItem}>
-                  <Icon name="star" size={20} color="#F59E0B" style={{ marginBottom: 8 }} />
+                  <Icon name="star" size={20} color="#F59E0B" style={styles.iconMarginBottom} />
                   <Text style={styles.statValue}>{totalPointsToday}</Text>
                   <Text style={styles.statLabel}>Điểm</Text>
                 </View>
@@ -354,7 +413,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
               <View style={styles.statColumn}>
                 <View style={styles.statItem}>
-                  <Icon name="check" size={20} color="#10B981" style={{ marginBottom: 8 }} />
+                  <Icon name="check" size={20} color="#10B981" style={styles.iconMarginBottom} />
                   <Text style={styles.statValue}>{checkedCount}</Text>
                   <Text style={styles.statLabel}>Hoàn thành</Text>
                 </View>
@@ -362,9 +421,9 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
               <View style={styles.statColumn}>
                 <View style={styles.statItem}>
-                  <Icon name="fire" size={20} color="#EF4444" style={{ marginBottom: 8 }} />
+                  <Icon name="fire" size={20} color="#EF4444" style={styles.iconMarginBottom} />
                   <Text style={styles.statValue}>
-                    {Math.max(...Object.values(todayCheckIns).map((c: any) => c.streak || 0), 0)}
+                    {Math.max(...Object.values(mergedCheckIns).map((c: any) => c.streak || 0), 0)}
                   </Text>
                   <Text style={styles.statLabel}>Streak cao nhất</Text>
                 </View>
@@ -372,27 +431,30 @@ export default function DailyCheckInScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Complete Button */}
-          <TouchableOpacity
-            style={[
-              styles.completeButton,
-              checkedCount === habits.length && styles.completeButtonActive,
-            ]}
-            onPress={handleCompleteAll}
-            activeOpacity={0.9}
-          >
-            {checkedCount === habits.length ? (
-              <View style={styles.completeButtonInline}>
-                <Icon name="trophy" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={[styles.completeButtonText, { color: '#FFFFFF' }]}>Hoàn thành ngày mới</Text>
-              </View>
-            ) : (
-              <View style={styles.completeButtonInline}>
-                <Icon name="timer-sand" size={16} color="#F59E0B" style={{ marginRight: 8 }} />
-                <Text style={styles.completeButtonText}>Chưa hoàn thành</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {/* Complete Button Section */}
+          <View style={styles.buttonContainer}>
+            {/* Complete Button - Hoàn thành tất cả */}
+            <TouchableOpacity
+              style={[
+                styles.completeButton,
+                checkedCount === habits.length && styles.completeButtonActive,
+              ]}
+              onPress={handleCompleteAll}
+              activeOpacity={0.9}
+            >
+              {checkedCount === habits.length ? (
+                <View style={styles.completeButtonInline}>
+                  <Icon name="trophy" size={16} color="#FFFFFF" style={styles.iconMarginRight} />
+                  <Text style={[styles.completeButtonText, styles.completeButtonTextWhite]}>Hoàn thành ngày mới</Text>
+                </View>
+              ) : (
+                <View style={styles.completeButtonInline}>
+                  <Icon name="timer-sand" size={16} color="#F59E0B" style={styles.iconMarginRight} />
+                  <Text style={styles.completeButtonText}>Chưa hoàn thành ({checkedCount}/{habits.length})</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </Animated.View>
       </ScrollView>
     </View>
@@ -410,6 +472,7 @@ const styles = StyleSheet.create({
   pointsBadge: { backgroundColor: "transparent", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
   pointsBadgeInline: { backgroundColor: 'transparent', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' },
   pointsText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
+  pointsTextMargin: { marginLeft: 8 },
   content: { padding: 16 },
   progressCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
   progressLabel: { fontSize: 14, color: "#333333", marginBottom: 16 },
@@ -419,9 +482,11 @@ const styles = StyleSheet.create({
   progressBar: { width: "100%", height: 8, backgroundColor: "#F3F4F6", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
   progressFill: { height: "100%", backgroundColor: "#6366F1", borderRadius: 4 },
   progressPercentage: { fontSize: 13, color: "#333333" },
-  motivationCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "#E5E7EB", overflow: 'hidden', shadowColor: 'transparent', shadowOpacity: 0, elevation: 0 },
+  motivationCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "#FCD34D", overflow: 'hidden', shadowColor: 'transparent', shadowOpacity: 0, elevation: 0 },
+  motivationCardBorder: { borderColor: '#F59E0B' },
+  motivationCardBg: { backgroundColor: '#FFFFFF' },
   motivationHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  motivationIcon: { fontSize: 28, marginRight: 8 },
+  motivationIconMargin: { marginRight: 8 },
   motivationTitle: { fontSize: 16, fontWeight: "800", color: "#000000" },
   motivationText: { fontSize: 15, lineHeight: 22, fontWeight: "700", color: "#333333" },
   section: { marginBottom: 24 },
@@ -452,14 +517,25 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: "#333333" },
   statDivider: { width: 1, height: 48, backgroundColor: "rgba(0,0,0,0.06)", marginHorizontal: 8, alignSelf: 'center' },
   statColumn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  iconMarginBottom: { marginBottom: 8 },
   completeButtonInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  completeButton: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 18, alignItems: "center", marginBottom: 20, borderWidth: 1, borderColor: "#E5E7EB" },
+  completeButton: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 18, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
   completeButtonActive: { backgroundColor: "#10B981", shadowColor: "#10B981", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
   completeButtonText: { color: "#000000", fontSize: 17, fontWeight: "800" },
+  motivationTextColor: { color: '#333333' },
+  motivationTextSecondary: { color: '#666666' },
+  completeButtonTextWhite: { color: '#FFFFFF' },
+  motivationTextCustom: { fontSize: 15, lineHeight: 22, fontWeight: "700" },
+  buttonContainer: { gap: 12, marginBottom: 8 },
+  checkInButton: { backgroundColor: "#E0F2FE", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "#CFFAFE" },
+  checkInButtonInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  checkInButtonText: { color: "#06B6D4", fontSize: 17, fontWeight: "800" },
   centerContent: { justifyContent: "center", alignItems: "center" },
   loadingText: { color: "#333333", marginTop: 16, fontSize: 14 },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { fontSize: 18, color: "#333333", textAlign: "center", marginBottom: 20 },
   addHabitButton: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: "#6366F1", borderRadius: 12 },
   addHabitButtonText: { color: "#FFFFFF", fontWeight: "700" },
+  iconMarginRight: { marginRight: 8 },
 });
+

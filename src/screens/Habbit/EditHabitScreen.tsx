@@ -179,7 +179,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
             <Icon name="chevron-left" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Sửa thói quen</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.deleteHeaderButton} />
         </View>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Đang tải...</Text>
@@ -241,7 +241,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
 
           {/* Target & Unit */}
           <View style={styles.row}>
-            <View style={[styles.inputContainer, { flex: 1 }]}>
+            <View style={[styles.inputContainer, styles.flex1]}>
               <Text style={styles.label}>Mục tiêu</Text>
               <TextInput
                 style={styles.input}
@@ -252,7 +252,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                 keyboardType="numeric"
               />
             </View>
-            <View style={[styles.inputContainer, { flex: 1 }]}>
+            <View style={[styles.inputContainer, styles.flex1]}>
               <Text style={styles.label}>Đơn vị</Text>
               <TextInput
                 style={styles.input}
@@ -295,7 +295,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                   ]}
                   onPress={() => setSelectedCategory(category.id)}
                 >
-                  <Icon name={category.icon} size={20} color={selectedCategory === category.id ? selectedColor : "#111827"} style={{ marginRight: 8 }} />
+                  <Icon name={category.icon} size={20} color={selectedCategory === category.id ? selectedColor : "#111827"} style={styles.iconMarginRight} />
                   <Text
                     style={[
                       styles.categoryName,
@@ -313,12 +313,16 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         {/* Schedule Section */}
         <View style={styles.section}>
           <View style={styles.scheduleHeader}>
-            <Text style={styles.label}>Lịch trình sinh hoạt</Text>
+            <View>
+              <Text style={styles.label}>Lịch trình sinh hoạt</Text>
+              <Text style={styles.scheduleSubtitle}>Chọn những ngày bạn muốn thực hiện thói quen</Text>
+            </View>
             <TouchableOpacity
               style={styles.addScheduleButton}
               onPress={addSchedule}
             >
-              <Text style={styles.addScheduleText}>+ Thêm</Text>
+              <Icon name="plus" size={16} color="#FFFFFF" style={styles.iconMarginRight} />
+              <Text style={styles.addScheduleText}>Thêm lịch</Text>
             </TouchableOpacity>
           </View>
 
@@ -337,9 +341,9 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                       setShowScheduleModal(true);
                     }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={styles.flexRow}>
                       <Icon name="clock-outline" size={16} color={selectedColor} />
-                      <Text style={[styles.timeText, { marginLeft: 8 }]}>{item.time}</Text>
+                      <Text style={[styles.timeText, styles.iconMarginRight]}>{item.time}</Text>
                     </View>
                   </TouchableOpacity>
 
@@ -352,28 +356,38 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                 </View>
 
                 {/* Days of Week */}
-                <View style={styles.daysGrid}>
-                  {daysOfWeekName.map((dayName, dayIndex) => (
-                    <TouchableOpacity
-                      key={dayIndex}
-                      style={[
-                        styles.dayButton,
-                        item.daysOfWeek.includes(dayIndex) &&
-                          styles.dayButtonActive,
-                      ]}
-                      onPress={() => toggleDayOfWeek(dayIndex, item.id)}
-                    >
-                      <Text
+                <View style={styles.daysSelectionContainer}>
+                  <Text style={styles.daysLabel}>Ngày trong tuần ({item.daysOfWeek.length}/7)</Text>
+                  <View style={styles.daysGrid}>
+                    {daysOfWeekName.map((dayName, dayIndex) => (
+                      <TouchableOpacity
+                        key={dayIndex}
                         style={[
-                          styles.dayText,
+                          styles.dayButton,
                           item.daysOfWeek.includes(dayIndex) &&
-                            styles.dayTextActive,
+                            styles.dayButtonActive,
                         ]}
+                        onPress={() => toggleDayOfWeek(dayIndex, item.id)}
+                        activeOpacity={0.7}
                       >
-                        {dayName}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Icon
+                          name={item.daysOfWeek.includes(dayIndex) ? "check-circle" : "circle-outline"}
+                          size={12}
+                          color={item.daysOfWeek.includes(dayIndex) ? "#FFFFFF" : "#D1D5DB"}
+                          style={styles.dayIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.dayText,
+                            item.daysOfWeek.includes(dayIndex) &&
+                              styles.dayTextActive,
+                          ]}
+                        >
+                          {dayName}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
 
                 {/* Reminder */}
@@ -389,9 +403,9 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                     )
                   }
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={styles.flexRow}>
                     <Icon name={item.reminder ? 'bell' : 'bell-off'} size={16} color="#10B981" />
-                    <Text style={[styles.reminderText, { marginLeft: 8 }]}>{"Nhắc nhở"}</Text>
+                    <Text style={[styles.reminderText, styles.iconMarginRight]}>{"Nhắc nhở"}</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -423,26 +437,26 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         {/* Action Buttons */}
         <View style={styles.buttonGroup}>
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: selectedColor, opacity: isLoading ? 0.6 : 1 }]}
+            style={[styles.saveButton, { backgroundColor: selectedColor }]}
             onPress={handleSave}
             disabled={isLoading}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.flexRow}>
               <Icon name="content-save" size={18} color="#FFFFFF" />
-              <Text style={[styles.saveButtonText, { marginLeft: 8 }]}>
+              <Text style={[styles.saveButtonText, styles.iconMarginRight]}>
                 {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
               </Text>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.deleteButton, { opacity: isLoading ? 0.6 : 1 }]}
+            style={[styles.deleteButton, isLoading && styles.disabledOpacity]}
             onPress={() => setShowDeleteConfirm(true)}
             disabled={isLoading}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.flexRow}>
               <Icon name="trash-can-outline" size={16} color="#EF4444" />
-              <Text style={[styles.deleteButtonText, { marginLeft: 8 }]}>Xóa thói quen</Text>
+              <Text style={[styles.deleteButtonText, styles.iconMarginRight]}>Xóa thói quen</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -546,7 +560,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.confirmDelete, { opacity: isLoading ? 0.6 : 1 }]}
+                style={[styles.confirmDelete, isLoading && styles.disabledOpacity]}
                 onPress={() => {
                   setShowDeleteConfirm(false);
                   handleDelete();
@@ -586,7 +600,7 @@ const styles = StyleSheet.create({
   iconButton: { width: 56, height: 56, borderRadius: 12, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "transparent" },
   iconButtonActive: { borderColor: "#6366F1", backgroundColor: "#6366F1" },
   iconText: { fontSize: 28 },
-  colorsGrid: { flexDirection: "row", gap: 12 },
+  colorsGrid: { flexDirection: "row", gap: 12, justifyContent: "center", flexWrap: "wrap" },
   colorButton: { width: 48, height: 48, borderRadius: 24, borderWidth: 3, borderColor: "transparent" },
   colorButtonActive: { borderColor: "#10B981" },
   categoriesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
@@ -595,9 +609,10 @@ const styles = StyleSheet.create({
   categoryIcon: { fontSize: 24, marginRight: 8 },
   categoryName: { fontSize: 14, fontWeight: "700", color: "#111827" },
   categoryNameActive: { color: "#111827" },
-  scheduleHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  addScheduleButton: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#6366F1", borderRadius: 8 },
-  addScheduleText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
+  scheduleHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 12 },
+  addScheduleButton: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: "#6366F1", borderRadius: 10, flexDirection: "row", alignItems: "center" },
+  addScheduleText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
+  scheduleSubtitle: { fontSize: 12, color: "#666666", marginTop: 4, fontStyle: "italic" },
   emptyText: { color: "#6B7280", fontSize: 13, fontStyle: "italic" },
   scheduleCard: { backgroundColor: "#F9FAFB", borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "#E5E7EB" },
   scheduleTimeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
@@ -605,11 +620,14 @@ const styles = StyleSheet.create({
   timeText: { color: "#111827", fontWeight: "700", fontSize: 14 },
   deleteScheduleButton: { paddingHorizontal: 12, paddingVertical: 8 },
   deleteScheduleText: { fontSize: 18 },
-  daysGrid: { flexDirection: "row", gap: 8, marginBottom: 12, justifyContent: "space-between" },
-  dayButton: { width: "13%", paddingVertical: 8, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center", borderWidth: 2, borderColor: "transparent" },
-  dayButtonActive: { backgroundColor: "#EEF2FF", borderColor: "#6366F1" },
-  dayText: { color: "#6B7280", fontWeight: "700", fontSize: 11 },
-  dayTextActive: { color: "#111827" },
+  daysGrid: { flexDirection: "row", gap: 4, marginBottom: 12 },
+  daysSelectionContainer: { backgroundColor: "#F9FAFB", borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#E5E7EB" },
+  daysLabel: { fontSize: 13, fontWeight: "700", color: "#333333", marginBottom: 10 },
+  dayButton: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, backgroundColor: "#FFFFFF", borderRadius: 8, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "#E5E7EB" },
+  dayButtonActive: { backgroundColor: "#6366F1", borderColor: "#6366F1" },
+  dayText: { color: "#666666", fontWeight: "600", fontSize: 10 },
+  dayTextActive: { color: "#FFFFFF" },
+  dayIcon: { marginBottom: 1 },
   reminderToggle: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "#ECFDF5", borderRadius: 8, alignItems: "center" },
   reminderText: { color: "#10B981", fontWeight: "700", fontSize: 13 },
   statsSection: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "#E5E7EB" },
@@ -648,4 +666,8 @@ const styles = StyleSheet.create({
   confirmDelete: { flex: 1, paddingVertical: 12, backgroundColor: "#EF4444", borderRadius: 8, alignItems: "center" },
   confirmCancelText: { color: "#111827", fontWeight: "700", fontSize: 14 },
   confirmDeleteText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  iconMarginRight: { marginRight: 8 },
+  flexRow: { flexDirection: "row", alignItems: "center" },
+  flex1: { flex: 1 },
+  disabledOpacity: { opacity: 0.6 },
 });

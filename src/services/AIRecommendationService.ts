@@ -16,7 +16,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import firestore from "@react-native-firebase/firestore";
 
-const API_KEY = "AIzaSyBLCiOB6D52RkyaPIo6wDMcRk3eFOZ2t1E";
+const API_KEY = "AIzaSyAB1q3_1T9mRMd1xvmYJBJxtXATyeStQuU";
 
 if (!API_KEY) {
   throw new Error("⚠️ Thiếu GEMINI_API_KEY");

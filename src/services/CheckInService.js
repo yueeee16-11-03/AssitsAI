@@ -215,7 +215,7 @@ class CheckInService {
         };
       }
 
-      // Save to Firebase
+      // Prepare refs
       const checkInRef = firestore()
         .collection('users')
         .doc(currentUser.uid)
@@ -224,15 +224,71 @@ class CheckInService {
         .collection('dates')
         .doc(today);
 
-      await checkInRef.set(newData, { merge: true });
+      const summaryRef = firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('dailySummaries')
+        .doc(today);
 
-      console.log('✅ [CHECK-IN SERVICE] Check-in saved');
+      // Read existing summary (single read) to update denormalized data
+      let existingSummary = null;
+      try {
+        const doc = await summaryRef.get({ source: 'server' });
+        if (doc.exists) existingSummary = doc.data();
+      } catch (e) {
+        console.warn('⚠️ [CHECK-IN SERVICE] Failed to read daily summary, will create new one', e.message || e);
+      }
 
-      // Wait a bit for Firebase sync
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const updatedCheckIns = (existingSummary && existingSummary.checkIns) ? { ...existingSummary.checkIns } : {};
 
-      // Fetch fresh data
-      const freshCheckIn = await this.getTodayCheckIn(habitId);
+      // Update the entry for this habit
+      updatedCheckIns[habitId] = {
+        habitId,
+        date: today,
+        completed: newData.completed,
+        points: newData.points || 0,
+        streak: newData.streak || 0,
+        bestStreak: newData.bestStreak || 0,
+      };
+
+      // Recompute totals
+      let totalPoints = 0;
+      let habitsCompleted = 0;
+      for (const k of Object.keys(updatedCheckIns)) {
+        const v = updatedCheckIns[k] || {};
+        if (v.completed) {
+          habitsCompleted += 1;
+          totalPoints += v.points || 0;
+        }
+      }
+
+      const habitsTotal = (existingSummary && typeof existingSummary.habitsTotal === 'number')
+        ? existingSummary.habitsTotal
+        : Object.keys(updatedCheckIns).length;
+
+      const summaryPayload = {
+        totalPoints,
+        habitsCompleted,
+        habitsTotal,
+        checkIns: updatedCheckIns,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      };
+
+      // Use a batch to write history + denormalized summary atomically
+      const batch = firestore().batch();
+      batch.set(checkInRef, newData, { merge: true });
+      batch.set(summaryRef, summaryPayload, { merge: true });
+
+      await batch.commit();
+
+      console.log('✅ [CHECK-IN SERVICE] Check-in saved and daily summary updated');
+
+      // Return the fresh data object we wrote
+      const freshCheckIn = {
+        habitId,
+        date: today,
+        ...newData,
+      };
 
       return {
         success: true,
@@ -327,16 +383,33 @@ class CheckInService {
       const today = new Date().toISOString().split('T')[0];
       console.log('💰 [CHECK-IN SERVICE] Getting total points for today');
 
-      // Get all checkIns for this user
+      // Try reading denormalized daily summary (single read)
+      const summaryRef = firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('dailySummaries')
+        .doc(today);
+
+      try {
+        const doc = await summaryRef.get({ source: 'server' });
+        if (doc.exists) {
+          const data = doc.data();
+          const total = data?.totalPoints || 0;
+          console.log('✅ [CHECK-IN SERVICE] Today total points (from summary):', total);
+          return total;
+        }
+      } catch (e) {
+        console.warn('⚠️ [CHECK-IN SERVICE] Failed to read daily summary for total points', e.message || e);
+      }
+
+      // Fallback: compute by scanning checkIns collections (only if summary missing)
+      let totalPoints = 0;
       const checkInsSnapshot = await firestore()
         .collection('users')
         .doc(currentUser.uid)
         .collection('checkIns')
         .get({ source: 'server' });
 
-      let totalPoints = 0;
-
-      // For each habit's checkIns, get today's data
       for (const habitDoc of checkInsSnapshot.docs) {
         try {
           const datesSnapshot = await firestore()
@@ -359,7 +432,7 @@ class CheckInService {
         }
       }
 
-      console.log('✅ [CHECK-IN SERVICE] Today total points:', totalPoints);
+      console.log('✅ [CHECK-IN SERVICE] Today total points (fallback):', totalPoints);
       return totalPoints;
 
     } catch (error) {
@@ -370,7 +443,8 @@ class CheckInService {
 
   /**
    * 8️⃣ LẤY TẤT CẢ CHECK-IN CỦA HÔM NAY (TẤT CẢ THÓI QUEN)
-   * @returns {Array} check-in array
+   * LUÔN FETCH TỪ FIREBASE SERVER (không dùng cache)
+   * @returns {Object} check-in map { habitId: { completed, points, streak, ... } }
    */
   async getTodayAllCheckIns() {
     try {
@@ -380,43 +454,31 @@ class CheckInService {
       }
 
       const today = new Date().toISOString().split('T')[0];
-      console.log('📋 [CHECK-IN SERVICE] Getting all check-ins for today');
+      console.log('📋 [CHECK-IN SERVICE] Reading daily summary for today (single read):', today);
 
-      // Get all checkIns for this user
-      const checkInsSnapshot = await firestore()
+      const summaryRef = firestore()
         .collection('users')
         .doc(currentUser.uid)
-        .collection('checkIns')
-        .get({ source: 'server' });
+        .collection('dailySummaries')
+        .doc(today);
 
-      const allCheckIns = {};
-
-      // For each habit's checkIns, get today's data
-      for (const habitDoc of checkInsSnapshot.docs) {
-        try {
-          const datesSnapshot = await firestore()
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('checkIns')
-            .doc(habitDoc.id)
-            .collection('dates')
-            .doc(today)
-            .get({ source: 'server' });
-
-          if (datesSnapshot.exists) {
-            allCheckIns[habitDoc.id] = {
-              habitId: habitDoc.id,
-              date: today,
-              ...datesSnapshot.data(),
-            };
-          }
-        } catch (error) {
-          console.warn('⚠️ [CHECK-IN SERVICE] Error getting check-in for habit:', habitDoc.id, error);
+      try {
+        const doc = await summaryRef.get({ source: 'server' });
+        if (!doc.exists) {
+          console.log('ℹ️ [CHECK-IN SERVICE] No daily summary found for today');
+          return {};
         }
+
+        const data = doc.data() || {};
+        const checkIns = data.checkIns || {};
+        console.log('✅ [CHECK-IN SERVICE] Loaded daily summary with', Object.keys(checkIns).length, 'items');
+        return checkIns;
+      } catch (e) {
+        console.warn('⚠️ [CHECK-IN SERVICE] Failed to read daily summary, falling back to full scan', e.message || e);
       }
 
-      console.log('✅ [CHECK-IN SERVICE] Found', Object.keys(allCheckIns).length, 'check-ins today');
-      return allCheckIns;
+      // Fallback (should rarely happen): return empty map so caller can merge defaults
+      return {};
 
     } catch (error) {
       console.error('❌ [CHECK-IN SERVICE] Error getting today all check-ins:', error);

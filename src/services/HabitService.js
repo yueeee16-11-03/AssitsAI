@@ -1,4 +1,5 @@
 import HabitApi from '../api/habitApi';
+import CheckInCleanupService from './CheckInCleanupService';
 
 /**
  * HabitService: Business logic ONLY
@@ -8,6 +9,7 @@ import HabitApi from '../api/habitApi';
  * - Fetch dữ liệu mới (freshData) sau mỗi thay đổi
  * - Trả về result object chứa {success, addedId/updatedId/deletedId, freshData}
  * - Handle errors
+ * - Tích hợp CheckInCleanupService để xóa check-in khi thói quen bị xóa
  *
  * Pattern: Screen → Store → Service → API → Firebase → freshData → Store state
  */
@@ -109,12 +111,21 @@ class HabitService {
       // 1. Xóa thói quen qua API
       await HabitApi.deleteHabitFromFirebase(habitId);
 
-      console.log('✅ [SERVICE] Habit deleted');
+      console.log('✅ [SERVICE] Habit deleted from habits collection');
 
-      // 2. Wait a bit để Firebase sync
+      // 2. 🆕 Xóa tất cả check-in của thói quen (CLEANUP LOGIC)
+      try {
+        const cleanupResult = await CheckInCleanupService.deleteAllCheckInsForHabit(habitId);
+        console.log('🧹 [SERVICE] Check-in cleanup completed:', cleanupResult.message);
+      } catch (cleanupError) {
+        console.warn('⚠️ [SERVICE] Warning during check-in cleanup:', cleanupError);
+        // Không throw error, chỉ warning vì habit đã xóa thành công
+      }
+
+      // 3. Wait a bit để Firebase sync
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // 3. Fetch freshData (cache bypass)
+      // 4. Fetch freshData (cache bypass)
       const freshData = await this.getAllHabits();
 
       return {

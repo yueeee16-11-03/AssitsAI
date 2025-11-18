@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   Animated,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { useHabitStore } from "../../store/habitStore";
+import AIHabitSuggestionService from "../../services/AIHabitSuggestionService";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AIHabitCoach">;
@@ -34,7 +37,10 @@ interface SmartReminder {
 }
 
 export default function AIHabitCoachScreen({ navigation }: Props) {
+  const habits = useHabitStore((state) => state.habits);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [aiInsights, setAiInsights] = useState<CoachingInsight[]>([]);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -44,63 +50,69 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const coachScore = 78;
+  // Định nghĩa loadAIInsights callback trước useEffect
+  const loadAIInsights = React.useCallback(async () => {
+    if (habits.length === 0) {
+      setAiInsights([]);
+      return;
+    }
 
-  const insights: CoachingInsight[] = [
-    {
-      id: "1",
-      type: "strength",
-      title: "Thói quen đọc sách xuất sắc",
-      description: "Bạn đã duy trì đọc sách 15 ngày liên tiếp! Đây là streak tốt nhất của bạn.",
-      action: "Tiếp tục phát huy",
-        icon: "trophy",
-      color: "#10B981",
-    },
-    {
-      id: "2",
-      type: "weakness",
-      title: "Thiền chưa đều đặn",
-      description: "Bạn chỉ hoàn thành thiền 2/7 ngày tuần này. Hãy thử vào buổi tối trước khi ngủ.",
-      action: "Cần cải thiện",
-        icon: "alert-circle-outline",
-      color: "#F59E0B",
-    },
-    {
-      id: "3",
-      type: "opportunity",
-      title: "Thêm thói quen buổi sáng",
-      description: "AI phát hiện bạn có 30 phút rảnh mỗi sáng 7-7:30. Hãy thêm yoga hoặc viết nhật ký.",
-      action: "Khám phá thêm",
-        icon: "lightbulb-on-outline",
-      color: "#3B82F6",
-    },
-    {
-      id: "4",
-      type: "warning",
-      title: "Nguy cơ bỏ thói quen tập gym",
-      description: "Bạn đã bỏ lỡ 3 ngày liên tiếp. Hãy đặt lại mục tiêu nhỏ hơn: 15 phút thay vì 45 phút.",
-      action: "Hành động ngay",
-        icon: "bell-alert",
-      color: "#EF4444",
-    },
-  ];
+    try {
+      setInsightsLoading(true);
+      
+      // Gọi service để generate insights cho từng category
+      const allInsights: CoachingInsight[] = [];
+      const habitCategories = new Set(habits.map((h: any) => h.category));
 
-  const [reminders, setReminders] = useState<SmartReminder[]>([
-    { id: "1", habit: "Uống nước", time: "9:00 AM", reason: "Bạn thường quên uống nước buổi sáng", icon: "water", enabled: true },
-    { id: "2", habit: "Đọc sách", time: "8:00 PM", reason: "Thời gian tập trung tốt nhất của bạn", icon: "book-open-variant", enabled: true },
-    { id: "3", habit: "Thiền", time: "10:00 PM", reason: "Giúp bạn ngủ ngon hơn", icon: "meditation", enabled: false },
-    { id: "4", habit: "Tập thể dục", time: "6:30 AM", reason: "Trước khi đi làm", icon: "arm-flex", enabled: true },
-  ]);
+      for (const category of habitCategories) {
+        const suggestions = await AIHabitSuggestionService.generateSuggestions(category as string);
+        
+        // Transform suggestions thành coaching insights
+        const categoryInsights = suggestions.map((suggestion, index) => ({
+          id: `ai-${category}-${index}`,
+          type: (["strength", "weakness", "opportunity", "warning"] as const)[index % 4],
+          title: `${suggestion.name} - Gợi ý từ AI`,
+          description: suggestion.description,
+          action: suggestion.benefits,
+          icon: suggestion.icon,
+          color: ["#10B981", "#F59E0B", "#3B82F6", "#EF4444"][index % 4],
+        }));
+        
+        allInsights.push(...categoryInsights);
+      }
 
-  const behaviorPatterns = [
-    { day: "T2", success: 80, trend: "up" },
-    { day: "T3", success: 90, trend: "up" },
-    { day: "T4", success: 85, trend: "stable" },
-    { day: "T5", success: 60, trend: "down" },
-    { day: "T6", success: 70, trend: "up" },
-    { day: "T7", success: 40, trend: "down" },
-    { day: "CN", success: 50, trend: "up" },
-  ];
+      setAiInsights(allInsights.length > 0 ? allInsights : getDefaultInsights());
+    } catch (error) {
+      console.error("Lỗi load AI insights:", error);
+      setAiInsights(getDefaultInsights());
+    } finally {
+      setInsightsLoading(false);
+    }
+  }, [habits]);
+
+  // Load insights từ AI khi screen mount
+  React.useEffect(() => {
+    loadAIInsights();
+  }, [habits, loadAIInsights]);
+
+  // Insights mặc định nếu AI không khả dụng
+  const getDefaultInsights = (): CoachingInsight[] => [];
+
+  const coachScore = aiInsights.length > 0 ? Math.round((aiInsights.length / 4) * 100) : 0;
+
+  const [reminders, setReminders] = useState<SmartReminder[]>([]);
+
+  const behaviorPatterns = habits.length > 0 
+    ? [
+        { day: "T2", success: Math.round(Math.random() * 100), trend: "up" as const },
+        { day: "T3", success: Math.round(Math.random() * 100), trend: "up" as const },
+        { day: "T4", success: Math.round(Math.random() * 100), trend: "stable" as const },
+        { day: "T5", success: Math.round(Math.random() * 100), trend: "down" as const },
+        { day: "T6", success: Math.round(Math.random() * 100), trend: "up" as const },
+        { day: "T7", success: Math.round(Math.random() * 100), trend: "down" as const },
+        { day: "CN", success: Math.round(Math.random() * 100), trend: "up" as const },
+      ]
+    : [];
 
   const toggleReminder = (id: string) => {
     setReminders(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
@@ -150,7 +162,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
               {behaviorPatterns.map((day, index) => (
                 <View key={index} style={styles.behaviorDay}>
                   <View style={styles.behaviorBar}>
-                    <View style={[styles.behaviorFill, { height: `${day.success}%`, backgroundColor: day.success >= 70 ? "#10B981" : "#F59E0B" }]} />
+                    <View style={[styles.behaviorFillStyled, { height: `${day.success}%` }, day.success >= 70 ? styles.behaviorFillGood : styles.behaviorFillWarning]} />
                   </View>
                   <Text style={styles.behaviorLabel}>{day.day}</Text>
                   <Text style={styles.behaviorValue}>{day.success}%</Text>
@@ -170,29 +182,52 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
             <View style={styles.sectionHeader}>
               <Icon name="bullseye" size={18} color="#00796B" style={styles.iconMarginRight} />
               <Text style={styles.sectionTitle}>Phân tích chi tiết</Text>
+              <TouchableOpacity 
+                style={styles.refreshButton}
+                onPress={loadAIInsights}
+                disabled={insightsLoading}
+              >
+                <Icon 
+                  name={insightsLoading ? "loading" : "refresh"} 
+                  size={16} 
+                  color="#8B5CF6"
+                />
+              </TouchableOpacity>
             </View>
-            {insights.map((insight) => (
-              <View key={insight.id} style={[styles.insightCard, { borderLeftColor: insight.color }]}>
-                <View style={styles.insightHeader}>
-                  <Icon name={insight.icon} size={32} color={insight.color} style={styles.insightIcon} />
-                  <View style={styles.insightTitleContainer}>
-                    <Text style={styles.insightTitle}>{insight.title}</Text>
-                    <View style={[styles.insightBadge, { backgroundColor: `${insight.color}22` }]}>
-                      <Text style={[styles.insightBadgeText, { color: insight.color }]}>
-                        {insight.action}
-                      </Text>
+            {insightsLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#8B5CF6" />
+                <Text style={styles.loadingText}>Đang tạo gợi ý từ AI...</Text>
+              </View>
+            ) : habits.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Icon name="inbox-multiple-outline" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>Bạn chưa có thói quen nào để phân tích</Text>
+              </View>
+            ) : (
+              aiInsights.map((insight) => (
+                <View key={insight.id} style={[styles.insightCard, { borderLeftColor: insight.color }]}>
+                  <View style={styles.insightHeader}>
+                    <Icon name={insight.icon} size={32} color={insight.color} style={styles.insightIcon} />
+                    <View style={styles.insightTitleContainer}>
+                      <Text style={styles.insightTitle}>{insight.title}</Text>
+                      <View style={[styles.insightBadge, { backgroundColor: `${insight.color}22` }]}>
+                        <Text style={[styles.insightBadgeText, { color: insight.color }]}>
+                          {insight.action}
+                        </Text>
+                      </View>
                     </View>
                   </View>
+                  <Text style={styles.insightDescription}>{insight.description}</Text>
+                  <TouchableOpacity
+                    style={[styles.insightButton, { backgroundColor: insight.color }]}
+                    onPress={() => Alert.alert("Gợi ý từ AI", insight.description)}
+                  >
+                    <Text style={styles.insightButtonText}>Xem chi tiết</Text>
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.insightDescription}>{insight.description}</Text>
-                <TouchableOpacity
-                  style={[styles.insightButton, { backgroundColor: insight.color }]}
-                  onPress={() => Alert.alert("Hành động", insight.action)}
-                >
-                  <Text style={styles.insightButtonText}>Xem chi tiết</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+              ))
+            )}
           </View>
 
           {/* Smart Reminders */}
@@ -208,13 +243,13 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
                   <Icon name={reminder.icon} size={28} color="#8B5CF6" style={styles.reminderIcon} />
                   <View style={styles.reminderDetails}>
                     <Text style={styles.reminderHabit}>{reminder.habit}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <View style={styles.reminderRowStyle}>
                       <Icon name="clock-outline" size={14} color="#6366F1" />
-                      <Text style={[styles.reminderTime, { marginLeft: 6 }]}>{reminder.time}</Text>
+                      <Text style={[styles.reminderTime, styles.reminderTimeMargin]}>{reminder.time}</Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={styles.reminderRowStyle2}>
                       <Icon name="lightbulb-on-outline" size={14} color="#F59E0B" />
-                      <Text style={[styles.reminderReason, { marginLeft: 6 }]}>{reminder.reason}</Text>
+                      <Text style={[styles.reminderReason, styles.reminderReasonMargin]}>{reminder.reason}</Text>
                     </View>
                   </View>
                 </View>
@@ -267,8 +302,20 @@ const styles = StyleSheet.create({
   scoreProgressFill: { height: "100%", backgroundColor: "#8B5CF6", borderRadius: 4 },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 8 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8, justifyContent: "space-between" },
+  refreshButton: { padding: 8 },
+  behaviorFillStyled: { height: "100%", borderRadius: 4 },
+  behaviorFillGood: { backgroundColor: "#10B981" },
+  behaviorFillWarning: { backgroundColor: "#F59E0B" },
+  reminderRowStyle: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  reminderRowStyle2: { flexDirection: "row", alignItems: "center" },
+  reminderTimeMargin: { marginLeft: 6 },
+  reminderReasonMargin: { marginLeft: 6 },
   sectionSubtitle: { fontSize: 13, color: "#6B7280", marginBottom: 16 },
+  loadingContainer: { paddingVertical: 40, alignItems: "center", justifyContent: "center" },
+  loadingText: { marginTop: 16, fontSize: 14, color: "#666666", fontStyle: "italic" },
+  emptyContainer: { paddingVertical: 40, alignItems: "center", justifyContent: "center" },
+  emptyText: { marginTop: 12, fontSize: 14, color: "#999999" },
   behaviorChart: { flexDirection: "row", justifyContent: "space-around", backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, height: 140, marginBottom: 12 },
   behaviorDay: { flex: 1, alignItems: "center" },
   behaviorBar: { flex: 1, width: "60%", justifyContent: "flex-end", marginBottom: 8 },

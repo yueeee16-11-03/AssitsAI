@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  Platform,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -19,11 +18,6 @@ type Props = NativeStackScreenProps<RootStackParamList, "HabitDashboard">;
 export default function HabitDashboardScreen({ navigation }: Props) {
   const habits = useHabitStore((state) => state.habits);
   const fetchHabits = useHabitStore((state) => state.fetchHabits);
-  const toggleHabitToday = useHabitStore.getState().deleteHabit ? 
-    ((id: string) => {
-      // Will implement toggleHabitToday properly
-      console.log("Toggle habit:", id);
-    }) : null;
 
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -32,7 +26,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
     React.useCallback(() => {
       console.log("📄 [HABIT-DASHBOARD] Screen focused - fetching habits");
       fetchHabits();
-    }, [])
+    }, [fetchHabits])
   );
 
   React.useEffect(() => {
@@ -44,15 +38,15 @@ export default function HabitDashboardScreen({ navigation }: Props) {
   }, [fadeAnim]);
 
   // Tính toán stats
-  const completedCount = habits.filter(h => {
+  const completedTodayCount = habits.filter((h: any) => {
     const today = new Date().toDateString();
     return h.completedDates?.includes(today);
   }).length;
 
-  const completionRate = habits.length > 0 ? (completedCount / habits.length) * 100 : 0;
-  const totalStreak = habits.reduce((sum, h) => sum + (h.currentStreak || 0), 0);
+  const completionRate = habits.length > 0 ? (completedTodayCount / habits.length) * 100 : 0;
+  const totalStreak = habits.reduce((sum: number, h: any) => sum + (h.currentStreak || 0), 0);
   const avgStreak = habits.length > 0 ? totalStreak / habits.length : 0;
-  const disciplineScore = Math.round((completionRate * 0.5) + (avgStreak * 2) + (completedCount * 5));
+  const disciplineScore = Math.round((completionRate * 0.5) + (avgStreak * 2) + (completedTodayCount * 5));
 
   const getDisciplineLevel = (score: number) => {
     if (score >= 80) return { level: "Xuất sắc", color: "#10B981", icon: "trophy" };
@@ -62,6 +56,11 @@ export default function HabitDashboardScreen({ navigation }: Props) {
   };
 
   const discipline = getDisciplineLevel(disciplineScore);
+
+  const getHabitIconName = (iconStr: string) => {
+    // Return icon name directly, fallback to 'circle' if not provided
+    return iconStr || 'circle';
+  };
 
   const weekProgress = [
     { day: "T2", completed: 3, total: 5 }, { day: "T3", completed: 4, total: 5 },
@@ -95,12 +94,12 @@ export default function HabitDashboardScreen({ navigation }: Props) {
               <Text style={styles.scoreMax}>/100</Text>
             </View>
             <View style={[styles.levelBadge, { backgroundColor: `${discipline.color}22` }]}>
-              <MaterialCommunityIcons name={discipline.icon} size={20} color={discipline.color} style={{ marginRight: 8 }} />
+              <MaterialCommunityIcons name={discipline.icon} size={20} color={discipline.color} style={styles.marginRight8} />
               <Text style={[styles.levelText, { color: discipline.color }]}>{discipline.level}</Text>
             </View>
             <View style={styles.scoreStats}>
               <View style={styles.scoreStat}>
-                <Text style={styles.scoreStatValue}>{completedCount}/{habits.length}</Text>
+                <Text style={styles.scoreStatValue}>{completedTodayCount}/{habits.length}</Text>
                 <Text style={styles.scoreStatLabel}>Hoàn thành</Text>
               </View>
               <View style={styles.statDivider} />
@@ -141,7 +140,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
                 return (
                   <View key={index} style={styles.dayColumn}>
                     <View style={styles.barContainer}>
-                      <View style={[styles.bar, { height: `${percentage}%`, backgroundColor: percentage === 100 ? "#10B981" : "#6366F1" }]} />
+                      <View style={[styles.bar, { height: `${percentage}%` }, percentage === 100 ? styles.barCompleted : styles.barIncomplete]} />
                     </View>
                     <Text style={styles.dayLabel}>{day.day}</Text>
                     <Text style={styles.dayCount}>{day.completed}/{day.total}</Text>
@@ -162,15 +161,15 @@ export default function HabitDashboardScreen({ navigation }: Props) {
                   style={styles.addFirstHabitButton}
                   onPress={() => navigation.navigate("AddHabit")}
                 >
-                  <MaterialCommunityIcons name="plus" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <MaterialCommunityIcons name="plus" size={18} color="#FFFFFF" style={styles.marginRight6} />
                   <Text style={styles.addFirstHabitText}>Thêm thói quen đầu tiên</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              habits.map((habit) => {
+              habits.map((habit: any) => {
                 const today = new Date().toDateString();
                 const isCompletedToday = habit.completedDates?.includes(today);
-                const completedCount = habit.completedDates?.length || 0;
+                const completedDatesLength = habit.completedDates?.length || 0;
 
                 return (
                   <TouchableOpacity
@@ -182,7 +181,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
                     <View style={styles.habitHeader}>
                       <View style={styles.habitInfo}>
                         <View style={[styles.habitIconContainer, { backgroundColor: `${habit.color}22` }]}>
-                          <Text style={styles.habitIcon}>{habit.icon}</Text>
+                          <MaterialCommunityIcons name={getHabitIconName(habit.icon)} size={24} color={habit.color} />
                         </View>
                         <View style={styles.habitDetails}>
                           <Text style={styles.habitName}>{habit.name}</Text>
@@ -192,7 +191,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
                       <View style={styles.habitRight}>
                         {(habit.currentStreak || 0) > 0 && (
                           <View style={styles.streakBadge}>
-                            <MaterialCommunityIcons name="fire" size={14} color="#F59E0B" style={{ marginRight: 4 }} />
+                            <MaterialCommunityIcons name="fire" size={14} color="#F59E0B" style={styles.marginRight4} />
                             <Text style={styles.streakText}>{habit.currentStreak}</Text>
                           </View>
                         )}
@@ -209,13 +208,13 @@ export default function HabitDashboardScreen({ navigation }: Props) {
                           style={[
                             styles.progressFill, 
                             { 
-                              width: `${Math.min((completedCount / 30) * 100, 100)}%`,
+                              width: `${Math.min((completedDatesLength / 30) * 100, 100)}%`,
                               backgroundColor: habit.color 
                             }
                           ]} 
                         />
                       </View>
-                      <Text style={styles.progressText}>{completedCount} lần</Text>
+                      <Text style={styles.progressText}>{completedDatesLength} lần</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -299,8 +298,13 @@ const styles = StyleSheet.create({
   habitName: { fontSize: 16, fontWeight: "800", color: "#1F2937", marginBottom: 4 },
   habitTarget: { fontSize: 13, color: "#6B7280" },
   habitRight: { flexDirection: "row", alignItems: "center", gap: 12 },
-  streakBadge: { backgroundColor: "#FEF3C7", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
+  streakBadge: { backgroundColor: "#FEF3C7", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center" },
   streakText: { fontSize: 12, fontWeight: "700", color: "#92400E" },
+  marginRight8: { marginRight: 8 },
+  marginRight6: { marginRight: 6 },
+  marginRight4: { marginRight: 4 },
+  barCompleted: { backgroundColor: "#10B981" },
+  barIncomplete: { backgroundColor: "#6366F1" },
   checkbox: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: "#D1D5DB", alignItems: "center", justifyContent: "center" },
   checkboxCompleted: { backgroundColor: "#D1FAE5", borderColor: "#10B981" },
   checkmark: { fontSize: 18, fontWeight: "900", color: "#10B981" },
