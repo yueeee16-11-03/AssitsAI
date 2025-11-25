@@ -83,22 +83,24 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
   const balance = financialData.balance;
   const savingRate = financialData.savingRate;
 
-  const getCategoryEmoji = (categoryId: string) => {
-    const emojiMap: { [key: string]: string } = {
-      "1": "🍔", // Ăn uống
-      "2": "🚗", // Di chuyển
-      "3": "🛍️", // Mua sắm
-      "4": "🎮", // Giải trí
-      "5": "💊", // Sức khỏe
-      "6": "📚", // Giáo dục
-      "7": "🏠", // Nhà cửa
-      "8": "📦", // Khác (expense)
-      "9": "💼", // Lương
-      "10": "🎁", // Thưởng
-      "11": "📈", // Đầu tư
-      "12": "💰", // Khác (income)
+  
+
+  const getCategoryIcon = (categoryId: string) => {
+    const map: { [key: string]: { name: string; color: string } } = {
+      "1": { name: "food", color: "#EF4444" },
+      "2": { name: "car", color: "#F97316" },
+      "3": { name: "shopping", color: "#EC4899" },
+      "4": { name: "gamepad-variant", color: "#8B5CF6" },
+      "5": { name: "hospital-box", color: "#EF4444" },
+      "6": { name: "book", color: "#3B82F6" },
+      "7": { name: "home", color: "#10B981" },
+      "8": { name: "dots-horizontal", color: "#6B7280" },
+      "9": { name: "briefcase", color: "#10B981" },
+      "10": { name: "gift", color: "#F59E0B" },
+      "11": { name: "chart-line", color: "#10B981" },
+      "12": { name: "cash", color: "#6366F1" },
     };
-    return emojiMap[categoryId] || "💳";
+    return map[categoryId] || { name: 'wallet', color: '#6B7280' };
   };
 
   return (
@@ -108,14 +110,14 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
           style={styles.iconLeft}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitleCentered}>Tài chính</Text>
         <TouchableOpacity
           style={styles.iconRight}
           onPress={() => navigation.navigate("BudgetPlanner")}
         >
-          <MaterialCommunityIcons name="chart-box" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="chart-box" size={24} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -177,15 +179,17 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
 
           {/* Income Chart */}
           <View style={styles.section}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.sectionHeaderButton}
               onPress={() => navigation.navigate("AIInsight", undefined)}
             >
-              <View style={styles.sectionTitleContainer}>
-                <MaterialCommunityIcons name="chart-line" size={24} color="#10B981" />
-                <Text style={styles.sectionTitleButton}>Thu nhập 6 tháng</Text>
+              <View style={[styles.sectionBadgeFull, styles.sectionBadgeBorder]}>
+                <View style={styles.sectionBadgeLeft}>
+                  <MaterialCommunityIcons name="chart-line" size={18} color="#6B7280" />
+                  <Text style={styles.sectionBadgeText}>Thu nhập 6 tháng</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={16} color="#6B7280" />
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#10B981" />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.chartContainer}
@@ -215,17 +219,20 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
 
           {/* Expense Breakdown */}
           <View style={styles.section}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.sectionHeaderButton}
               onPress={() => navigation.navigate("AIInsight", undefined)}
             >
-              <View style={styles.sectionTitleContainer}>
-                <MaterialCommunityIcons name="wallet" size={24} color="#10B981" />
-                <Text style={styles.sectionTitleButton}>Chi tiêu theo danh mục</Text>
+              <View style={styles.sectionBadgeFull}>
+                <View style={styles.sectionBadgeLeft}>
+                  <MaterialCommunityIcons name="wallet" size={18} color="#6B7280" />
+                  <Text style={styles.sectionBadgeText}>Chi tiêu theo danh mục</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={16} color="#6B7280" />
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#10B981" />
             </TouchableOpacity>
-            {expenseCategories.filter((category) => category.name !== "Ghi chú").map((category, index) => {
+            <View style={styles.categoryListContainer}>
+              {expenseCategories.filter((category) => category.name !== "Ghi chú").map((category, index) => {
               const getCategoryIcon = (categoryName: string) => {
                 const iconMap: { [key: string]: { name: string; color: string } } = {
                   "Ăn uống": { name: "food", color: "#EF4444" },
@@ -274,6 +281,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
             );
             })}
           </View>
+          </View>
 
           {/* AI Analysis */}
           <View style={styles.aiAnalysisCard}>
@@ -314,15 +322,17 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
 
           {/* Recent Transactions */}
           <View style={styles.section}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.sectionHeaderButton}
               onPress={() => navigation.push("TransactionHistory", { newTransaction: undefined })}
             >
-              <View style={styles.sectionTitleContainer}>
-                <MaterialCommunityIcons name="history" size={24} color="#10B981" />
-                <Text style={styles.sectionTitleButton}>Giao dịch gần đây</Text>
+              <View style={styles.sectionBadgeFull}>
+                <View style={styles.sectionBadgeLeft}>
+                  <MaterialCommunityIcons name="history" size={18} color="#6B7280" />
+                  <Text style={styles.sectionBadgeText}>Giao dịch gần đây</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={16} color="#6B7280" />
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#10B981" />
             </TouchableOpacity>
             {transactionsLoading ? (
               <View style={styles.loadingContainer}>
@@ -368,9 +378,12 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                       {/* Header: Category + Amount */}
                       <View style={styles.transactionHeader}>
                         <View style={styles.transactionLeft}>
-                          <Text style={styles.transactionEmoji}>
-                            {getCategoryEmoji(transaction.categoryId)}
-                          </Text>
+                                    <MaterialCommunityIcons
+                                      name={getCategoryIcon(transaction.categoryId).name}
+                                      size={24}
+                                      color={getCategoryIcon(transaction.categoryId).color}
+                                      style={styles.transactionIcon}
+                                    />
                           <View style={styles.transactionInfo}>
                             <Text style={styles.transactionCategory}>{transaction.category}</Text>
                             <Text style={styles.transactionTime}>
@@ -426,47 +439,50 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 48,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomColor: "rgba(0,0,0,0.06)",
+    backgroundColor: '#FFFFFF',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: 'transparent',
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#000000" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#000000" },
+  backIcon: { fontSize: 20, color: "#111827" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
   headerButton: {
-    backgroundColor: "#10B981",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 48,
+    paddingTop: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   headerButtonLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  headerButtonTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
-  headerTitleButton: { fontSize: 18, fontWeight: "800", color: "#FFFFFF", marginLeft: 8 },
-  headerTitleCentered: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
-  iconLeft: { position: "absolute", left: 12, top: 48, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  iconRight: { position: "absolute", right: 12, top: 48, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  headerButtonTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  headerTitleButton: { fontSize: 18, fontWeight: "800", color: "#111827", marginLeft: 8 },
+  headerTitleCentered: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  iconLeft: { position: "absolute", left: 12, top: 8, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  iconRight: { position: "absolute", right: 12, top: 8, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerButtonCenter: { 
     flex: 1, 
     flexDirection: "row", 
     alignItems: "center", 
     justifyContent: "center",
-    backgroundColor: "#10B981",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -483,20 +499,20 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 20,
   },
-  periodButton: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
+  periodButton: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8, backgroundColor: "#F3F4F6" },
   periodButtonActive: { backgroundColor: "#10B981" },
-  periodText: { color: "#999999", fontWeight: "600", fontSize: 13 },
+  periodText: { color: "#374151", fontWeight: "600", fontSize: 13 },
   periodTextActive: { color: "#FFFFFF" },
   balanceCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F3F4F6",
     borderRadius: 20,
     padding: 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "rgba(99,102,241,0.3)",
+    borderColor: "rgba(99,102,241,0.08)",
   },
   balanceLabel: { fontSize: 14, color: "#333333", marginBottom: 8 },
-  balanceAmount: { fontSize: 36, fontWeight: "900", color: "#333333", marginBottom: 20 },
+  balanceAmount: { fontSize: 16, fontWeight: "800", color: "#333333", marginBottom: 20 },
   balanceStats: { flexDirection: "row", justifyContent: "space-around" },
   balanceStat: { alignItems: "center" },
   statLabel: { fontSize: 12, color: "#000000", marginBottom: 4 },
@@ -517,16 +533,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  sectionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  sectionBadgeText: {
+    marginLeft: 8,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#374151",
+  },
   sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 16 },
   sectionTitleButton: { fontSize: 16, fontWeight: "800", color: "#000000" },
   sectionHeaderButton: { 
     backgroundColor: "transparent",
     borderRadius: 12,
-    padding: 16,
+    padding: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 16,
+  },
+  sectionBadgeFull: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flex: 1,
+  },
+  sectionBadgeBorder: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  sectionBadgeLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   viewAllLink: { fontSize: 13, color: "#000000", fontWeight: "700" },
   chartContainer: {
@@ -534,6 +582,8 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
     backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#9CA3AF",
   },
   chart: {
     flexDirection: "row",
@@ -650,13 +700,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   recentTransactionItem: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: "rgba(0, 137, 123, 0.12)",
   },
+  categoryListContainer: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 16,
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+    marginBottom: 12,
+  },
+  transactionIcon: { marginRight: 12 },
   transactionHeader: {
     flexDirection: "row",
     alignItems: "center",

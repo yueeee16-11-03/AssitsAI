@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import HabitService from '../services/HabitService';
+import { useCheckInStore } from './checkInStore';
 
 /**
  * HabitStore: Zustand store cho thói quen
@@ -102,10 +103,37 @@ export const useHabitStore = create((set, get) => ({
     try {
       // 1. Gọi Service, Service sẽ xóa và fetch lại dữ liệu mới
       const result = await HabitService.deleteHabit(habitId);
-      
-      // 2. Cập nhật state với dữ liệu đồng bộ (freshData)
+
+      // Optimistically update local state so UI reflects deletion immediately.
+      if (result && result.freshData) {
+        set({ habits: result.freshData });
+      } else {
+        set((state) => ({ habits: state.habits.filter(h => h.id !== habitId) }));
+      }
+
+      // Remove today's check-in for this habit from the check-in store
+      try {
+        const checkInStore = useCheckInStore.getState();
+        // Synchronous state update to remove stale check-in data immediately
+        if (typeof checkInStore.removeCheckInFromState === 'function') {
+          checkInStore.removeCheckInFromState(habitId);
+        } else if (typeof checkInStore.removeCheckInFromDisplay === 'function') {
+          await checkInStore.removeCheckInFromDisplay(habitId);
+        } else if (typeof checkInStore.getTodayAllCheckIns === 'function') {
+          await checkInStore.getTodayAllCheckIns();
+        }
+      } catch (ciErr) {
+        console.warn('⚠️ [STORE] Failed to remove today check-in after delete (non-fatal):', ciErr?.message || ciErr);
+      }
+
+      // Still attempt to refresh from server to ensure authoritative state.
+      try {
+        await get().fetchHabits();
+      } catch (fetchErr) {
+        console.warn('⚠️ [STORE] fetchHabits failed after delete (non-fatal):', fetchErr?.message || fetchErr);
+      }
+
       set({
-        habits: result.freshData,
         isLoading: false,
         error: null,
         lastSyncTime: new Date().toISOString(),
@@ -115,10 +143,10 @@ export const useHabitStore = create((set, get) => ({
       return result;
 
     } catch (error) {
-      console.error('❌ [STORE] Error deleting habit:', error.message);
+      console.error('❌ [STORE] Error deleting habit:', error);
       set({ 
         isLoading: false, 
-        error: error.message 
+        error: error?.message || String(error) 
       });
       throw error;
     }

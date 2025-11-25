@@ -166,14 +166,14 @@ export default function AIRecommendationScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#111827" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Gợi ý thông minh</Text>
           <Text style={styles.headerSubtitle}>{recommendations.length} gợi ý hôm nay</Text>
         </View>
         <TouchableOpacity style={styles.filterButton}>
-          <MaterialCommunityIcons name="refresh" size={22} color="#FFFFFF" />
+          <MaterialCommunityIcons name="refresh" size={22} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -330,29 +330,30 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 48,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 0,
-    backgroundColor: "#10B981",
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "#FFFFFF",
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
   headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: "#FFFFFF" },
-  headerSubtitle: { fontSize: 13, color: "rgba(255, 255, 255, 0.8)", marginTop: 4, fontWeight: "500" },
+  headerTitle: { fontSize: 20, fontWeight: "800", color: "#111827" },
+  headerSubtitle: { fontSize: 13, color: "rgba(0,0,0,0.6)", marginTop: 4, fontWeight: "500" },
   filterButton: { 
     width: 40, 
     height: 40, 
     alignItems: "center", 
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "transparent",
     borderRadius: 12,
   },
   content: { padding: 16, paddingBottom: 32 },

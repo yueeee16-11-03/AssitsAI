@@ -9,76 +9,61 @@ import {
   Modal,
   TextInput,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+// @ts-ignore
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RootStackParamList } from '../../navigation/types';
+import useWalletStore from '../../store/walletStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WalletManagement'>;
 
 interface Wallet {
-  id: string;
+  id?: string;
   name: string;
   type: 'cash' | 'bank' | 'ewallet';
   balance: number;
-  icon: string;
-  color: string;
-  isHidden: boolean;
+  icon?: string;
+  color?: string;
+  isHidden?: boolean;
   bankName?: string;
   accountNumber?: string;
 }
 
 const WALLET_TYPES = [
-  { key: 'cash', label: 'Tiền mặt', icon: '💵' },
-  { key: 'bank', label: 'Ngân hàng', icon: '🏦' },
-  { key: 'ewallet', label: 'Ví điện tử', icon: '📱' },
+  { key: 'cash', label: 'Tiền mặt', icon: 'cash' },
+  { key: 'bank', label: 'Ngân hàng', icon: 'bank' },
+  { key: 'ewallet', label: 'Ví điện tử', icon: 'cellphone' },
 ];
 
-const WALLET_ICONS = ['💵', '🏦', '📱', '💳', '🎯', '💎', '🔥', '⭐'];
+const WALLET_ICONS = ['cash', 'bank', 'cellphone', 'credit-card', 'target', 'diamond-stone', 'fire', 'star'];
 const WALLET_COLORS = ['#6366F1', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#F97316'];
 
 export default function WalletManagementScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [wallets, setWallets] = useState<Wallet[]>([
-    {
-      id: '1',
-      name: 'Tiền mặt',
-      type: 'cash',
-      balance: 2500000,
-      icon: '💵',
-      color: '#10B981',
-      isHidden: false,
-    },
-    {
-      id: '2',
-      name: 'Vietcombank',
-      type: 'bank',
-      balance: 45000000,
-      icon: '🏦',
-      color: '#6366F1',
-      isHidden: false,
-      bankName: 'Vietcombank',
-      accountNumber: '**** 1234',
-    },
-    {
-      id: '3',
-      name: 'Momo',
-      type: 'ewallet',
-      balance: 850000,
-      icon: '📱',
-      color: '#EC4899',
-      isHidden: false,
-    },
-  ]);
+  // Use wallet store for data & actions
+  const {
+    wallets,
+    fetchWallets,
+    addWallet,
+    updateWallet,
+    deleteWallet,
+    toggleVisibility,
+    transfer,
+  } = useWalletStore();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   // Form states
   const [walletName, setWalletName] = useState('');
   const [walletType, setWalletType] = useState<'cash' | 'bank' | 'ewallet'>('cash');
   const [walletBalance, setWalletBalance] = useState('');
-  const [walletIcon, setWalletIcon] = useState('💵');
+  const [walletIcon, setWalletIcon] = useState('cash');
   const [walletColor, setWalletColor] = useState('#6366F1');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -94,13 +79,13 @@ export default function WalletManagementScreen({ navigation }: Props) {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+    // load wallets
+    fetchWallets().catch(() => {});
+  }, [fadeAnim, fetchWallets]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
+    // Format numbers as Vietnamese locale without symbol and append ' VNĐ'
+    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(amount) + ' VNĐ';
   };
 
   const getTotalBalance = () => {
@@ -111,14 +96,14 @@ export default function WalletManagementScreen({ navigation }: Props) {
     setWalletName('');
     setWalletType('cash');
     setWalletBalance('');
-    setWalletIcon('💵');
+    setWalletIcon('cash');
     setWalletColor('#6366F1');
     setBankName('');
     setAccountNumber('');
     setEditingWallet(null);
   };
 
-  const handleAddWallet = () => {
+  const handleAddWallet = async () => {
     if (!walletName.trim() || !walletBalance.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
@@ -136,10 +121,25 @@ export default function WalletManagementScreen({ navigation }: Props) {
       accountNumber: walletType === 'bank' ? accountNumber : undefined,
     };
 
-    if (editingWallet) {
-      setWallets(prev => prev.map(w => w.id === editingWallet.id ? { ...newWallet, id: editingWallet.id } : w));
-    } else {
-      setWallets(prev => [...prev, newWallet]);
+    try {
+      if (editingWallet) {
+        await updateWallet(editingWallet?.id || '', {
+          name: newWallet.name,
+          type: newWallet.type,
+          balance: newWallet.balance,
+          icon: newWallet.icon,
+          color: newWallet.color,
+          bankName: newWallet.bankName,
+          accountNumber: newWallet.accountNumber,
+        });
+      } else {
+        await addWallet(newWallet as any);
+      }
+      // ensure store has fresh data after add/update
+      try { await fetchWallets(); } catch {}
+    } catch (err) {
+      Alert.alert('Lỗi', (err as any)?.message || 'Có lỗi khi lưu ví');
+      return;
     }
 
     setShowAddModal(false);
@@ -151,14 +151,14 @@ export default function WalletManagementScreen({ navigation }: Props) {
     setWalletName(wallet.name);
     setWalletType(wallet.type);
     setWalletBalance(wallet.balance.toString());
-    setWalletIcon(wallet.icon);
-    setWalletColor(wallet.color);
+    setWalletIcon(wallet.icon || 'cash');
+    setWalletColor(wallet.color || '#6366F1');
     setBankName(wallet.bankName || '');
     setAccountNumber(wallet.accountNumber || '');
     setShowAddModal(true);
   };
 
-  const handleDeleteWallet = (walletId: string) => {
+  const handleDeleteWallet = (wallet: Wallet) => {
     Alert.alert(
       'Xóa ví',
       'Bạn có chắc chắn muốn xóa ví này? Hành động này không thể hoàn tác.',
@@ -167,19 +167,45 @@ export default function WalletManagementScreen({ navigation }: Props) {
         {
           text: 'Xóa',
           style: 'destructive',
-          onPress: () => setWallets(prev => prev.filter(w => w.id !== walletId))
+          onPress: async () => {
+            const walletId = wallet.id;
+            setDeletingId(walletId || null);
+            try {
+              if (!walletId) {
+                const fallback = wallets.find(w => w.name === wallet.name && w.balance === wallet.balance);
+                if (fallback?.id) {
+                  await deleteWallet(fallback.id);
+                } else {
+                  Alert.alert('Lỗi', 'Không tìm thấy id ví để xóa');
+                  setDeletingId(null);
+                  return;
+                }
+              } else {
+                await deleteWallet(walletId);
+              }
+              try { await fetchWallets(); } catch {}
+              Alert.alert('Đã xóa', 'Ví đã được xóa');
+            } catch (err) {
+              console.error('[WalletManagement] delete error', err);
+              Alert.alert('Lỗi', (err as any)?.message || 'Xóa thất bại');
+            } finally {
+              setDeletingId(null);
+            }
+          }
         }
       ]
     );
   };
 
-  const handleToggleVisibility = (walletId: string) => {
-    setWallets(prev => prev.map(w => 
-      w.id === walletId ? { ...w, isHidden: !w.isHidden } : w
-    ));
+  const handleToggleVisibility = async (walletId: string) => {
+    try {
+      await toggleVisibility(walletId);
+    } catch (err) {
+      Alert.alert('Lỗi', (err as any)?.message || 'Không thể đổi trạng thái');
+    }
   };
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!transferFrom || !transferTo || !transferAmount || transferFrom === transferTo) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin chuyển tiền');
       return;
@@ -193,15 +219,12 @@ export default function WalletManagementScreen({ navigation }: Props) {
       return;
     }
 
-    setWallets(prev => prev.map(w => {
-      if (w.id === transferFrom) {
-        return { ...w, balance: w.balance - amount };
-      }
-      if (w.id === transferTo) {
-        return { ...w, balance: w.balance + amount };
-      }
-      return w;
-    }));
+    try {
+      await transfer(transferFrom, transferTo, amount);
+    } catch (err) {
+      Alert.alert('Lỗi', (err as any)?.message || 'Chuyển tiền thất bại');
+      return;
+    }
 
     setShowTransferModal(false);
     setTransferFrom('');
@@ -215,7 +238,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
     <View key={wallet.id} style={[styles.walletCard, { borderLeftColor: wallet.color }]}>
       <View style={styles.walletHeader}>
         <View style={styles.walletInfo}>
-          <Text style={styles.walletIcon}>{wallet.icon}</Text>
+          <Icon name={(wallet.icon as any) || 'cash'} size={24} color={wallet.color || '#10B981'} style={styles.walletIcon} />
           <View style={styles.walletDetails}>
             <Text style={[styles.walletName, wallet.isHidden && styles.hiddenText]}>
               {wallet.name} {wallet.isHidden && '(Ẩn)'}
@@ -230,23 +253,22 @@ export default function WalletManagementScreen({ navigation }: Props) {
         <View style={styles.walletActions}>
           <TouchableOpacity
             style={[styles.actionButton, wallet.isHidden ? styles.actionButtonSuccess : styles.actionButtonSecondary]}
-            onPress={() => handleToggleVisibility(wallet.id)}
+            onPress={() => wallet.id && handleToggleVisibility(wallet.id)}
           >
-            <Text style={styles.actionButtonText}>
-              {wallet.isHidden ? '👁️' : '🙈'}
-            </Text>
+            <Icon name={wallet.isHidden ? 'eye' : 'eye-off'} size={14} color="#111827" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.actionButtonPrimary]}
             onPress={() => handleEditWallet(wallet)}
           >
-            <Text style={styles.actionButtonText}>✏️</Text>
+            <Icon name="pencil" size={14} color="#111827" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, styles.actionButtonDanger]}
-            onPress={() => handleDeleteWallet(wallet.id)}
+            style={[styles.actionButton, styles.actionButtonDanger, deletingId === wallet.id && styles.actionButtonDeleting]}
+            onPress={() => handleDeleteWallet(wallet)}
+            disabled={deletingId === wallet.id}
           >
-            <Text style={styles.actionButtonText}>🗑️</Text>
+            <Icon name="trash-can-outline" size={14} color="#111827" />
           </TouchableOpacity>
         </View>
       </View>
@@ -267,14 +289,13 @@ export default function WalletManagementScreen({ navigation }: Props) {
     <Modal
       visible={showAddModal}
       animationType="slide"
-      transparent={true}
+      transparent={false}
       onRequestClose={() => {
         setShowAddModal(false);
         resetForm();
       }}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+      <View style={styles.fullscreenModalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {editingWallet ? 'Chỉnh sửa ví' : 'Thêm ví mới'}
@@ -285,11 +306,11 @@ export default function WalletManagementScreen({ navigation }: Props) {
                 resetForm();
               }}
             >
-              <Text style={styles.modalClose}>✕</Text>
+              <Icon name="close" size={20} color="rgba(0,0,0,0.6)" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Tên ví *</Text>
               <TextInput
@@ -313,7 +334,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setWalletType(type.key as any)}
                   >
-                    <Text style={styles.typeIcon}>{type.icon}</Text>
+                    <Icon name={type.icon as any} size={20} color="#111827" style={styles.typeIconIcon} />
                     <Text style={styles.typeLabel}>{type.label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -370,7 +391,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setWalletIcon(icon)}
                   >
-                    <Text style={styles.iconText}>{icon}</Text>
+                    <Icon name={icon as any} size={20} color="#111827" style={styles.iconText} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -394,7 +415,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
             </View>
           </ScrollView>
 
-          <View style={styles.modalFooter}>
+          <View style={[styles.modalFooter, styles.modalFooterFixed]}>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonSecondary]}
               onPress={() => {
@@ -413,7 +434,6 @@ export default function WalletManagementScreen({ navigation }: Props) {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
       </View>
     </Modal>
   );
@@ -422,19 +442,26 @@ export default function WalletManagementScreen({ navigation }: Props) {
     <Modal
       visible={showTransferModal}
       animationType="slide"
-      transparent={true}
+      transparent={false}
       onRequestClose={() => setShowTransferModal(false)}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+      <KeyboardAvoidingView
+        style={styles.fullscreenModalContent}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
+      >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Chuyển tiền giữa ví</Text>
             <TouchableOpacity onPress={() => setShowTransferModal(false)}>
-              <Text style={styles.modalClose}>✕</Text>
+              <Icon name="close" size={20} color="rgba(0,0,0,0.6)" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalBody}>
+          <ScrollView
+            style={styles.modalBody}
+            contentContainerStyle={styles.modalBodyScroll}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Từ ví *</Text>
               <View style={styles.walletPicker}>
@@ -443,11 +470,12 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     key={`from-${wallet.id}`}
                     style={[
                       styles.walletPickerOption,
-                      transferFrom === wallet.id && styles.walletPickerOptionSelected
+                      styles.walletPickerOptionGray,
+                      transferFrom === wallet.id && styles.walletPickerOptionGraySelected
                     ]}
-                    onPress={() => setTransferFrom(wallet.id)}
+                    onPress={() => setTransferFrom(wallet.id || '')}
                   >
-                    <Text style={styles.walletPickerIcon}>{wallet.icon}</Text>
+                    <Icon name={(wallet.icon as any) || 'cash'} size={20} color={wallet.color || '#10B981'} style={styles.walletPickerIcon} />
                     <View>
                       <Text style={styles.walletPickerName}>{wallet.name}</Text>
                       <Text style={styles.walletPickerBalance}>
@@ -467,13 +495,14 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     key={`to-${wallet.id}`}
                     style={[
                       styles.walletPickerOption,
-                      transferTo === wallet.id && styles.walletPickerOptionSelected,
+                      styles.walletPickerOptionGray,
+                      transferTo === wallet.id && styles.walletPickerOptionGraySelected,
                       transferFrom === wallet.id && styles.walletPickerOptionDisabled
                     ]}
-                    onPress={() => transferFrom !== wallet.id && setTransferTo(wallet.id)}
+                    onPress={() => transferFrom !== wallet.id && setTransferTo(wallet.id || '')}
                     disabled={transferFrom === wallet.id}
                   >
-                    <Text style={styles.walletPickerIcon}>{wallet.icon}</Text>
+                    <Icon name={(wallet.icon as any) || 'cash'} size={20} color={wallet.color || '#10B981'} style={styles.walletPickerIcon} />
                     <View>
                       <Text style={styles.walletPickerName}>{wallet.name}</Text>
                       <Text style={styles.walletPickerBalance}>
@@ -496,24 +525,23 @@ export default function WalletManagementScreen({ navigation }: Props) {
                 placeholderTextColor="#6B7280"
               />
             </View>
-          </View>
+          </ScrollView>
 
-          <View style={styles.modalFooter}>
+          <View style={[styles.modalFooter, styles.modalFooterFixed, styles.modalFooterSticky]}>
             <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonSecondary]}
+              style={[styles.modalButton, styles.modalButtonGray]}
               onPress={() => setShowTransferModal(false)}
             >
-              <Text style={styles.modalButtonTextSecondary}>Hủy</Text>
+              <Text style={styles.modalButtonTextGray}>Hủy</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonPrimary]}
+              style={[styles.modalButton, styles.modalButtonGray]}
               onPress={handleTransfer}
             >
-              <Text style={styles.modalButtonTextPrimary}>Chuyển tiền</Text>
+              <Text style={styles.modalButtonTextGray}>Chuyển tiền</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 
@@ -525,14 +553,14 @@ export default function WalletManagementScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Icon name="arrow-left" size={20} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Quản lý ví</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowAddModal(true)}
         >
-          <Text style={styles.addButtonText}>+</Text>
+          <Icon name="plus" size={20} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -551,7 +579,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
           style={[styles.actionBtn, styles.actionBtnPrimary]}
           onPress={() => setShowAddModal(true)}
         >
-          <Text style={styles.actionBtnIcon}>+</Text>
+          <Icon name="plus" size={16} color="#111827" style={styles.actionBtnIcon} />
           <Text style={styles.actionBtnText}>Thêm ví</Text>
         </TouchableOpacity>
         
@@ -560,7 +588,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
           onPress={() => setShowTransferModal(true)}
           disabled={wallets.length < 2}
         >
-          <Text style={styles.actionBtnIcon}>↔️</Text>
+          <Icon name="swap-horizontal" size={16} color="#111827" style={styles.actionBtnIcon} />
           <Text style={styles.actionBtnText}>Chuyển tiền</Text>
         </TouchableOpacity>
       </View>
@@ -585,68 +613,75 @@ export default function WalletManagementScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E0F2F1',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    marginTop: 0,
+    borderRadius: 0,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   backButtonText: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#111827',
     fontWeight: 'bold',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6366F1',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   addButtonText: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: '#111827',
     fontWeight: 'bold',
   },
   summaryCard: {
     margin: 20,
     padding: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   summaryLabel: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     marginBottom: 8,
   },
   summaryAmount: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 4,
   },
   summarySubtext: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: '#6B7280',
   },
   actionButtonsContainer: {
     flexDirection: 'row',
@@ -665,19 +700,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionBtnPrimary: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   actionBtnSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   actionBtnIcon: {
-    fontSize: 16,
-    color: '#FFFFFF',
+    marginRight: 8,
+    color: '#111827',
   },
   actionBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
   },
   walletsList: {
     flex: 1,
@@ -686,8 +725,10 @@ const styles = StyleSheet.create({
   walletCard: {
     padding: 20,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#FFFFFF',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     borderLeftWidth: 4,
   },
   walletHeader: {
@@ -711,7 +752,7 @@ const styles = StyleSheet.create({
   walletName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 2,
   },
   hiddenText: {
@@ -719,7 +760,7 @@ const styles = StyleSheet.create({
   },
   walletSubtitle: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
   },
   walletActions: {
     flexDirection: 'row',
@@ -731,15 +772,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  actionButtonDeleting: {
+    opacity: 0.5,
   },
   actionButtonText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#111827',
   },
   walletBalance: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 8,
   },
   walletTypeContainer: {
@@ -762,10 +809,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1A1D3A',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
+    backgroundColor: '#FFFFFF',
+    flex: 1,
+    paddingTop: 24,
+    paddingBottom: 0,
+  },
+
+  fullscreenModalContent: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -773,20 +825,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#111827',
   },
   modalClose: {
-    fontSize: 24,
-    color: 'rgba(255, 255, 255, 0.6)',
+      fontSize: 24,
+      color: 'rgba(0,0,0,0.6)',
   },
   modalBody: {
     flex: 1,
     padding: 20,
+  },
+  modalBodyScroll: {
+    paddingBottom: 220,
+  },
+
+  modalBodyContent: {
+    paddingBottom: 40,
   },
   formGroup: {
     marginBottom: 20,
@@ -794,17 +853,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 8,
   },
   formInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#111827',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#D1D5DB',
   },
   typeSelector: {
     flexDirection: 'row',
@@ -815,9 +874,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#D1D5DB',
   },
   typeOptionSelected: {
     borderColor: '#6366F1',
@@ -829,7 +888,7 @@ const styles = StyleSheet.create({
   },
   typeLabel: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: '#111827',
     textAlign: 'center',
   },
   iconSelector: {
@@ -843,13 +902,13 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#D1D5DB',
   },
   iconOptionSelected: {
     borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
   },
   iconText: {
     fontSize: 20,
@@ -892,20 +951,44 @@ const styles = StyleSheet.create({
     fontSize: 20,
     marginRight: 12,
   },
+  /* gray framed style used in transfer modal */
+  walletPickerOptionGray: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+  },
+  walletPickerOptionGraySelected: {
+    borderColor: '#6366F1',
+    backgroundColor: '#F8FAFF',
+  },
   walletPickerName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 2,
   },
   walletPickerBalance: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
   },
   modalFooter: {
     flexDirection: 'row',
     padding: 20,
     gap: 12,
+  },
+
+  modalFooterFixed: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  modalFooterSticky: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    backgroundColor: '#FFFFFF',
   },
   modalButton: {
     flex: 1,
@@ -915,15 +998,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalButtonSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  modalButtonGray: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 0,
+  },
+  modalButtonTextGray: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
   },
   modalButtonPrimary: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#111827',
   },
   modalButtonTextSecondary: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#111827',
   },
   modalButtonTextPrimary: {
     fontSize: 16,
@@ -943,16 +1037,27 @@ const styles = StyleSheet.create({
     right: -100,
   },
   actionButtonPrimary: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#6366F1',
+    borderWidth: 1,
   },
   actionButtonDanger: {
-    backgroundColor: '#EF4444',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EF4444',
+    borderWidth: 1,
   },
   actionButtonSuccess: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#10B981',
+    borderWidth: 1,
   },
   actionButtonSecondary: {
-    backgroundColor: '#6B7280',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#6B7280',
+    borderWidth: 1,
+  },
+  typeIconIcon: {
+    marginBottom: 8,
   },
   decorativeCircle2: {
     width: 150,

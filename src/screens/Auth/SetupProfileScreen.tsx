@@ -13,7 +13,8 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "SetupProfile">;
 
@@ -144,12 +145,12 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
         ]}>
           <View style={styles.header}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarEmoji}>👤</Text>
+                <View style={styles.avatarPlaceholder}>
+                <Icon name="account-circle" size={50} color="#EC4899" />
               </View>
               <View style={styles.avatarRing} />
               <TouchableOpacity style={styles.cameraButton} activeOpacity={0.8}>
-                <Text style={styles.cameraIcon}>📷</Text>
+                <Icon name="camera" size={18} color="#0A0E27" />
               </TouchableOpacity>
             </View>
             <Text style={styles.title}>Hoàn thiện hồ sơ</Text>
@@ -162,7 +163,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
                 Họ và tên <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>👤</Text>
+                <Icon name="account" size={20} color="#EC4899" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Nguyễn Văn A"
                   placeholderTextColor="#999"
@@ -184,7 +185,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
                 Số điện thoại <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>📱</Text>
+                <Icon name="phone" size={20} color="#EC4899" style={styles.inputIcon} />
                 <TextInput
                   placeholder="0912345678"
                   placeholderTextColor="#999"
@@ -206,7 +207,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
                 Ngày sinh <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>🎂</Text>
+                <Icon name="calendar" size={20} color="#EC4899" style={styles.inputIcon} />
                 <TextInput
                   placeholder="DD/MM/YYYY"
                   placeholderTextColor="#999"
@@ -226,7 +227,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Địa chỉ (tùy chọn)</Text>
               <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
-                <Text style={styles.inputIcon}>📍</Text>
+                <Icon name="map-marker" size={20} color="#EC4899" style={styles.inputIcon} />
                 <TextInput
                   placeholder="123 Đường ABC, Quận XYZ"
                   placeholderTextColor="#999"

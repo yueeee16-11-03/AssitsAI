@@ -16,6 +16,8 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import ReportExportService from '../../services/ReportExportService';
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { Transaction, Budget, Habit, Goal, ReportType, ExportFormat, PeriodType } from '../../types/report';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Report'>;
@@ -460,7 +462,7 @@ export default function ReportScreen({ navigation }: Props) {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📊 Chi tiêu theo danh mục</Text>
+        <Text style={styles.sectionTitle}><Icon name="chart-pie" size={16} color="#0F1724" />  Chi tiêu theo danh mục</Text>
         {categoryEntries.map(([category, amount]) => {
           const percentage = (amount / reportData.totalExpense) * 100;
           return (
@@ -491,8 +493,8 @@ export default function ReportScreen({ navigation }: Props) {
   const renderTransactionList = () => {
     return (
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>📝 Chi tiết giao dịch</Text>
+          <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}><Icon name="receipt" size={16} color="#0F1724" />  Chi tiết giao dịch</Text>
           <Text style={styles.transactionCount}>{filteredTransactions.length} giao dịch</Text>
         </View>
 
@@ -533,9 +535,9 @@ export default function ReportScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
+          <Icon name="arrow-left" size={22} color="#0F1724" style={styles.backButton} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>📥 Xuất Báo cáo</Text>
+        <Text style={styles.headerTitle}><Icon name="file-export" size={18} color="#0F1724" />  Xuất Báo cáo</Text>
         <TouchableOpacity 
           style={styles.exportMainButton}
           onPress={() => setShowExportModal(true)}
@@ -551,21 +553,21 @@ export default function ReportScreen({ navigation }: Props) {
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Summary Cards */}
           <View style={styles.summaryContainer}>
-            <View style={styles.summaryCard}>
+            <View style={[styles.summaryCard, styles.summaryCardGray]}>
               <Text style={styles.summaryLabel}>Thu nhập</Text>
               <Text style={[styles.summaryAmount, styles.incomeText]}>
-                {formatCurrency(reportData.totalIncome)}
+                {reportData.totalIncome.toLocaleString('vi-VN')} VNĐ
               </Text>
             </View>
 
-            <View style={styles.summaryCard}>
+            <View style={[styles.summaryCard, styles.summaryCardGray]}>
               <Text style={styles.summaryLabel}>Chi tiêu</Text>
               <Text style={[styles.summaryAmount, styles.expenseText]}>
-                {formatCurrency(reportData.totalExpense)}
+                {reportData.totalExpense.toLocaleString('vi-VN')} VNĐ
               </Text>
             </View>
 
-            <View style={styles.summaryCard}>
+            <View style={[styles.summaryCard, styles.summaryCardGray]}>
               <Text style={styles.summaryLabel}>Số dư</Text>
               <Text
                 style={[
@@ -573,14 +575,14 @@ export default function ReportScreen({ navigation }: Props) {
                   reportData.balance >= 0 ? styles.balancePositive : styles.balanceNegative,
                 ]}
               >
-                {formatCurrency(reportData.balance)}
+                {reportData.balance.toLocaleString('vi-VN')} VNĐ
               </Text>
             </View>
           </View>
 
           {/* Period Selection */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📅 Chọn khoảng thời gian</Text>
+            <Text style={styles.sectionTitle}><Icon name="calendar-month" size={16} color="#0F1724" />  Chọn khoảng thời gian</Text>
             <View style={styles.periodButtons}>
               {(['week', 'month', 'quarter', 'year', 'custom'] as const).map(p => (
                 <TouchableOpacity
@@ -611,7 +613,7 @@ export default function ReportScreen({ navigation }: Props) {
 
           {/* Filter Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🔍 Lọc</Text>
+            <Text style={styles.sectionTitle}><Icon name="filter-variant" size={16} color="#0F1724" />  Lọc</Text>
 
             {/* Filter by Type */}
             <View style={styles.filterGroup}>
@@ -716,11 +718,11 @@ export default function ReportScreen({ navigation }: Props) {
               <Text style={styles.sectionModalLabel}>Loại báo cáo</Text>
               <View style={styles.reportTypeOptions}>
                 {([
-                  { id: 'summary', label: 'Tổng quan', icon: '📊' },
-                  { id: 'detailed', label: 'Chi tiết', icon: '📝' },
-                  { id: 'budget', label: 'Ngân sách', icon: '💰' },
-                  { id: 'habits', label: 'Thói quen', icon: '🎯' },
-                  { id: 'goals', label: 'Mục tiêu', icon: '🚀' },
+                  { id: 'summary', label: 'Tổng quan', icon: 'chart-bar' },
+                  { id: 'detailed', label: 'Chi tiết', icon: 'file-document-outline' },
+                  { id: 'budget', label: 'Ngân sách', icon: 'wallet' },
+                  { id: 'habits', label: 'Thói quen', icon: 'target' },
+                  { id: 'goals', label: 'Mục tiêu', icon: 'rocket-launch' },
                 ] as { id: ReportType; label: string; icon: string }[]).map(rt => (
                   <TouchableOpacity
                     key={rt.id}
@@ -731,7 +733,7 @@ export default function ReportScreen({ navigation }: Props) {
                     onPress={() => setReportType(rt.id)}
                     disabled={isExporting}
                   >
-                    <Text style={styles.reportTypeIcon}>{rt.icon}</Text>
+                    <Icon name={rt.icon} size={26} color={reportType === rt.id ? '#FFFFFF' : 'rgba(255,255,255,0.6)'} style={styles.reportTypeIcon} />
                     <Text
                       style={[
                         styles.reportTypeLabel,
@@ -750,9 +752,9 @@ export default function ReportScreen({ navigation }: Props) {
               <Text style={styles.sectionModalLabel}>Định dạng xuất</Text>
               <View style={styles.exportOptions}>
                 {([
-                  { id: 'csv', label: 'CSV File', desc: 'Mở với Excel, Google Sheets', icon: '📄' },
-                  { id: 'json', label: 'JSON File', desc: 'Định dạng JSON tiêu chuẩn', icon: '📋' },
-                  { id: 'pdf', label: 'PDF Report', desc: 'Tệp PDF chuyên nghiệp', icon: '📑' },
+                  { id: 'csv', label: 'CSV File', desc: 'Mở với Excel, Google Sheets', icon: 'file-delimited' },
+                  { id: 'json', label: 'JSON File', desc: 'Định dạng JSON tiêu chuẩn', icon: 'file-code' },
+                  { id: 'pdf', label: 'PDF Report', desc: 'Tệp PDF chuyên nghiệp', icon: 'file-pdf-box' },
                 ] as { id: ExportFormat; label: string; desc: string; icon: string }[]).map(format => (
                   <TouchableOpacity
                     key={format.id}
@@ -764,7 +766,7 @@ export default function ReportScreen({ navigation }: Props) {
                     disabled={isExporting}
                   >
                     <View style={styles.exportOptionContent}>
-                      <Text style={styles.exportOptionIcon}>{format.icon}</Text>
+                      <Icon name={format.icon} size={24} color={exportFormat === format.id ? '#6366F1' : 'rgba(255,255,255,0.8)'} style={styles.exportOptionIcon} />
                       <View>
                         <Text style={styles.exportOptionTitle}>{format.label}</Text>
                         <Text style={styles.exportOptionDesc}>{format.desc}</Text>
@@ -810,29 +812,26 @@ export default function ReportScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
-    backgroundColor: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: 'rgba(15,23,36,0.06)',
   },
   backButton: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: '700',
     padding: 8,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F1724',
     flex: 1,
     textAlign: 'center',
   },
@@ -859,7 +858,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 16,
     letterSpacing: 0.3,
   },
@@ -871,7 +870,7 @@ const styles = StyleSheet.create({
   },
   transactionCount: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(15, 23, 36, 0.6)',
     fontWeight: '600',
   },
   summaryContainer: {
@@ -887,9 +886,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.25)',
   },
+  summaryCardGray: {
+    backgroundColor: '#F3F4F6',
+    borderColor: 'rgba(15,23,36,0.06)'
+  },
   summaryLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(15, 23, 36, 0.6)',
     marginBottom: 10,
     fontWeight: '600',
     letterSpacing: 0.3,
@@ -897,7 +900,7 @@ const styles = StyleSheet.create({
   summaryAmount: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#111827',
   },
   incomeText: {
     color: '#10B981',
@@ -920,9 +923,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(15,23,36,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(15,23,36,0.06)',
   },
   periodButtonActive: {
     backgroundColor: 'rgba(99, 102, 241, 0.2)',
@@ -930,7 +933,7 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(15,23,36,0.6)',
     fontWeight: '700',
   },
   periodButtonTextActive: {
@@ -954,9 +957,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(15,23,36,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(15,23,36,0.06)',
   },
   filterButtonActive: {
     backgroundColor: 'rgba(99, 102, 241, 0.2)',
@@ -964,7 +967,7 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(15,23,36,0.6)',
     fontWeight: '700',
   },
   filterButtonTextActive: {
@@ -1015,12 +1018,12 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 8,
   },
   progressBar: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(15,23,36,0.06)',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -1032,7 +1035,7 @@ const styles = StyleSheet.create({
   categoryAmount: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#111827',
   },
   transactionItem: {
     flexDirection: 'row',
@@ -1051,22 +1054,22 @@ const styles = StyleSheet.create({
   transactionCategory: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 4,
   },
   transactionDescription: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(15,23,36,0.6)',
     marginBottom: 4,
   },
   transactionDate: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: 'rgba(15,23,36,0.45)',
   },
   transactionAmount: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F1724',
   },
   incomeAmount: {
     color: '#10B981',
@@ -1079,7 +1082,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: 'rgba(15,23,36,0.45)',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1147,6 +1150,7 @@ const styles = StyleSheet.create({
   },
   exportOptionIcon: {
     fontSize: 28,
+    marginRight: 8,
   },
   exportOptionTitle: {
     fontSize: 14,

@@ -134,14 +134,14 @@ export default function AIChatScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="chevron-left" size={20} color="#FFFFFF" />
+          <Icon name="chevron-left" size={20} color="#111827" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>AI Assistant</Text>
           <Text style={styles.headerSubtitle}>Luôn sẵn sàng hỗ trợ</Text>
         </View>
         <TouchableOpacity style={styles.menuButton}>
-          <Icon name="dots-vertical" size={20} color="#FFFFFF" />
+          <Icon name="dots-vertical" size={20} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -225,11 +225,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 48,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: '#10B981',
-    borderBottomWidth: 0,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   backButton: {
     width: 40,
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 20,
-    color: "#FFFFFF",
+    color: "#111827",
   },
   headerCenter: {
     flex: 1,
@@ -251,11 +252,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#111827",
   },
   headerSubtitle: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.9)",
+    color: "rgba(0,0,0,0.6)",
   },
   menuButton: {
     width: 40,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 24,
-    color: "#FFFFFF",
+    color: "#111827",
   },
   messagesContainer: {
     flex: 1,

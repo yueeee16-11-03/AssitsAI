@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { registerAndCreateProfile, onGoogleButtonPress } from "../../services/AuthService";
 import GoogleLoginButton from "../../components/GoogleLoginButton";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Register">;
 
@@ -154,7 +155,7 @@ export default function RegisterScreen({ navigation }: Props) {
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>👤</Text>
+                <Icon name="account" size={20} color="#8B5CF6" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Họ và tên"
                   placeholderTextColor="#999"
@@ -173,7 +174,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>📧</Text>
+                <Icon name="email-outline" size={20} color="#8B5CF6" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Email của bạn"
                   placeholderTextColor="#999"
@@ -194,7 +195,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>🔒</Text>
+                <Icon name="lock-outline" size={20} color="#8B5CF6" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Mật khẩu"
                   placeholderTextColor="#999"
@@ -214,7 +215,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>🔐</Text>
+                <Icon name="lock-check-outline" size={20} color="#8B5CF6" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Xác nhận mật khẩu"
                   placeholderTextColor="#999"

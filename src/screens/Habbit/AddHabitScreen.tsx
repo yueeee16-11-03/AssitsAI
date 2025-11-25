@@ -42,6 +42,7 @@ interface ScheduleItem {
 
 export default function AddHabitScreen({ navigation }: Props) {
   const addHabit = useHabitStore((state) => state.addHabit);
+  const updateHabit = useHabitStore((state) => state.updateHabit);
   const isLoading = useHabitStore((state) => state.isLoading);
 
   const [habitName, setHabitName] = useState("");
@@ -168,9 +169,9 @@ export default function AddHabitScreen({ navigation }: Props) {
     }
 
     try {
-      // Nếu là Hàng ngày, tạo schedule mặc định
+      // Nếu là Hàng ngày, tạo schedule mặc định (nhắc nhở bật)
       const finalSchedule = isDaily
-        ? [{ id: "1", time: "06:00", daysOfWeek: [0, 1, 2, 3, 4, 5, 6], reminder: false }]
+        ? [{ id: "1", time: "06:00", daysOfWeek: [0, 1, 2, 3, 4, 5, 6], reminder: true }]
         : schedule;
 
       // Nếu không đo lường, set target = 1 và unit = "lần"
@@ -205,16 +206,34 @@ export default function AddHabitScreen({ navigation }: Props) {
       const savedId = (result && result.addedId) ? result.addedId : habitId;
 
       // Schedule notifications for reminder entries (if any) using savedId
+      let scheduledIds: any[] = [];
       try {
         if (hasReminder) {
           await NotificationService.requestPermission();
           for (const r of reminders) {
-            await NotificationService.scheduleHabitReminder({
-              id: savedId,
-              name: habitName,
-              reminderTime: r.time,
-              timeZone: 'Asia/Ho_Chi_Minh',
-            });
+            try {
+              // Pass daysOfWeek so NotificationService can schedule weekly triggers
+              const res = await NotificationService.scheduleHabitReminder({
+                id: savedId,
+                name: habitName,
+                reminderTime: r.time,
+                daysOfWeek: r.daysOfWeek,
+                timeZone: 'Asia/Ho_Chi_Minh',
+              });
+              if (Array.isArray(res)) scheduledIds.push(...res);
+              else if (res) scheduledIds.push(res);
+            } catch (innerErr) {
+              console.warn('AddHabitScreen: failed to schedule reminder for schedule', r, innerErr);
+            }
+          }
+
+          // Persist scheduledIds into habit document so we can cancel later
+          if (scheduledIds.length > 0) {
+            try {
+              await updateHabit(savedId, { notificationIds: scheduledIds });
+            } catch (updateErr) {
+              console.warn('AddHabitScreen: failed to save notificationIds to habit', updateErr);
+            }
           }
         }
       } catch (e) {
@@ -236,7 +255,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     >
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerTile} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-left" size={20} color="#FFFFFF" />
+          <Icon name="chevron-left" size={20} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thói quen</Text>
         <View style={styles.headerTile} />
@@ -695,11 +714,11 @@ export default function AddHabitScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: "#10B981" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20, color: "#00796B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
-  headerTile: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  headerTile: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   saveButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: '#10B981', borderWidth: 1, borderColor: '#10B981', flexDirection: 'row', alignItems: 'center' },
   saveText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
   content: { padding: 16 },

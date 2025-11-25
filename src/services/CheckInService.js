@@ -542,6 +542,110 @@ class CheckInService {
   }
 
   /**
+   * 8.1️⃣ XÓA DỮ LIỆU THÓI QUEN KHI HỦY / XÓA THÓI QUEN
+   * - Xóa check-in của hôm nay (nếu có)
+   * - Xóa key tương ứng trong dailySummaries/{today} và cập nhật totals
+   */
+  async deleteHabitData(habitId) {
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) throw new Error('Người dùng chưa đăng nhập');
+
+      console.log('🧹 [CHECK-IN SERVICE] Deleting ALL check-in data for habit:', habitId);
+
+      // 1) Read all date docs under users/{uid}/checkIns/{habitId}/dates
+      const datesRef = firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('checkIns')
+        .doc(habitId)
+        .collection('dates');
+
+      const snapshot = await datesRef.get();
+      const docs = snapshot.docs || [];
+
+      if (docs.length === 0) {
+        console.log('ℹ️ [CHECK-IN SERVICE] No check-in docs found for habit, nothing to delete');
+      }
+
+      // We'll batch deletes and dailySummary updates, respecting Firestore limit (~500 ops per batch)
+      const MAX_OPS_PER_BATCH = 450; // leave margin
+      let batch = firestore().batch();
+      let opCount = 0;
+      const commitBatch = async () => {
+        if (opCount === 0) return;
+        await batch.commit();
+        batch = firestore().batch();
+        opCount = 0;
+      };
+
+      for (const doc of docs) {
+        // delete the date doc
+        batch.delete(doc.ref);
+        opCount++;
+
+        // Also attempt to remove from dailySummaries/{date} if present
+        const dateId = doc.id; // expected YYYY-MM-DD
+        const summaryRef = firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('dailySummaries')
+          .doc(dateId);
+
+        try {
+          const summaryDoc = await summaryRef.get();
+          if (summaryDoc.exists) {
+            const data = summaryDoc.data() || {};
+            const checkIns = data.checkIns ? { ...data.checkIns } : {};
+            if (checkIns[habitId]) {
+              delete checkIns[habitId];
+
+              // Recompute totals
+              let totalPoints = 0;
+              let habitsCompleted = 0;
+              const keys = Object.keys(checkIns);
+              for (const k of keys) {
+                const v = checkIns[k] || {};
+                if (v.completed) {
+                  habitsCompleted += 1;
+                  totalPoints += v.points || 0;
+                }
+              }
+
+              const payload = {
+                checkIns,
+                totalPoints,
+                habitsCompleted,
+                habitsTotal: keys.length,
+                updatedAt: firestore.FieldValue.serverTimestamp(),
+              };
+
+              batch.set(summaryRef, payload, { merge: true });
+              opCount++;
+            }
+          }
+        } catch (e) {
+          console.warn('⚠️ [CHECK-IN SERVICE] Failed reading/updating dailySummary for', dateId, e?.message || e);
+        }
+
+        if (opCount >= MAX_OPS_PER_BATCH) {
+          await commitBatch();
+        }
+      }
+
+      // commit remaining
+      await commitBatch();
+
+      console.log('✅ [CHECK-IN SERVICE] Deleted check-in docs and cleaned dailySummaries for habit');
+      return { success: true, deleted: docs.length };
+
+    } catch (error) {
+      console.error('❌ [CHECK-IN SERVICE] Error deleting habit data:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 🔟 BULK CHECK-IN (Batch update nhiều habits)
    * @param {Array} checkIns - [{ habitId, completed, points, ... }, ...]
    * @returns {Object} { success, updated }

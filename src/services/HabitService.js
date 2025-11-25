@@ -1,5 +1,6 @@
 import HabitApi from '../api/habitApi';
 import CheckInCleanupService from './CheckInCleanupService';
+import CheckInService from './CheckInService';
 
 /**
  * HabitService: Business logic ONLY
@@ -108,18 +109,35 @@ class HabitService {
     try {
       console.log('🗑️ [SERVICE] Deleting habit:', habitId);
 
+      // 0. Attempt to cancel any scheduled notifications for this habit
+      try {
+        const habit = await HabitApi.getHabitByIdFromFirebase(habitId);
+        const notificationIds = habit?.notificationIds || habit?.notificationIds || null;
+        if (notificationIds) {
+          try {
+            const NotificationService = require('./NotificationService').default;
+            await NotificationService.cancelReminder(notificationIds);
+            console.log('🔕 [SERVICE] Cancelled notifications for habit:', habitId);
+          } catch (e) {
+            console.warn('⚠️ [SERVICE] Failed to cancel notifications for habit (non-fatal):', e);
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ [SERVICE] Could not load habit before delete to cancel notifications:', e);
+      }
+
       // 1. Xóa thói quen qua API
       await HabitApi.deleteHabitFromFirebase(habitId);
 
       console.log('✅ [SERVICE] Habit deleted from habits collection');
 
-      // 2. 🆕 Xóa tất cả check-in của thói quen (CLEANUP LOGIC)
+      // 2. 🆕 Xóa dữ liệu check-in liên quan (today summary key + today's check-in)
       try {
-        const cleanupResult = await CheckInCleanupService.deleteAllCheckInsForHabit(habitId);
-        console.log('🧹 [SERVICE] Check-in cleanup completed:', cleanupResult.message);
+        const res = await CheckInService.deleteHabitData(habitId);
+        console.log('🧹 [SERVICE] Check-in service removed habit data:', res.message);
       } catch (cleanupError) {
-        console.warn('⚠️ [SERVICE] Warning during check-in cleanup:', cleanupError);
-        // Không throw error, chỉ warning vì habit đã xóa thành công
+        console.warn('⚠️ [SERVICE] Warning during check-in data cleanup:', cleanupError);
+        // Don't throw - habit deletion already succeeded
       }
 
       // 3. Wait a bit để Firebase sync

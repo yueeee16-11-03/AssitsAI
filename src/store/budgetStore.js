@@ -11,18 +11,31 @@ import BudgetService from '../services/BudgetService';
  * Screen → Store.action → Service (CUD + fetch fresh data) → Store.state
  */
 
+// Initialize month/year ONCE at module load time (not on every render)
+const initDate = new Date();
+const INIT_YEAR = initDate.getFullYear();
+const INIT_MONTH = initDate.getMonth();
+
 export const useBudgetStore = create((set, get) => ({
   // ========== STATE ==========
   budgets: [],
   isLoading: false,
   error: null,
   lastSyncTime: null,
+  // remember which year/month we last fetched so mutations can re-sync the same view
+  currentYear: INIT_YEAR,
+  currentMonth: INIT_MONTH,
 
   // ========== SIMPLE STATE SETTERS ==========
   setBudgets: (budgets) => set({ budgets }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   setLastSyncTime: (time) => set({ lastSyncTime: time }),
+  setCurrentYear: (year) => set({ currentYear: year }),
+  setCurrentMonth: (month) => {
+    console.log('🔁 [STORE] setCurrentMonth ->', month);
+    set({ currentMonth: month });
+  },
 
   // ========== CRUD OPERATIONS ==========
 
@@ -30,26 +43,57 @@ export const useBudgetStore = create((set, get) => ({
    * 1️⃣ FETCH BUDGETS (với tính toán chi tiêu)
    */
   fetchBudgets: async (year, month) => {
-    console.log('🔵 [STORE] fetchBudgets called');
-    set({ isLoading: true, error: null });
+    const currentState = get();
+    const useYear = typeof year === 'number' ? year : currentState.currentYear;
+    const useMonth = typeof month === 'number' ? month : currentState.currentMonth;
+    
+    console.log('🔵 [STORE] fetchBudgets START - requesting year=', useYear, 'month=', useMonth);
+    console.log('   Current state - budgets:', currentState.budgets.length, 'year:', currentState.currentYear, 'month:', currentState.currentMonth);
+    // Show full-page loader only if we don't have cached budgets
+    const showLoader = !(currentState.budgets && currentState.budgets.length > 0);
+    set({ isLoading: showLoader, error: null });
 
     try {
-      const budgets = await BudgetService.getAllBudgetsWithSpending(year, month);
+      console.log(`🔎 [STORE] Service call: getAllBudgetsWithSpending(${useYear}, ${useMonth})`);
+      const budgets = await BudgetService.getAllBudgetsWithSpending(useYear, useMonth);
 
+      console.log(`✅ [STORE] Service returned ${budgets.length} budgets`);
+      if (budgets.length > 0) {
+        console.log('   Budgets:', budgets.map((b) => `${b.category}(id=${b.id},spent=${b.spent})`).join(', '));
+      }
+
+      // Update state with new budgets
       set({
         budgets,
         isLoading: false,
         error: null,
         lastSyncTime: new Date().toISOString(),
+        currentYear: useYear,
+        currentMonth: useMonth,
       });
 
-      console.log('✅ [STORE] Fetched', budgets.length, 'budgets');
+      console.log('✅ [STORE] State updated - budgets now:', budgets.length);
       return budgets;
     } catch (error) {
-      console.error('❌ [STORE] Error fetching budgets:', error.message);
+      console.error('❌ [STORE] fetchBudgets ERROR:', error.message);
+      // If we have cached budgets, keep them and surface the error (background error)
+      if (currentState.budgets && currentState.budgets.length > 0) {
+        console.warn('⚠️ [STORE] Fetch failed but keeping cached budgets');
+        set({
+          isLoading: false,
+          error: `Fetch error (using cached): ${error.message}`,
+          lastSyncTime: new Date().toISOString(),
+          currentYear: useYear,
+          currentMonth: useMonth,
+        });
+        return currentState.budgets;
+      }
+
+      // No cached budgets - show an empty state with error
       set({
         isLoading: false,
         error: error.message,
+        budgets: [],
       });
       throw error;
     }
@@ -60,13 +104,15 @@ export const useBudgetStore = create((set, get) => ({
    */
   addBudget: async (budgetData) => {
     console.log('🔵 [STORE] addBudget called');
-    set({ isLoading: true, error: null });
+    const currentState = get();
+    const showLoader = !(currentState.budgets && currentState.budgets.length > 0);
+    set({ isLoading: showLoader, error: null });
 
     try {
       await BudgetService.addBudget(budgetData);
 
       // Fetch lại dữ liệu mới
-      const budgets = await BudgetService.getAllBudgetsWithSpending();
+      const budgets = await BudgetService.getAllBudgetsWithSpending(get().currentYear, get().currentMonth);
 
       set({
         budgets,
@@ -92,13 +138,15 @@ export const useBudgetStore = create((set, get) => ({
    */
   updateBudget: async (budgetId, updateData) => {
     console.log('🔵 [STORE] updateBudget called');
-    set({ isLoading: true, error: null });
+    const currentState = get();
+    const showLoader = !(currentState.budgets && currentState.budgets.length > 0);
+    set({ isLoading: showLoader, error: null });
 
     try {
       await BudgetService.updateBudget(budgetId, updateData);
 
       // Fetch lại dữ liệu mới
-      const budgets = await BudgetService.getAllBudgetsWithSpending();
+      const budgets = await BudgetService.getAllBudgetsWithSpending(get().currentYear, get().currentMonth);
 
       set({
         budgets,
@@ -124,13 +172,15 @@ export const useBudgetStore = create((set, get) => ({
    */
   deleteBudget: async (budgetId) => {
     console.log('🔵 [STORE] deleteBudget called');
-    set({ isLoading: true, error: null });
+    const currentState = get();
+    const showLoader = !(currentState.budgets && currentState.budgets.length > 0);
+    set({ isLoading: showLoader, error: null });
 
     try {
       await BudgetService.deleteBudget(budgetId);
 
       // Fetch lại dữ liệu mới
-      const budgets = await BudgetService.getAllBudgetsWithSpending();
+      const budgets = await BudgetService.getAllBudgetsWithSpending(get().currentYear, get().currentMonth);
 
       set({
         budgets,
@@ -159,7 +209,7 @@ export const useBudgetStore = create((set, get) => ({
     if (get().isLoading) return; // Tránh gọi lại nếu đang load
 
     try {
-      await get().fetchBudgets();
+      await get().fetchBudgets(get().currentYear, get().currentMonth);
       console.log('✅ [STORE] Budget store initialized');
     } catch (error) {
       console.error('❌ [STORE] Error initializing budget store:', error);

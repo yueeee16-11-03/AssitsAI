@@ -159,7 +159,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="arrow-left" size={20} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={20} color="#111827" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Thêm thu nhập</Text>
@@ -497,11 +497,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 48,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 0,
-    backgroundColor: "#10B981",
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: "#FFFFFF",
   },
   
   mainContent: {
@@ -523,12 +524,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(0,137,123,0.1)",
+    backgroundColor: 'transparent',
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#FFFFFF" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
+  backIcon: { fontSize: 20, color: "#111827" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
   voiceButton: {
     width: 40,
     height: 40,

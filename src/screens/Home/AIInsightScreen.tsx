@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Alert,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -243,11 +244,11 @@ export default function AIInsightScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Phân tích thông minh</Text>
         <TouchableOpacity style={styles.refreshButton}>
-          <MaterialCommunityIcons name="refresh" size={22} color="#FFFFFF" />
+          <MaterialCommunityIcons name="refresh" size={22} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -280,9 +281,9 @@ export default function AIInsightScreen({ navigation }: Props) {
           </View>
 
           {/* AI Summary Card */}
-          <View style={styles.summaryCard}>
-            <View style={styles.aiIcon}>
-              <MaterialCommunityIcons name="lightbulb-on" size={32} color="#10B981" />
+          <View style={[styles.summaryCard, styles.summaryCardGray]}>
+            <View style={[styles.aiIcon, styles.aiIconGray]}>
+              <MaterialCommunityIcons name="brain" size={28} color="#374151" />
             </View>
             <Text style={styles.summaryTitle}>Phân tích AI</Text>
             <Text style={styles.summaryText}>
@@ -291,7 +292,7 @@ export default function AIInsightScreen({ navigation }: Props) {
               ) : (
                 <>
                   {`Tháng này bạn đã chi tiêu `}
-                  <Text style={styles.highlight}>{`₫${(financial.totalExpense || 0).toLocaleString('vi-VN')}`}</Text>
+                  <Text style={styles.highlight}>{`${(financial.totalExpense || 0).toLocaleString('vi-VN')} VNĐ`}</Text>
                   {`, tiết kiệm ${financial.savingRate}% so với thu nhập. Chi tiêu chủ yếu vào các hạng mục hiển thị bên dưới.`}
                 </>
               )}
@@ -309,13 +310,18 @@ export default function AIInsightScreen({ navigation }: Props) {
             <Text style={styles.sectionTitle}>Phân tích chi tiêu</Text>
             <View style={styles.spendingChart}>
               {displaySpending.map((item: any, index: number) => (
-                <View key={index} style={styles.spendingItem}>
+                <TouchableOpacity
+                  key={index}
+                  style={styles.spendingItem}
+                  activeOpacity={0.85}
+                  onPress={() => Alert.alert(item.category || 'Hạng mục', `${(item.amount || 0).toLocaleString('vi-VN')} VNĐ`)}
+                >
                   <View style={styles.spendingInfo}>
                     <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
                     <Text style={styles.categoryName}>{item.category}</Text>
                   </View>
                   <View style={styles.spendingAmount}>
-                    <Text style={styles.amountText}>₫{(item.amount / 1000000).toFixed(1)}M</Text>
+                    <Text style={styles.amountText}>{(item.amount || 0).toLocaleString('vi-VN')} VNĐ</Text>
                     <Text style={styles.percentText}>{item.percent}%</Text>
                   </View>
                   <View style={styles.progressBar}>
@@ -326,7 +332,7 @@ export default function AIInsightScreen({ navigation }: Props) {
                       ]}
                     />
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -334,21 +340,36 @@ export default function AIInsightScreen({ navigation }: Props) {
           {/* Habits Progress */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tiến độ thói quen</Text>
-            <View style={styles.habitsGrid}>
+            <View style={styles.habitsGridVertical}>
               {habits.map((habit: any, index: number) => (
-                <View key={index} style={styles.habitCard}>
-                  <Text style={styles.habitIcon}>{habit.icon}</Text>
-                  <Text style={styles.habitName}>{habit.name}</Text>
-                  <View style={styles.habitStats}>
-                    <Text style={styles.streakText}>🔥 {habit.streak} ngày</Text>
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.habitCardVertical}
+                    activeOpacity={0.85}
+                    onPress={() => Alert.alert(habit.name || 'Thói quen', `Tiến độ ${habit.progress}% — Chuỗi ${habit.streak} ngày`)}
+                  >
+                  <View style={styles.habitRowHorizontal}>
+                    {/* render emoji icons directly, otherwise use MaterialCommunityIcons */}
+                    {typeof habit.icon === 'string' && habit.icon.length <= 2 ? (
+                      <Text style={styles.habitIcon}>{habit.icon}</Text>
+                    ) : (
+                      <MaterialCommunityIcons name={habit.icon || 'check'} size={28} color="#10B981" style={{ marginRight: 12 }} />
+                    )}
+
+                    <View style={{flex:1}}>
+                      <Text style={styles.habitName}>{habit.name}</Text>
+                      <View style={styles.habitProgressRow}>
+                        <View style={styles.habitProgressBarHorizontal}>
+                          <View
+                            style={[styles.habitProgressFillHorizontal, { width: `${habit.progress}%`} ]}
+                          />
+                        </View>
+                        <Text style={styles.habitPercent}>{habit.progress}%</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.habitProgressBar}>
-                    <View
-                      style={[styles.habitProgressFill, { width: `${habit.progress}%` }]}
-                    />
-                  </View>
-                  <Text style={styles.habitPercent}>{habit.progress}%</Text>
-                </View>
+                  <Text style={styles.streakTextSmall}>🔥 {habit.streak} ngày</Text>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -356,31 +377,35 @@ export default function AIInsightScreen({ navigation }: Props) {
           {/* Insights & Recommendations */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Khuyến nghị</Text>
-            {insights.map((insight, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.insightCard,
-                  insight.type === "warning" && styles.insightWarning,
-                  insight.type === "success" && styles.insightSuccess,
-                ]}
-              >
-                <Text style={styles.insightIcon}>{insight.icon}</Text>
-                <View style={styles.insightContent}>
-                  <Text style={styles.insightTitle}>{insight.title}</Text>
-                  <Text style={styles.insightDescription}>{insight.description}</Text>
-                </View>
-              </View>
-            ))}
+            {insights.map((insight, index) => {
+              const iconName = insight.type === 'warning' ? 'alert-circle-outline' : insight.type === 'success' ? 'check-circle-outline' : 'lightbulb-outline';
+              const iconColor = insight.type === 'warning' ? '#F59E0B' : insight.type === 'success' ? '#10B981' : '#6366F1';
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.insightCardModern}
+                  activeOpacity={0.85}
+                  onPress={() => Alert.alert(insight.title, insight.description)}
+                >
+                  <View style={[styles.insightIconCircle, { backgroundColor: `${iconColor}20` }]}>
+                    <MaterialCommunityIcons name={iconName} size={18} color={iconColor} />
+                  </View>
+                  <View style={styles.insightContent}>
+                    <Text style={styles.insightTitle}>{insight.title}</Text>
+                    <Text style={styles.insightDescription}>{insight.description}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* AI Actions */}
           <View style={styles.section}>
             <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, styles.actionButtonStrong]}
               onPress={() => navigation.navigate("AIChat")}
             >
-              <Text style={styles.actionIcon}>💬</Text>
+              <MaterialCommunityIcons name="chat-processing" size={18} color="#374151" style={styles.actionIcon} />
               <Text style={styles.actionText}>Hỏi AI về chi tiết</Text>
             </TouchableOpacity>
           </View>
@@ -395,22 +420,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+  spendingItem: {
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(31,41,55,0.12)',
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 48,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 0,
-    borderBottomColor: "transparent",
-    backgroundColor: "#10B981",
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "#FFFFFF",
+  },
+  spendingChart: {
+    backgroundColor: "transparent",
+    borderRadius: 0,
+    padding: 0,
+    borderWidth: 0,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -421,14 +461,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#111827",
   },
   refreshButton: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "transparent",
     borderRadius: 12,
   },
   refreshIcon: {
@@ -444,23 +484,24 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.1)",
+    borderColor: "rgba(31,41,55,0.12)",
   },
   periodButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: "center",
     borderRadius: 8,
+    backgroundColor: 'transparent',
   },
   periodButtonActive: {
-    backgroundColor: "#10B981",
+    backgroundColor: "#E5E7EB",
   },
   periodText: {
-    color: "#9CA3AF",
+    color: "#6B7280",
     fontWeight: "600",
   },
   periodTextActive: {
-    color: "#FFFFFF",
+    color: "#111827",
   },
   summaryCard: {
     backgroundColor: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(74, 222, 128, 0.05) 100%)",
@@ -470,6 +511,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(16, 185, 129, 0.15)",
   },
+  summaryCardGray: {
+    backgroundColor: '#F3F4F6',
+    borderColor: 'rgba(31,41,55,0.12)',
+  },
   aiIcon: {
     width: 48,
     height: 48,
@@ -478,6 +523,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+  },
+  aiIconGray: {
+    backgroundColor: 'rgba(31,41,55,0.12)',
   },
   aiIconText: {
     fontSize: 24,
@@ -506,16 +554,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 16,
   },
-  spendingChart: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.1)",
-  },
-  spendingItem: {
-    marginBottom: 16,
-  },
+  
   spendingInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -553,64 +592,43 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
   },
-  habitsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  /* vertical habit list */
+  habitsGridVertical: {
+    flexDirection: 'column',
     gap: 12,
   },
-  habitCard: {
-    flex: 1,
-    minWidth: "45%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
+  habitCardVertical: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'flex-start',
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.1)",
+    borderColor: 'rgba(31,41,55,0.12)',
+    marginBottom: 10,
   },
-  habitIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
+  habitRowHorizontal: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  habitIcon: { fontSize: 28, marginRight: 8, width: 36, textAlign: 'center' },
   habitName: {
     color: "#111827",
     fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
   },
-  habitStats: {
-    marginBottom: 8,
-  },
-  streakText: {
-    color: "#9CA3AF",
-    fontSize: 12,
-  },
-  habitProgressBar: {
-    width: "100%",
-    height: 4,
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
-    borderRadius: 2,
-    marginBottom: 4,
-    overflow: "hidden",
-  },
-  habitProgressFill: {
-    height: "100%",
-    backgroundColor: "#10B981",
-  },
-  habitPercent: {
-    color: "#9CA3AF",
-    fontSize: 12,
-  },
+  habitProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  habitProgressBarHorizontal: { flex: 1, height: 8, backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 6, overflow: 'hidden' },
+  habitProgressFillHorizontal: { height: '100%', backgroundColor: '#10B981' },
+  habitPercent: { color: '#9CA3AF', fontSize: 12, marginLeft: 8 },
+  streakTextSmall: { color: '#9CA3AF', fontSize: 12, marginTop: 8 },
   insightCard: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: "#10B981",
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.1)",
+    borderColor: "rgba(31,41,55,0.12)",
   },
   insightWarning: {
     borderLeftColor: "#F59E0B",
@@ -622,6 +640,30 @@ const styles = StyleSheet.create({
   },
   insightIcon: {
     fontSize: 24,
+    marginRight: 12,
+  },
+
+  insightCardModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(31,41,55,0.12)',
+    shadowColor: 'rgba(0,0,0,0.04)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  insightIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   insightContent: {
@@ -641,23 +683,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#10B981",
-    borderRadius: 16,
-    padding: 18,
-    shadowColor: "rgba(16, 185, 129, 0.3)",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "rgba(31,41,55,0.12)",
+  },
+  actionButtonStrong: {
+    backgroundColor: '#E9ECEF',
   },
   actionIcon: {
-    fontSize: 20,
-    marginRight: 8,
-    color: "#FFFFFF",
+    width: 20,
+    height: 20,
+    marginRight: 10,
   },
   actionText: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: "#111827",
+    fontSize: 15,
     fontWeight: "700",
   },
   aiStatusText: {

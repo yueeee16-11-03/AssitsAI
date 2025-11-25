@@ -79,14 +79,26 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
   // Merge store check-ins with local overrides so UI updates instantly
   const mergedCheckIns = useMemo(() => ({ ...todayCheckIns, ...localOverrides }), [todayCheckIns, localOverrides]);
-  const checkedCount = Object.values(mergedCheckIns).filter((c: any) => c?.completed).length;
-  const completionRate = habits.length > 0 ? (checkedCount / habits.length) * 100 : 0;
+  const todayWeekday = new Date().getDay();
+  const visibleHabits = useMemo(() => habits.filter((h: any) => {
+    if (h.isDaily) return true;
+    if (!Array.isArray(h.schedule)) return true;
+    return h.schedule.some((s: any) => Array.isArray(s.daysOfWeek) && s.daysOfWeek.includes(todayWeekday));
+  }), [habits, todayWeekday]);
+
+  // Count only check-ins for habits scheduled for today
+  const checkedCount = useMemo(() => {
+    if (!visibleHabits || visibleHabits.length === 0) return 0;
+    return visibleHabits.reduce((sum: number, h: any) => sum + (mergedCheckIns[h.id]?.completed ? 1 : 0), 0);
+  }, [visibleHabits, mergedCheckIns]);
+
+  const completionRate = visibleHabits.length > 0 ? (checkedCount / visibleHabits.length) * 100 : 0;
 
   // Data validation: Ensure all habits have check-in records
   const validateCheckInData = React.useCallback(async () => {
     console.log("🔍 [DAILY-CHECK-IN] Validating check-in data");
     
-    const missingHabits = habits.filter((h: any) => !mergedCheckIns[h.id]);
+    const missingHabits = visibleHabits.filter((h: any) => !mergedCheckIns[h.id]);
     
     if (missingHabits.length > 0) {
       console.warn(
@@ -98,14 +110,46 @@ export default function DailyCheckInScreen({ navigation }: Props) {
       await getTodayAllCheckIns();
       console.log("✅ [DAILY-CHECK-IN] Check-in data reloaded");
     }
-  }, [habits, mergedCheckIns, getTodayAllCheckIns]);
+  }, [visibleHabits, mergedCheckIns, getTodayAllCheckIns]);
 
-  // Validate whenever habits or check-ins change
+  // Validate whenever visible habits or check-ins change
   React.useEffect(() => {
-    if (habits.length > 0) {
+    if (visibleHabits.length > 0) {
       validateCheckInData();
     }
-  }, [habits, validateCheckInData]);
+  }, [visibleHabits, validateCheckInData]);
+
+  // Midnight reset: schedule reload at next local 00:00 and repeat daily
+  React.useEffect(() => {
+    let timeoutId: any = null;
+
+    const scheduleNextMidnight = () => {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+      const delay = next.getTime() - now.getTime();
+      timeoutId = setTimeout(async () => {
+        try {
+          console.log('🕛 [DAILY-CHECK-IN] Midnight reached — reloading habits and check-ins');
+          await fetchHabits();
+          await getTodayAllCheckIns();
+          await getTodayTotalPoints();
+          setLocalOverrides({});
+          setDebugVersion(v => v + 1);
+        } catch (err) {
+          console.warn('⚠️ [DAILY-CHECK-IN] midnight reload failed', err);
+        } finally {
+          // schedule next midnight
+          scheduleNextMidnight();
+        }
+      }, delay);
+    };
+
+    scheduleNextMidnight();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [fetchHabits, getTodayAllCheckIns, getTodayTotalPoints]);
 
   // Clear local overrides on focus (we reload from store on focus)
   React.useEffect(() => {
@@ -178,7 +222,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
   };
 
   const getAIMotivation = () => {
-    if (completionRate === 100 && habits.length > 0) {
+    if (completionRate === 100 && visibleHabits.length > 0) {
       return { message: "Hoàn hảo! Bạn đã hoàn thành tất cả thói quen hôm nay. Đây là một ngày tuyệt vời!", color: "#10B981", iconName: "trophy" };
     } else if (completionRate >= 80) {
       return { message: "Xuất sắc! Bạn gần hoàn thành rồi. Hãy duy trì động lực này!", color: "#3B82F6", iconName: "star" };
@@ -249,7 +293,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
   };
 
   const handleCompleteAll = () => {
-    if (checkedCount === habits.length && habits.length > 0) {
+    if (checkedCount === visibleHabits.length && visibleHabits.length > 0) {
       Alert.alert(
         "Hoàn thành!",
         `Bạn đã nhận được ${totalPointsToday} điểm hôm nay! 🎉`,
@@ -276,10 +320,10 @@ export default function DailyCheckInScreen({ navigation }: Props) {
       <View style={styles.container}>
         <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
           <View style={styles.headerInner}>
-            <Icon name="chevron-left" size={20} color="#FFFFFF" />
+            <Icon name="chevron-left" size={20} color="#111827" />
             <Text style={styles.headerTitle}>Check-in hôm nay</Text>
             <View style={styles.pointsBadgeInline}>
-              <Icon name="bullseye" size={20} color="#FFFFFF" />
+              <Icon name="bullseye" size={20} color="#111827" />
               <Text style={[styles.pointsText, styles.pointsTextMargin]}>0</Text>
             </View>
           </View>
@@ -299,14 +343,41 @@ export default function DailyCheckInScreen({ navigation }: Props) {
     );
   }
 
+  // If there are habits but none scheduled for today, show a helpful empty state
+  if (visibleHabits.length === 0) {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
+          <View style={styles.headerInner}>
+            <Icon name="chevron-left" size={20} color="#111827" />
+            <Text style={styles.headerTitle}>Check-in hôm nay</Text>
+            <View style={styles.pointsBadgeInline}>
+              <Icon name="bullseye" size={20} color="#111827" />
+              <Text style={[styles.pointsText, styles.pointsTextMargin]}>0</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        <View style={[styles.content, styles.emptyContainer]}>
+          <Text style={styles.emptyText}>Hôm nay không có thói quen được lên lịch. Hãy kiểm tra lịch thói quen trong tuần hoặc thêm thói quen mới.</Text>
+          <TouchableOpacity
+            style={styles.addHabitButton}
+            onPress={() => navigation.navigate("AddHabit")}
+          >
+            <Text style={styles.addHabitButtonText}>+ Thêm thói quen</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
         <View style={styles.headerInner}>
-          <Icon name="chevron-left" size={20} color="#FFFFFF" />
+          <Icon name="chevron-left" size={20} color="#111827" />
           <Text style={styles.headerTitle}>Check-in hôm nay</Text>
           <View style={styles.pointsBadgeInline}>
-            <Icon name="bullseye" size={20} color="#FFFFFF" />
+            <Icon name="bullseye" size={20} color="#111827" />
             <Text style={[styles.pointsText, styles.pointsTextMargin]}> {totalPointsToday}</Text>
           </View>
         </View>
@@ -318,7 +389,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
           <View style={styles.progressCard}>
             <Text style={styles.progressLabel}>Tiến độ hôm nay</Text>
             <View style={styles.progressCircle}>
-              <Text style={styles.progressValue}>{checkedCount}/{habits.length}</Text>
+              <Text style={styles.progressValue}>{checkedCount}/{visibleHabits.length}</Text>
               <Text style={styles.progressSubtext}>thói quen</Text>
             </View>
             <View style={styles.progressBar}>
@@ -346,7 +417,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
           {/* Habits Checklist */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danh sách thói quen - Bấm để check-in</Text>
-            {habits.map((habit: any) => {
+            {visibleHabits.map((habit: any) => {
               const checkIn = mergedCheckIns[habit.id] || { completed: false, points: 0, streak: 0 };
               const isToggling = isTogglingHabit[habit.id];
               const iconColor = getHabitColor(habit);
@@ -437,12 +508,12 @@ export default function DailyCheckInScreen({ navigation }: Props) {
             <TouchableOpacity
               style={[
                 styles.completeButton,
-                checkedCount === habits.length && styles.completeButtonActive,
+                checkedCount === visibleHabits.length && styles.completeButtonActive,
               ]}
               onPress={handleCompleteAll}
               activeOpacity={0.9}
             >
-              {checkedCount === habits.length ? (
+              {checkedCount === visibleHabits.length ? (
                 <View style={styles.completeButtonInline}>
                   <Icon name="trophy" size={16} color="#FFFFFF" style={styles.iconMarginRight} />
                   <Text style={[styles.completeButtonText, styles.completeButtonTextWhite]}>Hoàn thành ngày mới</Text>
@@ -450,7 +521,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
               ) : (
                 <View style={styles.completeButtonInline}>
                   <Icon name="timer-sand" size={16} color="#F59E0B" style={styles.iconMarginRight} />
-                  <Text style={styles.completeButtonText}>Chưa hoàn thành ({checkedCount}/{habits.length})</Text>
+                  <Text style={styles.completeButtonText}>Chưa hoàn thành ({checkedCount}/{visibleHabits.length})</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -463,15 +534,15 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.08)" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)", backgroundColor: '#FFFFFF' },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20, color: "#000000" },
-  headerButton: { paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: '#10B981', borderBottomWidth: 0 },
+  headerButton: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
   headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF", flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827", flex: 1, textAlign: 'center' },
   pointsBadge: { backgroundColor: "transparent", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
   pointsBadgeInline: { backgroundColor: 'transparent', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' },
-  pointsText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
+  pointsText: { fontSize: 15, fontWeight: "800", color: "#111827" },
   pointsTextMargin: { marginLeft: 8 },
   content: { padding: 16 },
   progressCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },

@@ -25,6 +25,7 @@ import {
   // Dimensions đã được xóa khỏi đây vì không còn dùng
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useTransactionStore } from "../../store/transactionStore";
@@ -229,8 +230,25 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
    */
   const renderTransactionItem = ({ item }: { item: Transaction }) => {
     const isExpense = item.type === "expense";
-    const categoryEmoji = TransactionHistoryService.getCategoryEmoji(item.categoryId);
     const hasImage = !!item.billImageUri;
+    const getCategoryIcon = (categoryId: string) => {
+      const map: Record<string, { name: string; color: string }> = {
+        "1": { name: "food", color: "#EF4444" },
+        "2": { name: "car", color: "#F97316" },
+        "3": { name: "shopping", color: "#EC4899" },
+        "4": { name: "gamepad-variant", color: "#8B5CF6" },
+        "5": { name: "hospital-box", color: "#EF4444" },
+        "6": { name: "book", color: "#3B82F6" },
+        "7": { name: "home", color: "#10B981" },
+        "8": { name: "dots-horizontal", color: "#6B7280" },
+        "9": { name: "briefcase", color: "#10B981" },
+        "10": { name: "gift", color: "#F59E0B" },
+        "11": { name: "chart-line", color: "#10B981" },
+        "12": { name: "cash", color: "#6366F1" },
+      };
+      return map[categoryId] || { name: 'wallet', color: '#6B7280' };
+    };
+    const categoryIcon = getCategoryIcon(item.categoryId);
     const displayTitle = item.description || item.category;
 
     // 🔧 FIX: Xử lý Firebase Timestamp + LOGGING CHI TIẾT
@@ -311,7 +329,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
               resizeMode="cover"
             />
           ) : (
-            <Text style={styles.bankIconEmoji}>{categoryEmoji}</Text>
+            <MaterialCommunityIcons name={categoryIcon.name} size={28} color={categoryIcon.color} />
           )}
         </View>
         
@@ -408,7 +426,10 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
           <View style={styles.dailySummary}>
             {dayTransactions.some((t: Transaction) => t.type === "expense") && (
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>💸 Chi</Text>
+                <View style={styles.summaryRow}>
+                  <MaterialCommunityIcons name="cash-minus" size={14} color="#DC2626" style={styles.summaryIconMargin} />
+                  <Text style={styles.summaryLabel}>Chi</Text>
+                </View>
                 <Text style={styles.summaryAmount}>
                   ₫
                   {dayTransactions
@@ -420,7 +441,10 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
             )}
             {dayTransactions.some((t: Transaction) => t.type === "income") && (
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>💰 Thu</Text>
+                <View style={styles.summaryRow}>
+                  <MaterialCommunityIcons name="cash-plus" size={14} color="#00897B" style={styles.summaryIconMargin} />
+                  <Text style={styles.summaryLabel}>Thu</Text>
+                </View>
                 <Text style={[styles.summaryAmount, styles.summaryAmountIncome]}>
                   ₫
                   {dayTransactions
@@ -456,7 +480,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <Text style={[styles.backIcon, { color: '#111827' }]}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lịch sử giao dịch</Text>
         <View style={styles.placeholderButton} />
@@ -472,7 +496,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       /* Empty State (Giữ nguyên) */
       ) : transactions.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyIcon}>📭</Text>
+          <MaterialCommunityIcons name="tray" size={64} color="#9CA3AF" style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Chưa có ghi chú nào</Text>
           <Text style={styles.emptySubText}>Hãy thêm ghi chú mới để bắt đầu</Text>
           <TouchableOpacity
@@ -486,28 +510,6 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       /* FlatList (Giữ nguyên) */
       ) : (
         <View style={styles.fullContainer}>
-          {/* Summary Stats Header */}
-          <View style={styles.summaryStatsHeader}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>💰 Tổng thu nhập</Text>
-              <Text style={styles.statValueIncome}>₫{totalIncome.toLocaleString('vi-VN')}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>💸 Tổng chi tiêu</Text>
-              <Text style={styles.statValueExpense}>₫{totalExpense.toLocaleString('vi-VN')}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>📊 Số dư</Text>
-              <Text style={[styles.statValue, balance >= 0 ? styles.statValueGreen : styles.statValueRed]}>
-                ₫{balance.toLocaleString('vi-VN')}
-              </Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>✓ Tiết kiệm</Text>
-              <Text style={styles.statValuePercent}>{savingRate}%</Text>
-            </View>
-          </View>
-
           {/* Transaction List */}
           <FlatList
             data={dateKeys}
@@ -539,27 +541,27 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 48,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.03)",
-    backgroundColor: "#E0F2F1",
+    borderBottomColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "#FFFFFF",
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(76,175,80,0.1)",
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#1F2937" },
+  backIcon: { fontSize: 20, color: "#111827" },
   headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
   placeholderButton: { width: 40, height: 40 },
 
@@ -568,7 +570,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#FFFFFF",
   },
   loadingText: {
     color: "#00796B",
@@ -616,14 +618,14 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#111827",
     marginBottom: 4,
   },
   dateSubText: {
     fontSize: 12,
-    color: "#00796B",
+    color: "#111827",
     fontWeight: "600",
-    opacity: 0.7,
+    opacity: 0.85,
   },
 
   /* Daily Summary */
@@ -634,9 +636,16 @@ const styles = StyleSheet.create({
   summaryItem: {
     alignItems: "flex-end",
   },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  summaryIconMargin: {
+    marginRight: 8,
+  },
   summaryLabel: {
     fontSize: 11,
-    color: "#00796B",
+    color: "#111827",
     fontWeight: "600",
     marginBottom: 2,
   },
@@ -707,7 +716,7 @@ const styles = StyleSheet.create({
   bankItemDateTime: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#00796B",
+    color: "#111827",
   },
   
   /* 🎨 [NEW] Amount Container - Bên phải (Số tiền) */

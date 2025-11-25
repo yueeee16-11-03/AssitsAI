@@ -10,6 +10,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useHabitStore } from "../../store/habitStore";
+import { useCheckInStore } from "../../store/checkInStore";
 import { useFocusEffect } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
@@ -18,8 +19,12 @@ type Props = NativeStackScreenProps<RootStackParamList, "HabitDashboard">;
 export default function HabitDashboardScreen({ navigation }: Props) {
   const habits = useHabitStore((state) => state.habits);
   const fetchHabits = useHabitStore((state) => state.fetchHabits);
+  const getCheckInHistory = useCheckInStore((state) => state.getCheckInHistory);
+  const getTodayAllCheckIns = useCheckInStore((state) => state.getTodayAllCheckIns);
+  const getCheckInByHabitId = useCheckInStore((state) => state.getCheckInByHabitId);
 
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [weekProgress, setWeekProgress] = useState<Array<any>>([]);
 
   // Fetch habits khi screen focus
   useFocusEffect(
@@ -38,14 +43,24 @@ export default function HabitDashboardScreen({ navigation }: Props) {
   }, [fadeAnim]);
 
   // Tính toán stats
-  const completedTodayCount = habits.filter((h: any) => {
+  const todayWeekday = new Date().getDay();
+  const visibleHabits = habits.filter((h: any) => {
+    // Show habit if explicitly marked daily, or if any schedule entry includes today's weekday
+    if (h.isDaily) return true;
+    if (!Array.isArray(h.schedule)) return true; // fallback: show if schedule missing
+    return h.schedule.some((s: any) => Array.isArray(s.daysOfWeek) && s.daysOfWeek.includes(todayWeekday));
+  });
+
+  const completedTodayCount = visibleHabits.filter((h: any) => {
     const today = new Date().toDateString();
-    return h.completedDates?.includes(today);
+    // Prefer authoritative check-in store data, fallback to habit.completedDates
+    const check = getCheckInByHabitId(h.id) || {};
+    return check.completed || h.completedDates?.includes(today);
   }).length;
 
-  const completionRate = habits.length > 0 ? (completedTodayCount / habits.length) * 100 : 0;
-  const totalStreak = habits.reduce((sum: number, h: any) => sum + (h.currentStreak || 0), 0);
-  const avgStreak = habits.length > 0 ? totalStreak / habits.length : 0;
+  const completionRate = visibleHabits.length > 0 ? (completedTodayCount / visibleHabits.length) * 100 : 0;
+  const totalStreak = visibleHabits.reduce((sum: number, h: any) => sum + (h.currentStreak || 0), 0);
+  const avgStreak = visibleHabits.length > 0 ? totalStreak / visibleHabits.length : 0;
   const disciplineScore = Math.round((completionRate * 0.5) + (avgStreak * 2) + (completedTodayCount * 5));
 
   const getDisciplineLevel = (score: number) => {
@@ -62,25 +77,90 @@ export default function HabitDashboardScreen({ navigation }: Props) {
     return iconStr || 'circle';
   };
 
-  const weekProgress = [
-    { day: "T2", completed: 3, total: 5 }, { day: "T3", completed: 4, total: 5 },
-    { day: "T4", completed: 5, total: 5 }, { day: "T5", completed: 4, total: 5 },
-    { day: "T6", completed: 3, total: 5 }, { day: "T7", completed: 2, total: 5 },
-    { day: "CN", completed: 2, total: 5 },
-  ];
+  // Helper: determine if habit is scheduled on a weekday (0..6)
+  const isHabitScheduledOn = (h: any, weekday: number) => {
+    if (!h) return true;
+    if (h.isDaily) return true;
+    if (!Array.isArray(h.schedule)) return true;
+    return h.schedule.some((s: any) => Array.isArray(s.daysOfWeek) && s.daysOfWeek.includes(weekday));
+  };
+
+  // Build week progress data by reading last 7 days of history per habit
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('📄 [HABIT-DASHBOARD] Screen focused - fetching habits and week stats');
+
+      const load = async () => {
+        try {
+          await fetchHabits();
+          // refresh today's check-ins so today's completed state is accurate
+          await getTodayAllCheckIns();
+
+          // Prepare last 7 dates (oldest -> newest)
+          const days: Date[] = Array.from({ length: 7 }).map((_, i: number) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          });
+
+          // Fetch history for each habit in parallel (7 days)
+          const histories = await Promise.all(
+            (habits || []).map((h: any) => getCheckInHistory(h.id, 7).catch(() => []))
+          );
+
+          // Map habitId -> historyMap(date->entry)
+          const habitHistoryMaps: Record<string, Record<string, any>> = {};
+          (habits || []).forEach((h: any, idx: number) => {
+            const hist = histories[idx] || [];
+            const m: Record<string, any> = {};
+            hist.forEach((entry: any) => { if (entry && entry.date) m[entry.date] = entry; });
+            habitHistoryMaps[h.id] = m;
+          });
+
+          // Aggregate per-day completed / total (only count habits scheduled for that weekday)
+          const aggregated = days.map((d: Date) => {
+            const dateStr = d.toISOString().split('T')[0];
+            const weekday = d.getDay();
+            let completed = 0;
+            let total = 0;
+
+            for (const h of (habits || [])) {
+              if (!isHabitScheduledOn(h, weekday)) continue;
+              total += 1;
+              const map = habitHistoryMaps[h.id] || {};
+              if (map[dateStr] && map[dateStr].completed) completed += 1;
+            }
+
+            // Label VN short
+            const labels = ['CN','T2','T3','T4','T5','T6','T7'];
+            const label = labels[d.getDay()];
+
+            return { day: label, date: dateStr, completed, total };
+          });
+
+          setWeekProgress(aggregated);
+
+        } catch (err) {
+          console.warn('⚠️ [HABIT-DASHBOARD] Failed to load week progress', err);
+        }
+      };
+
+      load();
+    }, [fetchHabits, getCheckInHistory, getTodayAllCheckIns, habits])
+  );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thói quen</Text>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => navigation.navigate("AddHabit")}
         >
-          <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="plus" size={24} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -99,7 +179,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
             </View>
             <View style={styles.scoreStats}>
               <View style={styles.scoreStat}>
-                <Text style={styles.scoreStatValue}>{completedTodayCount}/{habits.length}</Text>
+                <Text style={styles.scoreStatValue}>{completedTodayCount}/{visibleHabits.length}</Text>
                 <Text style={styles.scoreStatLabel}>Hoàn thành</Text>
               </View>
               <View style={styles.statDivider} />
@@ -136,7 +216,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
             <Text style={styles.sectionTitle}>Tiến độ tuần</Text>
             <View style={styles.weekChart}>
               {weekProgress.map((day, index) => {
-                const percentage = (day.completed / day.total) * 100;
+                const percentage = day.total > 0 ? Math.round((day.completed / day.total) * 100) : 0;
                 return (
                   <View key={index} style={styles.dayColumn}>
                     <View style={styles.barContainer}>
@@ -153,7 +233,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
           {/* Habits List */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Thói quen hôm nay</Text>
-            {habits.length === 0 ? (
+            {visibleHabits.length === 0 ? (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="inbox-multiple-outline" size={48} color="#D1D5DB" />
                 <Text style={styles.emptyText}>Bạn chưa có thói quen nào</Text>
@@ -166,7 +246,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
                 </TouchableOpacity>
               </View>
             ) : (
-              habits.map((habit: any) => {
+              visibleHabits.map((habit: any) => {
                 const today = new Date().toDateString();
                 const isCompletedToday = habit.completedDates?.includes(today);
                 const completedDatesLength = habit.completedDates?.length || 0;
@@ -255,12 +335,12 @@ export default function HabitDashboardScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: "#059669", borderBottomWidth: 0 },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#FFFFFF" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
-  addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
-  addIcon: { fontSize: 24, color: "#FFFFFF", fontWeight: "700" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: "#111827" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
+  addIcon: { fontSize: 24, color: "#111827", fontWeight: "700" },
   content: { padding: 16 },
   scoreCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   scoreLabel: { fontSize: 14, color: "#6B7280", marginBottom: 16 },

@@ -21,14 +21,17 @@ import auth from '@react-native-firebase/auth';
 class BudgetApi {
   /**
    * Lấy tất cả ngân sách của user
+   * Note: year/month hiện tại không dùng để filter (chỉ có 1 collection budgets)
+   * Filtering theo tháng được handle ở BudgetService khi tính spending
    */
-  async getBudgets() {
+  async getBudgets(year, month) {
     try {
       const currentUser = auth().currentUser;
       if (!currentUser) {
         throw new Error('Người dùng chưa đăng nhập');
       }
 
+      console.log('🔎 [API] getBudgets called for year=', year, 'month=', month, 'user=', currentUser.uid);
       const snapshot = await firestore()
         .collection('users')
         .doc(currentUser.uid)
@@ -41,10 +44,13 @@ class BudgetApi {
         ...doc.data(),
       }));
 
-      console.log('✅ [API] Fetched', budgets.length, 'budgets');
+      console.log('✅ [API] Firestore query returned', budgets.length, 'budgets');
+      if (budgets.length > 0) {
+        console.log('   First few budgets:', budgets.slice(0, 3).map(b => `"${b.category}" (${b.id})`).join(', '));
+      }
       return budgets;
     } catch (error) {
-      console.error('❌ [API] Lỗi lấy ngân sách:', error);
+      console.error('❌ [API] Error getBudgets:', error.message);
       throw error;
     }
   }

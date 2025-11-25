@@ -324,7 +324,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
           onPress={() => navigation.goBack()}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="chevron-left" size={18} color="#10B981" />
+            <Icon name="chevron-left" size={18} color="#111827" />
             <Text style={styles.backIconText}>Quay lại</Text>
           </View>
         </TouchableOpacity>
@@ -333,8 +333,8 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
           style={styles.addButtonContainer}
           onPress={() => setShowAddModal(true)}
         >
-          <View style={styles.addButtonBubble}>
-            <Icon name="plus" size={20} color="#FFFFFF" />
+          <View style={[styles.addButtonBubble, { backgroundColor: 'transparent' }]}>
+            <Icon name="plus" size={20} color="#111827" />
           </View>
         </TouchableOpacity>
       </View>

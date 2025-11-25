@@ -122,11 +122,11 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerTile} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-left" size={20} color="#FFFFFF" />
+          <Icon name="chevron-left" size={20} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>AI Coach</Text>
         <TouchableOpacity style={styles.headerTile}>
-          <Icon name="cog-outline" size={20} color="#FFFFFF" />
+          <Icon name="cog-outline" size={20} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -282,11 +282,11 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: "#10B981" },
-  headerTile: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
+  headerTile: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#FFFFFF" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
+  backIcon: { fontSize: 20, color: "#111827" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
   settingsButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   settingsIcon: { fontSize: 20 },
   content: { padding: 16, backgroundColor: "#FFFFFF" },

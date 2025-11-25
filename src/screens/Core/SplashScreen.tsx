@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import auth from '@react-native-firebase/auth';
 import {
   View,
   Text,
@@ -51,9 +52,14 @@ export default function SplashScreen({ navigation }: Props) {
       useNativeDriver: false,
     }).start();
 
-    // Navigate after animation
+    // Navigate after animation — if user already authenticated, go Home
     const timer = setTimeout(() => {
-      navigation.replace("Onboarding");
+      const current = auth().currentUser;
+      if (current) {
+        navigation.replace("Home");
+      } else {
+        navigation.replace("Onboarding");
+      }
     }, 3000);
 
     return () => clearTimeout(timer);

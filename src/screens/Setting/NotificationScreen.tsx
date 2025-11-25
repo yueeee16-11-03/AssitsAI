@@ -203,38 +203,57 @@ export default function NotificationScreen({ navigation }: Props) {
               </Text>
             </View>
           ) : (
-            filteredNotifications.map((notif) => (
+            filteredNotifications.map((notif) => {
+              const leftAccentColor =
+                notif.type === 'warning' || notif.type === 'ai'
+                  ? '#10B981'
+                  : notif.type === 'reminder' || notif.type === 'achievement'
+                  ? '#F59E0B'
+                  : notif.color;
+              return (
               <TouchableOpacity
-                key={notif.id}
-                style={[styles.notificationCard, !notif.read && styles.notificationCardUnread]}
+                  key={notif.id}
+                  style={[
+                    styles.notificationCard,
+                    !notif.read && styles.notificationCardUnread,
+                    { borderLeftColor: leftAccentColor },
+                  ]}
                 onPress={() => handleNotificationPress(notif)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.notificationIcon, { backgroundColor: `${notif.color}22` }]}>
-                  <Icon name={notif.icon as any} size={22} color={notif.color} />
-                  {!notif.read && <View style={styles.unreadDot} />}
-                </View>
+                <View style={[styles.notificationIcon, { backgroundColor: `${leftAccentColor}22` }]}>
+                <Icon name={notif.icon as any} size={22} color={leftAccentColor} />
+              </View>
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
                     <Text style={styles.notificationTitle}>{notif.title}</Text>
                     <Text style={styles.notificationTime}>{getTimeAgo(notif.timestamp)}</Text>
                   </View>
                   <Text style={styles.notificationMessage}>{notif.message}</Text>
-                  <View style={styles.notificationFooter}>
-                    <View style={[styles.typeBadge, { backgroundColor: `${notif.color}22` }]}>
-                      <Text style={[styles.typeBadgeText, { color: notif.color }]}>
-                        {notif.type === "ai" ? "AI" :
-                         notif.type === "reminder" ? "Nhắc nhở" :
-                         notif.type === "warning" ? "Cảnh báo" : "Thành tích"}
-                      </Text>
-                    </View>
-                    {notif.actionRoute && (
-                      <Text style={styles.actionHint}>Nhấn để xem chi tiết →</Text>
-                    )}
-                  </View>
+                      <View style={styles.notificationFooter}>
+                        <View style={[styles.typeBadge, { backgroundColor: `${leftAccentColor}22` }]}>
+                          <Text style={[styles.typeBadgeText, { color: leftAccentColor }]}>
+                            {notif.type === "ai" ? "AI" :
+                             notif.type === "reminder" ? "Nhắc nhở" :
+                             notif.type === "warning" ? "Cảnh báo" : "Thành tích"}
+                          </Text>
+                        </View>
+                        {notif.actionRoute ? (
+                          <TouchableOpacity
+                            style={[styles.ctaButton, { borderColor: leftAccentColor }]}
+                            onPress={() => handleNotificationPress(notif)}
+                            activeOpacity={0.85}
+                          >
+                            <Text style={[styles.ctaText, { color: leftAccentColor }]}>Xem chi tiết</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.actionHint}>Nhấn để xem chi tiết →</Text>
+                        )}
+                      </View>
                 </View>
               </TouchableOpacity>
-            ))
+            );
+            })
           )}
         </Animated.View>
       </ScrollView>
@@ -255,26 +274,35 @@ const styles = StyleSheet.create({
   markAllText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
   tabSelector: { flexDirection: "row", backgroundColor: "rgba(0, 137, 123, 0.08)", margin: 16, borderRadius: 12, padding: 4 },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
-  tabActive: { backgroundColor: "#6366F1" },
+  tabActive: { backgroundColor: "#E5E7EB" },
   tabText: { fontSize: 14, color: "#999999", fontWeight: "700" },
-  tabTextActive: { color: "#FFFFFF" },
+  tabTextActive: { color: "#6B7280" },
   content: { padding: 16, paddingTop: 0 },
   emptyState: { alignItems: "center", paddingTop: 80 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: "800", color: "#00796B", marginBottom: 8 },
   emptyText: { fontSize: 14, color: "#999999", textAlign: "center" },
-  notificationCard: { flexDirection: "row", backgroundColor: "rgba(0, 137, 123, 0.06)", borderRadius: 16, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: "transparent" },
-  notificationCardUnread: { backgroundColor: "rgba(99,102,241,0.08)", borderLeftColor: "#6366F1" },
+  notificationCard: { flexDirection: "row", backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(31,41,55,0.12)', borderLeftWidth: 3, borderLeftColor: "transparent" },
+  notificationCardUnread: { backgroundColor: "#FFFFFF", borderLeftColor: "transparent", borderWidth: 1, borderColor: 'rgba(31,41,55,0.12)' },
   notificationIcon: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginRight: 12, position: "relative" },
   notificationEmoji: { fontSize: 24 },
-  unreadDot: { position: "absolute", top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: "#EF4444", borderWidth: 2, borderColor: "#0A0E27" },
+  // removed unread dot indicator
   notificationContent: { flex: 1 },
   notificationHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
-  notificationTitle: { flex: 1, fontSize: 16, fontWeight: "800", color: "#00796B", marginRight: 8 },
+  notificationTitle: { flex: 1, fontSize: 16, fontWeight: "800", color: "#374151", marginRight: 8 },
   notificationTime: { fontSize: 12, color: "#999999" },
   notificationMessage: { fontSize: 14, color: "#333333", lineHeight: 20, marginBottom: 8 },
   notificationFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   typeBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   typeBadgeText: { fontSize: 11, fontWeight: "700" },
   actionHint: { fontSize: 12, color: "#999999", fontWeight: "600" },
+  ctaButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  ctaText: { fontSize: 12, fontWeight: '700' },
 });

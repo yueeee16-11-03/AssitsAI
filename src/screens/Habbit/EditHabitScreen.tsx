@@ -159,12 +159,14 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         if (hasReminder) {
           await NotificationService.requestPermission();
           for (const r of reminders) {
+            // When editing an existing habit, schedule reminders for the exact user time
+            // (minutesBefore: 0) so the updated reminder can fire the same day if appropriate.
             await NotificationService.scheduleHabitReminder({
               id: savedId,
               name: habitName,
               reminderTime: r.time,
               timeZone: 'Asia/Ho_Chi_Minh',
-            });
+            }, { minutesBefore: 0 });
           }
         }
       } catch (e) {
@@ -174,8 +176,8 @@ export default function EditHabitScreen({ navigation, route }: Props) {
       Alert.alert("Thành công", "Đã cập nhật thói quen!", [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
-    } catch (error) {
-      Alert.alert("Lỗi", error instanceof Error ? error.message : "Có lỗi xảy ra");
+    } catch (error: any) {
+      Alert.alert("Lỗi", error instanceof Error ? error.message : (error?.message || "Có lỗi xảy ra"));
     }
   };
 
@@ -190,9 +192,9 @@ export default function EditHabitScreen({ navigation, route }: Props) {
       Alert.alert("Thành công", "Đã xóa thói quen!", [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ [EDIT-HABIT] Error deleting habit:", error);
-      Alert.alert("Lỗi", error instanceof Error ? error.message : "Có lỗi xảy ra");
+      Alert.alert("Lỗi", error instanceof Error ? error.message : (error?.message || 'Có lỗi xảy ra'));
     }
   };
 
@@ -200,8 +202,8 @@ export default function EditHabitScreen({ navigation, route }: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="chevron-left" size={20} color="#FFFFFF" />
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Icon name="chevron-left" size={20} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Sửa thói quen</Text>
           <View style={styles.deleteHeaderButton} />
@@ -220,14 +222,14 @@ export default function EditHabitScreen({ navigation, route }: Props) {
     >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-left" size={20} color="#FFFFFF" />
+          <Icon name="chevron-left" size={20} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Sửa thói quen</Text>
-        <TouchableOpacity
+          <TouchableOpacity
           style={styles.deleteHeaderButton}
           onPress={() => setShowDeleteConfirm(true)}
         >
-          <Icon name="trash-can-outline" size={18} color="#FFFFFF" />
+          <Icon name="trash-can-outline" size={18} color="#111827" />
         </TouchableOpacity>
       </View>
 
@@ -560,12 +562,12 @@ export default function EditHabitScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: "#10B981", borderBottomWidth: 0 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20, color: "#111827" },
   deleteHeaderButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   deleteHeaderIcon: { fontSize: 20 },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF", flex: 1, textAlign: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827", flex: 1, textAlign: "center" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { color: "#6B7280", fontSize: 16 },
   content: { padding: 16, backgroundColor: "#FFFFFF" },

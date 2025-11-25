@@ -371,6 +371,38 @@ export const useCheckInStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Remove check-in from local state synchronously (used when habit deleted)
+   */
+  removeCheckInFromState: (habitId) => {
+    console.log('🔵 [STORE] removeCheckInFromState called for', habitId);
+    try {
+      set(state => {
+        const newCheckIns = { ...state.todayCheckIns };
+        if (newCheckIns[habitId]) {
+          delete newCheckIns[habitId];
+        }
+
+        // Recompute totalPointsToday from remaining entries
+        let totalPoints = 0;
+        Object.keys(newCheckIns).forEach(k => {
+          const v = newCheckIns[k] || {};
+          if (v.completed) totalPoints += v.points || 0;
+        });
+
+        return {
+          todayCheckIns: newCheckIns,
+          totalPointsToday: totalPoints,
+        };
+      });
+      console.log('✅ [STORE] removeCheckInFromState completed for', habitId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ [STORE] Error in removeCheckInFromState:', error);
+      return { success: false, error };
+    }
+  },
+
   // ========== SELECTORS / GETTERS ==========
 
   /**

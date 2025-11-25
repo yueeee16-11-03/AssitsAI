@@ -172,14 +172,14 @@ export default function AIProcessingResultsScreen({
               onPress={() => navigation.goBack()}
               style={styles.backButtonIcon}
             >
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#111827" />
             </TouchableOpacity>
             
             <View style={styles.headerCenter}>
               <MaterialCommunityIcons 
                 name={transactionType === 'income' ? 'cash-multiple' : 'shopping'} 
                 size={28} 
-                color="#FFFFFF" 
+                color="#111827" 
               />
               <Text style={styles.headerTitle}>
                 {transactionType === 'income' ? 'THU NHẬP' : 'CHI TIÊU'}
@@ -390,15 +390,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
   },
   header: {
-    backgroundColor: "#059669",
-    paddingTop: Platform.OS === "ios" ? 60 : 16,
+    backgroundColor: "#FFFFFF",
+    paddingTop: Platform.OS === "ios" ? 44 : 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   headerContent: {
     flexDirection: "row",
@@ -411,7 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "transparent",
   },
   headerCenter: {
     flex: 1,
@@ -423,7 +420,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#111827",
   },
   headerPlaceholder: {
     width: 44,

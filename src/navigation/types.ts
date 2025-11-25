@@ -79,6 +79,7 @@ export type RootStackParamList = {
   
   // Daily Goals
   DailyGoalsDetail: undefined;
+  GoalDetail: { goal?: any; onSave?: (updatedGoal: any) => void };
   
   // Finance Reports
   Report: undefined;

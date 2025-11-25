@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { loginWithEmail, onGoogleButtonPress } from "../../services/AuthService";
 import GoogleLoginButton from "../../components/GoogleLoginButton";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -25,6 +26,8 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [successAnim] = useState(new Animated.Value(0));
+  const [showSuccess, setShowSuccess] = useState(false);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -34,9 +37,9 @@ export default function LoginScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const validateEmail = (email: string) => {
+  const validateEmail = (emailValue: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return emailRegex.test(emailValue);
   };
 
   const handleLogin = async () => {
@@ -66,10 +69,15 @@ export default function LoginScreen({ navigation }: Props) {
       // Gọi Firebase loginWithEmail
       await loginWithEmail(email.trim(), password);
       
-      // TODO: Kiểm tra xem user đã setup profile chưa
-      // Tạm thời luôn chuyển đến Home
-      Alert.alert("Thành công", "Đăng nhập thành công!");
-      navigation.replace("Home");
+      // show polished success UI then navigate
+      setShowSuccess(true);
+      Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      setTimeout(() => {
+        Animated.timing(successAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
+          setShowSuccess(false);
+          navigation.replace("Home");
+        });
+      }, 900);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Đăng nhập thất bại. Vui lòng thử lại.";
       Alert.alert("Lỗi đăng nhập", errorMessage);
@@ -82,8 +90,14 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await onGoogleButtonPress();
-      Alert.alert("Thành công", "Đăng nhập Google thành công!");
-      navigation.replace("Home");
+      setShowSuccess(true);
+      Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      setTimeout(() => {
+        Animated.timing(successAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
+          setShowSuccess(false);
+          navigation.replace("Home");
+        });
+      }, 900);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Đăng nhập Google thất bại";
       Alert.alert("Lỗi", errorMessage);
@@ -121,7 +135,7 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>📧</Text>
+                <Icon name="email-outline" size={20} color="#00796B" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Email của bạn"
                   placeholderTextColor="#999"
@@ -142,7 +156,7 @@ export default function LoginScreen({ navigation }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>🔒</Text>
+                <Icon name="lock-outline" size={20} color="#00796B" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Mật khẩu"
                   placeholderTextColor="#999"
@@ -202,6 +216,16 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
           </View>
         </Animated.View>
+        {/* Success overlay */}
+        {showSuccess && (
+          <Animated.View pointerEvents="none" style={[styles.successOverlay, { opacity: successAnim }]}>
+            <Animated.View style={[styles.successCard, { transform: [{ scale: successAnim.interpolate({ inputRange: [0,1], outputRange: [0.96,1] }) }] } ]}>
+              <Icon name="check-circle" size={40} color="#fff" />
+              <Text style={styles.successTitle}>Đăng nhập thành công</Text>
+              <Text style={styles.successSub}>Chào mừng bạn trở lại — đang chuyển hướng...</Text>
+            </Animated.View>
+          </Animated.View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -411,4 +435,32 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
+  /* Success overlay */
+  successOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)'
+  },
+  successCard: {
+    width: 300,
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+  successTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginTop: 6 },
+  successSub: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 4 },
 });

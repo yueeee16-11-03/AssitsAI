@@ -18,11 +18,14 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useUserStore } from '../../store/userStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 export default function HomeScreen({ navigation }: Props) {
   const [loading] = useState(false);
+  const user = useUserStore((s: any) => s.user);
+  const displayName = (user && (user.displayName || user.email || user.phoneNumber)) || 'Người dùng';
   const [cameraOptionsVisible, setCameraOptionsVisible] = useState(false);
   const [chatPulse] = useState(new Animated.Value(0));
   const [activeTab, setActiveTab] = useState<'home' | 'habit' | 'finance' | 'ai'>('home');
@@ -84,14 +87,14 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.headerContentFull}>
           <View style={styles.headerTextCol}>
             <Text style={styles.greeting}>Chào,</Text>
-            <Text style={styles.username}>Người dùng</Text>
+            <Text style={styles.username}>{displayName}</Text>
           </View>
           <View style={styles.headerIconsRowFull}>
             <TouchableOpacity
               style={styles.notificationButton}
               onPress={() => navigation.navigate("Notification")}
             >
-              <Icon name="bell" size={24} color="#004D40" />
+              <Icon name="bell" size={24} color="#111827" />
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>3</Text>
               </View>
@@ -100,19 +103,19 @@ export default function HomeScreen({ navigation }: Props) {
               style={styles.familyButton}
               onPress={() => navigation.navigate("FamilyOverview")}
             >
-              <Icon name="account-multiple" size={24} color="#004D40" />
+              <Icon name="account-multiple" size={24} color="#111827" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.settingsButton}
               onPress={() => navigation.navigate("Settings")}
             >
-              <Icon name="cog" size={24} color="#004D40" />
+              <Icon name="cog" size={24} color="#111827" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.profileButton}
               onPress={() => navigation.navigate("Profile")}
             >
-              <Icon name="account-circle" size={26} color="#004D40" />
+              <Icon name="account-circle" size={26} color="#111827" />
             </TouchableOpacity>
           </View>
         </View>
@@ -160,26 +163,28 @@ export default function HomeScreen({ navigation }: Props) {
                 <Text style={styles.accountIconLabel}>Quét hóa đơn</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.accountIcon} onPress={() => {}}>
+              <TouchableOpacity style={styles.accountIcon} onPress={() => navigation.navigate('BudgetPlanner')}>
                 <View style={styles.accountIconCircle}>
                   <Icon name="piggy-bank" size={24} color="#7C3AED" />
                 </View>
                 <Text style={styles.accountIconLabel}>Ngân sách</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.accountIcon} onPress={() => {}}>
+              <TouchableOpacity style={styles.accountIcon} onPress={() => navigation.navigate('GoalTracking')}>
                 <View style={styles.accountIconCircle}>
                   <Icon name="bullseye" size={24} color="#7C3AED" />
                 </View>
                 <Text style={styles.accountIconLabel}>Mục tiêu tiết kiệm</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.accountIcon} onPress={() => {}}>
+              <TouchableOpacity style={styles.accountIcon} onPress={() => navigation.navigate('Report')}>
                 <View style={styles.accountIconCircle}>
                   <Icon name="chart-box" size={24} color="#7C3AED" />
                 </View>
                 <Text style={styles.accountIconLabel}>Báo cáo chi thu</Text>
               </TouchableOpacity>
+
+              
             </View>
           </View>
         </TouchableOpacity>
@@ -214,6 +219,25 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
               <Text style={[styles.notebookTitle, styles.notebookTitleWhite]}>Sổ Ghi Chú</Text>
             </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Wallet management button matching notebook style */}
+        <TouchableOpacity
+          style={[styles.notebookCard, styles.notebookCompact]}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('WalletManagement')}
+        >
+          <View style={styles.notebookContent}>
+            <View style={styles.notebookLeft}>
+              <View style={[styles.notebookIconCircle, styles.notebookIconCircleAlt]}>
+                <Icon name="wallet" size={18} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.notebookTitle, styles.notebookTitleWhite]}>Quản lý ví</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('WalletManagement')}>
+              <Icon name="chevron-right" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
 
@@ -317,8 +341,30 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.85}
           >
             <View style={styles.personalGoalInlineRow}>
-              <Icon name="account-heart" size={18} color="#FFFFFF" />
+              <Icon name="account-heart" size={18} color="#374151" />
               <Text style={styles.personalGoalText}>Mục tiêu cá nhân</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.personalGoalButton, styles.commonGoalButton]}
+            onPress={() => {} }
+            activeOpacity={0.85}
+          >
+            <View style={styles.personalGoalInlineRow}>
+              <Icon name="bullseye" size={18} color="#374151" />
+              <Text style={styles.commonGoalText}>Mục tiêu chung</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.personalGoalButton, styles.personalGoalButtonMarginTop]}
+            onPress={() => navigation.navigate('RecurringTransactions')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.personalGoalInlineRow}>
+              <Icon name="repeat" size={18} color="#374151" />
+              <Text style={styles.personalGoalText}>Khoản thu chi định kỳ</Text>
             </View>
           </TouchableOpacity>
 
@@ -894,7 +940,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   headerButtonFull: {
     width: '100%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
@@ -934,11 +980,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
-  profileInitial: { color: "#00796B", fontWeight: "800" },
+  profileInitial: { color: "#111827", fontWeight: "800" },
   headerButtons: {
     flexDirection: "row",
     gap: 8,
@@ -947,7 +993,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -958,7 +1004,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -969,7 +1015,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -1402,7 +1448,7 @@ const styles = StyleSheet.create({
     marginTop: 32,
     transform: [{ translateY: 6 }],
   },
-  accountIcon: { alignItems: 'center', width: '23%' },
+  accountIcon: { alignItems: 'center', width: '20%' },
   accountIconCircle: { width: 60, height: 60, borderRadius: 14, backgroundColor: 'rgba(124,58,237,0.06)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   accountIconLabel: { color: '#999999', fontSize: 13, textAlign: 'center' },
   /* Goal card compact styles */
@@ -1432,7 +1478,7 @@ const styles = StyleSheet.create({
   },
   goalBadgeText: { color: '#FFB020', fontWeight: '800' },
   personalGoalButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -1440,10 +1486,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#7C3AED',
+    borderColor: '#10B981',
   },
   personalGoalInlineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', width: '100%' },
-  personalGoalText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14, marginLeft: 12 },
+  personalGoalText: { color: '#111827', fontWeight: '800', fontSize: 14, marginLeft: 12 },
+  commonGoalButton: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#10B981',
+  },
+  commonGoalText: { color: '#111827', fontWeight: '800', fontSize: 14, marginLeft: 12 },
   personalSuggestContent: { flex: 1 },
   tabBarBg: {
     position: 'absolute',
@@ -1469,4 +1520,6 @@ const styles = StyleSheet.create({
   personalSuggestSubtitle: { color: '#999999', fontSize: 12 },
   iconViewBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(99,102,241,0.08)' },
   iconViewBtnColored: { backgroundColor: 'rgba(255,255,255,0.16)' },
+  personalGoalButtonMarginTop: { marginTop: 8 },
+  notebookIconCircleAlt: { backgroundColor: 'rgba(255,255,255,0.16)' },
 });

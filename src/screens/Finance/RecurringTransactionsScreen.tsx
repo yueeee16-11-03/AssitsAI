@@ -11,6 +11,8 @@ import {
   Animated,
   Switch,
 } from 'react-native';
+// @ts-ignore
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 
@@ -37,10 +39,10 @@ interface RecurringTransaction {
 }
 
 const FREQUENCY_OPTIONS = [
-  { key: 'weekly', label: 'Hàng tuần', icon: '📅' },
-  { key: 'monthly', label: 'Hàng tháng', icon: '🗓️' },
-  { key: 'quarterly', label: 'Hàng quý', icon: '📊' },
-  { key: 'yearly', label: 'Hàng năm', icon: '🎯' },
+  { key: 'weekly', label: 'Hàng tuần', icon: 'calendar-week' },
+  { key: 'monthly', label: 'Hàng tháng', icon: 'calendar-month' },
+  { key: 'quarterly', label: 'Hàng quý', icon: 'chart-box' },
+  { key: 'yearly', label: 'Hàng năm', icon: 'calendar-star' },
 ];
 
 const REMINDER_OPTIONS = [
@@ -59,7 +61,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       amount: 8000000,
       categoryId: 'housing',
       categoryName: 'Nhà ở',
-      categoryIcon: '🏠',
+      categoryIcon: 'home',
       walletId: 'bank1',
       walletName: 'Vietcombank',
       frequency: 'monthly',
@@ -77,7 +79,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       amount: 25000000,
       categoryId: 'salary',
       categoryName: 'Lương',
-      categoryIcon: '💰',
+      categoryIcon: 'cash',
       walletId: 'bank1',
       walletName: 'Vietcombank',
       frequency: 'monthly',
@@ -95,7 +97,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       amount: 180000,
       categoryId: 'entertainment',
       categoryName: 'Giải trí',
-      categoryIcon: '🎬',
+      categoryIcon: 'movie-open',
       walletId: 'momo',
       walletName: 'Momo',
       frequency: 'monthly',
@@ -113,7 +115,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       amount: 1200000,
       categoryId: 'utilities',
       categoryName: 'Tiện ích',
-      categoryIcon: '⚡',
+      categoryIcon: 'flash',
       walletId: 'cash',
       walletName: 'Tiền mặt',
       frequency: 'monthly',
@@ -134,10 +136,10 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
   const [transactionName, setTransactionName] = useState('');
   const [transactionAmount, setTransactionAmount] = useState('');
   const [transactionType, setTransactionType] = useState<'expense' | 'income'>('expense');
-  const [frequency, setFrequency] = useState<'weekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
+  const [frequency, setFrequency] = useState<'weekly' | 'monthly' | 'quarterly' | 'yearly'>('weekly');
   const [dueDate, setDueDate] = useState('1');
   const [isAutomatic, setIsAutomatic] = useState(false);
-  const [reminderDays, setReminderDays] = useState(3);
+  const [reminderDays, setReminderDays] = useState(0);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
@@ -149,10 +151,10 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
   }, [fadeAnim]);
 
   const formatCurrency = (amount: number) => {
+    // Format without currency symbol and append ' VNĐ'
     return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
+      maximumFractionDigits: 0,
+    }).format(amount) + ' VNĐ';
   };
 
   const getDaysUntilDue = (nextDue: string) => {
@@ -349,7 +351,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
         <View style={styles.transactionHeader}>
           <View style={styles.transactionInfo}>
             <View style={styles.transactionIcon}>
-              <Text style={styles.transactionIconText}>{transaction.categoryIcon}</Text>
+              <Icon name={transaction.categoryIcon as any} size={22} color="#374151" />
             </View>
             <View style={styles.transactionDetails}>
               <Text style={styles.transactionName}>{transaction.name}</Text>
@@ -366,13 +368,13 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
               style={[styles.actionButton, styles.actionButtonPrimary]}
               onPress={() => handleEditTransaction(transaction)}
             >
-              <Text style={styles.actionButtonText}>✏️</Text>
+              <Icon name="pencil" size={14} color="#374151" />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.actionButtonDanger]}
               onPress={() => handleDeleteTransaction(transaction.id)}
             >
-              <Text style={styles.actionButtonText}>🗑️</Text>
+              <Icon name="trash-can-outline" size={14} color="#374151" />
             </TouchableOpacity>
           </View>
         </View>
@@ -395,8 +397,9 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
               <Text style={styles.statusText}>{statusInfo.text}</Text>
             </View>
             {transaction.isAutomatic && (
-              <View style={styles.automaticBadge}>
-                <Text style={styles.automaticText}>🤖 Tự động</Text>
+                <View style={styles.automaticBadgeRow}>
+                <Icon name="robot" size={12} color="#6366F1" />
+                <Text style={[styles.automaticText, styles.automaticTextSpacing]}>Tự động</Text>
               </View>
             )}
           </View>
@@ -416,7 +419,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
             <Switch
               value={transaction.isActive}
               onValueChange={() => handleToggleActive(transaction.id)}
-              trackColor={{ false: '#374151', true: '#6366F1' }}
+              trackColor={{ false: '#374151', true: '#10B981' }}
               thumbColor={transaction.isActive ? '#FFFFFF' : '#9CA3AF'}
             />
             {!transaction.isAutomatic && statusInfo.status !== 'normal' && (
@@ -481,7 +484,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
                   ]}
                   onPress={() => setTransactionType('expense')}
                 >
-                  <Text style={styles.typeIcon}>📤</Text>
+                  <Icon name="cash-minus" size={20} color={transactionType === 'expense' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
                   <Text style={styles.typeLabel}>Chi tiêu</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -491,7 +494,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
                   ]}
                   onPress={() => setTransactionType('income')}
                 >
-                  <Text style={styles.typeIcon}>📥</Text>
+                  <Icon name="cash-plus" size={20} color={transactionType === 'income' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
                   <Text style={styles.typeLabel}>Thu nhập</Text>
                 </TouchableOpacity>
               </View>
@@ -521,8 +524,8 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setFrequency(option.key as any)}
                   >
-                    <Text style={styles.frequencyIcon}>{option.icon}</Text>
-                    <Text style={styles.frequencyLabel}>{option.label}</Text>
+                    <Icon name={option.icon as any} size={16} color={frequency === option.key ? '#FFFFFF' : '#111827'} />
+                      <Text style={[styles.frequencyLabel, frequency === option.key ? styles.frequencyLabelSelected : undefined]}>{option.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -554,7 +557,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setReminderDays(option.value)}
                   >
-                    <Text style={styles.reminderLabel}>{option.label}</Text>
+                    <Text style={[styles.reminderLabel, reminderDays === option.value ? styles.reminderLabelSelected : undefined]}>{option.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -627,14 +630,16 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Text style={[styles.backButtonText, { color: '#111827' }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Giao dịch lặp lại</Text>
+        <View style={styles.headerTitleWrapper}>
+          <Text style={styles.headerTitleText}>Giao dịch lặp lại</Text>
+        </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowAddModal(true)}
         >
-          <Text style={styles.addButtonText}>+</Text>
+          <Text style={[styles.addButtonText, { color: '#111827' }]}>+</Text>
         </TouchableOpacity>
       </View>
 
@@ -698,7 +703,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           filteredTransactions.map(renderTransactionCard)
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>📋</Text>
+            <Icon name="clipboard-text-outline" size={48} color="#111827" style={styles.emptyStateIcon} />
             <Text style={styles.emptyStateText}>Chưa có giao dịch lặp lại nào</Text>
             <Text style={styles.emptyStateSubtext}>
               Thêm hóa đơn định kỳ để theo dõi chi tiêu tự động
@@ -727,21 +732,26 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E0F2F1',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -750,27 +760,36 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+  headerTitleWrapper: {
+    backgroundColor: 'transparent',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  headerTitleText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
   },
   addButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#6366F1',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   addButtonText: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: '#111827',
     fontWeight: 'bold',
   },
   filterTabs: {
     flexDirection: 'row',
     paddingHorizontal: 20,
+    marginTop: 12,
     marginBottom: 20,
   },
   filterTab: {
@@ -778,27 +797,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     alignItems: 'center',
   },
   filterTabActive: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#9CA3AF',
   },
   filterTabText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#374151',
     fontWeight: '600',
   },
   filterTabTextActive: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   summaryCard: {
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 20,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -810,7 +834,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     marginBottom: 4,
   },
   summaryAmount: {
@@ -824,8 +848,10 @@ const styles = StyleSheet.create({
   transactionCard: {
     padding: 20,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#FFFFFF',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   transactionHeader: {
     flexDirection: 'row',
@@ -842,7 +868,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -856,7 +884,7 @@ const styles = StyleSheet.create({
   transactionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 4,
   },
   transactionMeta: {
@@ -865,16 +893,16 @@ const styles = StyleSheet.create({
   },
   transactionCategory: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
   },
   transactionMetaSeparator: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: '#9CA3AF',
     marginHorizontal: 6,
   },
   transactionWallet: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
   },
   transactionActions: {
     flexDirection: 'row',
@@ -886,10 +914,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   actionButtonText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#374151',
   },
   transactionBody: {
     marginBottom: 16,
@@ -898,13 +929,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   amountText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
     marginBottom: 4,
   },
   frequencyText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
   },
   statusContainer: {
     flexDirection: 'row',
@@ -926,10 +957,21 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'rgba(99, 102, 241, 0.2)',
   },
+  automaticBadgeRow: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   automaticText: {
     fontSize: 10,
     fontWeight: '600',
     color: '#6366F1',
+  },
+  automaticTextSpacing: {
+    marginLeft: 8,
   },
   transactionFooter: {
     flexDirection: 'row',
@@ -941,12 +983,12 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#6B7280',
     marginBottom: 4,
   },
   notesText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     fontStyle: 'italic',
   },
   transactionControls: {
@@ -958,12 +1000,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   payButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
   },
   emptyState: {
     alignItems: 'center',
@@ -972,17 +1016,18 @@ const styles = StyleSheet.create({
   emptyStateIcon: {
     fontSize: 48,
     marginBottom: 16,
+    color: '#111827',
   },
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -991,12 +1036,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   emptyStateButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#374151',
   },
   bottomSpace: {
     height: 100,
@@ -1008,7 +1055,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1A1D3A',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -1024,11 +1071,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#111827',
   },
   modalClose: {
     fontSize: 24,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(0,0,0,0.6)',
   },
   modalBody: {
     flex: 1,
@@ -1040,17 +1087,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 8,
   },
   formInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#111827',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#D1D5DB',
   },
   textArea: {
     height: 80,
@@ -1065,21 +1112,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#D1D5DB',
   },
   typeOptionSelected: {
     borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: '#6366F1',
   },
   typeIcon: {
     fontSize: 24,
     marginBottom: 8,
   },
+  typeIconIcon: {
+    marginBottom: 8,
+  },
   typeLabel: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: '#111827',
     textAlign: 'center',
   },
   frequencySelector: {
@@ -1093,20 +1143,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#D1D5DB',
   },
   frequencyOptionSelected: {
     borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: '#6366F1',
   },
   frequencyIcon: {
-    fontSize: 16,
     marginRight: 6,
   },
   frequencyLabel: {
     fontSize: 12,
+    color: '#111827',
+  },
+  frequencyLabelSelected: {
     color: '#FFFFFF',
   },
   reminderSelector: {
@@ -1118,16 +1170,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
   },
   reminderOptionSelected: {
     borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: '#6366F1',
   },
   reminderLabel: {
     fontSize: 12,
+    color: '#111827',
+  },
+  reminderLabelSelected: {
     color: '#FFFFFF',
   },
   switchContainer: {
@@ -1138,7 +1193,7 @@ const styles = StyleSheet.create({
   },
   formHint: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#6B7280',
     fontStyle: 'italic',
   },
   modalFooter: {
@@ -1154,20 +1209,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalButtonSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   modalButtonPrimary: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#6366F1',
   },
   modalButtonTextSecondary: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#374151',
   },
   modalButtonTextPrimary: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#374151',
   },
   decorativeCircle: {
     position: 'absolute',
@@ -1189,10 +1248,14 @@ const styles = StyleSheet.create({
     left: -75,
   },
   actionButtonPrimary: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   actionButtonDanger: {
-    backgroundColor: '#EF4444',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   incomeAmountText: {
     color: '#10B981',

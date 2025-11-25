@@ -1,16 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
-/**
- * HabitApi: Firebase Calls ONLY
- * Responsibility:
- * - Gọi Firestore API
- * - Không chứa logic kinh doanh
- * - Trả về raw data từ Firebase
- * 
- * Pattern: Service → API → Firebase
- */
-
 class HabitApi {
   /**
    * 1️⃣ LẤY TẤT CẢ THÓI QUEN TỪ FIREBASE
@@ -29,11 +19,12 @@ class HabitApi {
         .doc(currentUser.uid)
         .collection('habits')
         .orderBy('createdAt', 'desc')
-        .get({ source: 'server' }); // Cache bypass
+        .get({ source: 'server' });
 
+      // SỬA LỖI: Đảo ngược thứ tự spread để ưu tiên doc.id thật
       const habits = snapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id, 
       }));
 
       console.log('✅ [API] Fetched', habits.length, 'habits from Firebase');
@@ -57,12 +48,15 @@ class HabitApi {
 
       console.log('➕ [API] Adding habit to Firebase:', habitData.name);
 
+      // SỬA LỖI: Loại bỏ id client gửi lên
+      const { id, ...dataToSave } = habitData;
+
       const docRef = await firestore()
         .collection('users')
         .doc(currentUser.uid)
         .collection('habits')
         .add({
-          ...habitData,
+          ...dataToSave,
           userId: currentUser.uid,
           isActive: true,
           currentStreak: 0,
@@ -163,9 +157,10 @@ class HabitApi {
         throw new Error('Thói quen không tồn tại');
       }
 
+      // SỬA LỖI: Đảm bảo ID chuẩn
       return {
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
       };
 
     } catch (error) {
@@ -175,7 +170,7 @@ class HabitApi {
   }
 
   /**
-   * 6️⃣ CẬP NHẬT STREAK & COMPLETED DATES TRÊN FIREBASE
+   * 6️⃣ CẬP NHẬT STREAK
    */
   async updateStreakOnFirebase(habitId, updateData) {
     try {
