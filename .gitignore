@@ -71,6 +71,7 @@ yarn-error.log
 .env.local
 .env.*.local
 .env.production
+src/config/env.ts
 
 # Yarn
 .yarn/*
