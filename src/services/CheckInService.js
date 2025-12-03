@@ -1,6 +1,9 @@
+// helper will be defined inside the CheckInService class
+
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import NotificationService from './NotificationService';
+import NotificationApi from '../api/notificationApi';
 
 /**
  * CheckInService: Business logic cho daily check-in
@@ -21,6 +24,15 @@ import NotificationService from './NotificationService';
  */
 
 class CheckInService {
+  // ---------- Helpers ----------
+  /**
+   * Streak milestone rule: notify when streak is >=5 and a multiple of 5
+   */
+  isStreakMilestone(streak) {
+    if (typeof streak !== 'number') return false;
+    return streak >= 5 && streak % 5 === 0;
+  }
+
   /**
    * 1️⃣ LẤY CHECK-IN HÔM NAY CHO HABIT
    * @param {string} habitId
@@ -185,11 +197,19 @@ class CheckInService {
 
         // Calculate points: base + streak bonus
         const basePoints = habitData.target || 10;
-        const currentStreak = habitData.currentStreak || 0;
-        const streakBonus = Math.floor(currentStreak / 7) * 5;
+        // Compute current streak from the most recent previous day (yesterday).
+        // If yesterday was completed, use its streak value; otherwise streak before
+        // today is 0 (user broke the chain).
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayKey = yesterdayDate.toISOString().split('T')[0];
+        const yesterdayCheckIn = await this.getCheckInByDate(habitId, yesterdayKey);
+        const currentStreakBefore = (yesterdayCheckIn && yesterdayCheckIn.completed) ? (yesterdayCheckIn.streak || 0) : 0;
+        console.log('ℹ️ [CHECK-IN SERVICE] Yesterday key:', yesterdayKey, 'yesterdayCheckIn:', !!yesterdayCheckIn, 'currentStreakBefore:', currentStreakBefore);
+        const streakBonus = Math.floor(currentStreakBefore / 7) * 5;
         const totalPoints = basePoints + streakBonus;
 
-        const newStreak = currentStreak + 1;
+        const newStreak = currentStreakBefore + 1;
         const bestStreak = Math.max(newStreak, habitData.bestStreak || 0);
 
         newData = {
@@ -297,6 +317,20 @@ class CheckInService {
       try {
         if (freshCheckIn.completed) {
           await NotificationService.cancelReminder(habitId);
+          // If user completed any check-in today, cancel today's streak reminder
+          // and reschedule it for next day so we don't notify unnecessarily.
+          try {
+            await NotificationService.cancelReminder('daily-streak-reminder');
+            await NotificationService.scheduleDailyStreakReminder({ hour: 20, minute: 0 });
+            try {
+              // Mark persisted reminder as read so it doesn't show as pending in the UI
+              await NotificationApi.markAsRead('daily-streak-reminder');
+            } catch (err) {
+              // non-fatal - persistence may be updated via subscription
+            }
+          } catch (e) {
+            console.warn('⚠️ [CHECK-IN SERVICE] Failed to update daily streak reminder', e);
+          }
         } else {
           // only schedule if user has reminders enabled and a reminderTime
           if (habitData && habitData.hasReminder && habitData.reminderTime) {
@@ -310,6 +344,28 @@ class CheckInService {
         }
       } catch (e) {
         console.warn('⚠️ [CHECK-IN SERVICE] Notification update failed', e);
+      }
+          // If we've reached a milestone streak (5, 10, 15...), congratulate the user
+      try {
+        // Special achievement for 7-day streak
+        if (freshCheckIn.streak === 7) {
+          const habitName = (habitData && habitData.name) ? habitData.name : 'thói quen';
+          await NotificationService.displayNotification({
+            id: `streak-${habitId}-7`,
+            title: 'Chúc mừng!',
+            body: `Chúc mừng! Bạn đã duy trì chuỗi '${habitName}' được 7 ngày liên tiếp! 🔥`,
+          });
+          console.log('ℹ️ [CHECK-IN SERVICE] Sent 7-day achievement notification for', habitId);
+        } else if (this.isStreakMilestone(freshCheckIn.streak)) {
+          await NotificationService.displayNotification({
+            id: `streak-${habitId}-${freshCheckIn.streak}`,
+            title: 'Chúc mừng!',
+            body: `Bạn đã đạt ${freshCheckIn.streak} ngày liên tiếp! Tiếp tục thế nhé! 🎉`,
+          });
+          console.log('ℹ️ [CHECK-IN SERVICE] Sent milestone notification for streak', freshCheckIn.streak);
+        }
+      } catch (e) {
+        console.warn('⚠️ [CHECK-IN SERVICE] Failed to send milestone notification', e);
       }
 
       return {

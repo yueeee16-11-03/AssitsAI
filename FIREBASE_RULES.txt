@@ -1,0 +1,90 @@
+// Firebase Firestore Security Rules - Assist App
+// Để áp dụng: Vào Firebase Console → Firestore Database → Rules → Paste code này → Publish
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============ USERS COLLECTION ============
+    // Rule 1: Cho phép người dùng đọc/ghi document của chính họ
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ============ SUBCOLLECTIONS UNDER USERS ============
+    // Rule 2: Transactions
+    match /users/{userId}/transactions/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 3: Habits
+    match /users/{userId}/habits/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 4: Check-ins
+    match /users/{userId}/checkIns/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 5: Daily summaries
+    match /users/{userId}/dailySummaries/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 6: Budgets
+    match /users/{userId}/budgets/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 7: Insights
+    match /users/{userId}/insights/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 8: Goals
+    match /users/{userId}/goals/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 9: Wallets
+    match /users/{userId}/wallets/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule 10: Notifications
+    match /users/{userId}/notifications/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ============ CHAT HISTORIES (Top-level collection) ============
+    // LỖI CẦN SỬA: Nếu không có userId trong collection, cần check trong resource.data
+    match /chatHistories/{chatId} {
+      // Cho phép tạo chat mới
+      allow create: if request.auth != null 
+        && request.resource.data.userId == request.auth.uid;
+      
+      // Cho phép đọc/cập nhật/xóa nếu là chủ nhân
+      allow read, update, delete: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ============ CHAT MESSAGES ============
+    // LỖI CẦN SỬA: Cần kiểm tra null trước khi access resource.data
+    match /chatMessages/{messageId} {
+      // Cho phép tạo message mới
+      allow create: if request.auth != null 
+        && request.resource.data.userId == request.auth.uid;
+      
+      // Cho phép đọc nếu là chủ nhân
+      allow read: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ============ DEFAULT DENY ============
+    // Mặc định từ chối tất cả các truy cập không khớp với rules trên
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

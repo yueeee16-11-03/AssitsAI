@@ -14,6 +14,7 @@
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import NotificationService from './NotificationService';
 import firestore from "@react-native-firebase/firestore";
 
 const API_KEY = "AIzaSyAB1q3_1T9mRMd1xvmYJBJxtXATyeStQuU";
@@ -365,6 +366,21 @@ export async function generateDailyRecommendations(
     const processingTime = Date.now() - startTime;
 
     console.log("\n✅ [RECOMMENDATION] Successfully generated daily recommendations!");
+    // Notify the user that new recommendations are available and persist it
+    try {
+      const notifId = `ai-recommendation-${today}`;
+      await NotificationService.displayNotification({
+        id: notifId,
+        title: 'Gợi ý mới',
+        body: `Có ${recommendations.length} gợi ý tài chính và thói quen cho hôm nay.`,
+        type: 'ai',
+        icon: 'robot',
+        actionRoute: 'AIRecommendation',
+      });
+      console.log('RECOMMENDATION: persisted and displayed AI suggestions notification', notifId);
+    } catch (err) {
+      console.warn('RECOMMENDATION: failed to create ai notification', err);
+    }
     console.log(`⏱️ [RECOMMENDATION] Processing time: ${processingTime}ms`);
 
     return {

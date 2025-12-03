@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "MemberDetail">;
 
@@ -27,7 +29,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
   // Mock data - sẽ nhận từ navigation params
   const member = {
     name: "Bố",
-    avatar: "👨",
+    avatar: "account",
     role: "Trụ cột gia đình",
     color: "#6366F1",
   };
@@ -43,22 +45,22 @@ export default function MemberDetailScreen({ navigation }: Props) {
       { name: "Khác", amount: 3000000, color: "#10B981" },
     ],
     recentTransactions: [
-      { id: "1", type: "expense", amount: 150000, category: "Ăn uống", date: "Hôm nay", icon: "🍔" },
-      { id: "2", type: "income", amount: 5000000, category: "Lương", date: "Hôm qua", icon: "💰" },
-      { id: "3", type: "expense", amount: 500000, category: "Xăng xe", date: "2 ngày trước", icon: "⛽" },
+      { id: "1", type: "expense", amount: 150000, category: "Ăn uống", date: "Hôm nay", icon: "hamburger" },
+      { id: "2", type: "income", amount: 5000000, category: "Lương", date: "Hôm qua", icon: "cash" },
+      { id: "3", type: "expense", amount: 500000, category: "Xăng xe", date: "2 ngày trước", icon: "gas-station" },
     ],
   };
 
   const habitsData = [
-    { id: "1", name: "Đọc sách", icon: "📚", completed: 15, total: 15, streak: 15, progress: 100 },
-    { id: "2", name: "Tập gym", icon: "💪", completed: 12, total: 15, streak: 12, progress: 80 },
-    { id: "3", name: "Thiền", icon: "🧘", completed: 10, total: 15, streak: 10, progress: 67 },
+    { id: "1", name: "Đọc sách", icon: "book-open-page-variant", completed: 15, total: 15, streak: 15, progress: 100 },
+    { id: "2", name: "Tập gym", icon: "dumbbell", completed: 12, total: 15, streak: 12, progress: 80 },
+    { id: "3", name: "Thiền", icon: "meditation", completed: 10, total: 15, streak: 10, progress: 67 },
   ];
 
   const goalsData = [
-    { id: "1", name: "Mua xe", icon: "🚗", target: 500000000, current: 180000000, deadline: "31/12/2025" },
-    { id: "2", name: "Du lịch", icon: "✈️", target: 50000000, current: 25000000, deadline: "01/06/2025" },
-    { id: "3", name: "Quỹ dự phòng", icon: "🏦", target: 100000000, current: 45000000, deadline: "31/12/2024" },
+    { id: "1", name: "Mua xe", icon: "car", target: 500000000, current: 180000000, deadline: "31/12/2025" },
+    { id: "2", name: "Du lịch", icon: "airplane", target: 50000000, current: 25000000, deadline: "01/06/2025" },
+    { id: "3", name: "Quỹ dự phòng", icon: "bank", target: 100000000, current: 45000000, deadline: "31/12/2024" },
   ];
 
   return (
@@ -69,7 +71,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết thành viên</Text>
         <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editIcon}>✏️</Text>
+          <Icon name="pencil" size={20} color="#00796B" />
         </TouchableOpacity>
       </View>
 
@@ -78,7 +80,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
           {/* Member Profile */}
           <View style={[styles.profileCard, { borderTopColor: member.color }]}>
             <View style={[styles.avatar, { backgroundColor: `${member.color}22` }]}>
-              <Text style={styles.avatarText}>{member.avatar}</Text>
+              <Icon name={member.avatar as any} size={48} color={member.color} />
             </View>
             <Text style={styles.memberName}>{member.name}</Text>
             <Text style={styles.memberRole}>{member.role}</Text>
@@ -90,25 +92,34 @@ export default function MemberDetailScreen({ navigation }: Props) {
               style={[styles.tab, selectedTab === "finance" && styles.tabActive]}
               onPress={() => setSelectedTab("finance")}
             >
-              <Text style={[styles.tabText, selectedTab === "finance" && styles.tabTextActive]}>
-                💰 Tài chính
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon name="currency-usd" size={16} color={selectedTab === "finance" ? "#00796B" : "#666"} style={{ marginRight: 6 }} />
+                <Text style={[styles.tabText, selectedTab === "finance" && styles.tabTextActive]}>
+                  Tài chính
+                </Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, selectedTab === "habits" && styles.tabActive]}
               onPress={() => setSelectedTab("habits")}
             >
-              <Text style={[styles.tabText, selectedTab === "habits" && styles.tabTextActive]}>
-                ✓ Thói quen
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon name="check-circle" size={16} color={selectedTab === "habits" ? "#00796B" : "#666"} style={{ marginRight: 6 }} />
+                <Text style={[styles.tabText, selectedTab === "habits" && styles.tabTextActive]}>
+                  Thói quen
+                </Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, selectedTab === "goals" && styles.tabActive]}
               onPress={() => setSelectedTab("goals")}
             >
-              <Text style={[styles.tabText, selectedTab === "goals" && styles.tabTextActive]}>
-                🎯 Mục tiêu
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon name="target" size={16} color={selectedTab === "goals" ? "#00796B" : "#666"} style={{ marginRight: 6 }} />
+                <Text style={[styles.tabText, selectedTab === "goals" && styles.tabTextActive]}>
+                  Mục tiêu
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -160,7 +171,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
                 {financeData.recentTransactions.map((trans) => (
                   <View key={trans.id} style={styles.transactionCard}>
-                    <Text style={styles.transIcon}>{trans.icon}</Text>
+                    <Icon name={trans.icon as any} size={20} color={trans.type === "income" ? "#10B981" : "#EF4444"} />
                     <View style={styles.transInfo}>
                       <Text style={styles.transCategory}>{trans.category}</Text>
                       <Text style={styles.transDate}>{trans.date}</Text>
@@ -181,11 +192,11 @@ export default function MemberDetailScreen({ navigation }: Props) {
               {habitsData.map((habit) => (
                 <View key={habit.id} style={styles.habitCard}>
                   <View style={styles.habitHeader}>
-                    <Text style={styles.habitIcon}>{habit.icon}</Text>
+                    <Icon name={habit.icon as any} size={20} color="#6366F1" />
                     <View style={styles.habitInfo}>
                       <Text style={styles.habitName}>{habit.name}</Text>
                       <Text style={styles.habitMeta}>
-                        {habit.completed}/{habit.total} ngày • 🔥 {habit.streak}
+                        {habit.completed}/{habit.total} ngày • <Icon name="fire" size={12} color="#F59E0B" /> {habit.streak}
                       </Text>
                     </View>
                     <Text style={styles.habitPercent}>{habit.progress}%</Text>
@@ -207,10 +218,10 @@ export default function MemberDetailScreen({ navigation }: Props) {
                 return (
                   <View key={goal.id} style={styles.goalCard}>
                     <View style={styles.goalHeader}>
-                      <Text style={styles.goalIcon}>{goal.icon}</Text>
+                      <Icon name={goal.icon as any} size={20} color="#00796B" />
                       <View style={styles.goalInfo}>
                         <Text style={styles.goalName}>{goal.name}</Text>
-                        <Text style={styles.goalDeadline}>📅 {goal.deadline}</Text>
+                        <Text style={styles.goalDeadline}><Icon name="calendar" size={12} color="#999" /> {goal.deadline}</Text>
                       </View>
                     </View>
                     <View style={styles.goalAmounts}>

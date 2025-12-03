@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "FamilyChat">;
 
@@ -32,35 +34,35 @@ export default function FamilyChatScreen({ navigation }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      sender: { id: "ai", name: "AI Assistant", avatar: "🤖", color: "#8B5CF6" },
+      sender: { id: "ai", name: "AI Assistant", avatar: "robot", color: "#8B5CF6" },
       text: "Chào cả nhà! Tôi là AI Assistant. Tôi có thể giúp gia đình lên kế hoạch chung. Hãy thử hỏi tôi nhé!",
       timestamp: new Date(Date.now() - 3600000),
       type: "ai-suggestion",
     },
     {
       id: "2",
-      sender: { id: "1", name: "Bố", avatar: "👨", color: "#6366F1" },
+      sender: { id: "1", name: "Bố", avatar: "account", color: "#6366F1" },
       text: "Cuối tuần này chúng ta đi du lịch Đà Lạt nhé!",
       timestamp: new Date(Date.now() - 3000000),
       type: "message",
     },
     {
       id: "3",
-      sender: { id: "2", name: "Mẹ", avatar: "👩", color: "#EC4899" },
+      sender: { id: "2", name: "Mẹ", avatar: "account-outline", color: "#EC4899" },
       text: "Ý kiến hay đấy! Nhưng chúng ta có đủ ngân sách không nhỉ?",
       timestamp: new Date(Date.now() - 2400000),
       type: "message",
     },
     {
       id: "4",
-      sender: { id: "ai", name: "AI Assistant", avatar: "🤖", color: "#8B5CF6" },
-      text: "💡 AI gợi ý: Du lịch Đà Lạt cần khoảng ₫30M. Hiện quỹ chung có ₫18M. Mỗi người đóng góp thêm:\n• Bố: ₫8M\n• Mẹ: ₫6M\n• Con: ₫4M/người\nDự kiến hoàn thành sau 2 tháng!",
+      sender: { id: "ai", name: "AI Assistant", avatar: "robot", color: "#8B5CF6" },
+      text: "AI gợi ý: Du lịch Đà Lạt cần khoảng ₫30M. Hiện quỹ chung có ₫18M. Mỗi người đóng góp thêm:\n• Bố: ₫8M\n• Mẹ: ₫6M\n• Con: ₫4M/người\nDự kiến hoàn thành sau 2 tháng!",
       timestamp: new Date(Date.now() - 1800000),
       type: "ai-suggestion",
     },
     {
       id: "5",
-      sender: { id: "3", name: "Con trai", avatar: "👦", color: "#10B981" },
+      sender: { id: "3", name: "Con trai", avatar: "human-child", color: "#10B981" },
       text: "Em đồng ý! Em sẽ cố gắng tiết kiệm tiền lì xì",
       timestamp: new Date(Date.now() - 1200000),
       type: "message",
@@ -84,7 +86,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      sender: { id: "current", name: "Bạn", avatar: "👤", color: "#6366F1" },
+      sender: { id: "current", name: "Bạn", avatar: "account-circle", color: "#6366F1" },
       text: inputText.trim(),
       timestamp: new Date(),
       type: "message",
@@ -101,8 +103,8 @@ export default function FamilyChatScreen({ navigation }: Props) {
       setTimeout(() => {
         const aiResponse: Message = {
           id: (Date.now() + 1).toString(),
-          sender: { id: "ai", name: "AI Assistant", avatar: "🤖", color: "#8B5CF6" },
-          text: "💡 Tôi có thể giúp gia đình lên kế hoạch chi tiết! Hãy cho tôi biết:\n1. Mục tiêu là gì?\n2. Ngân sách dự kiến?\n3. Thời gian thực hiện?",
+          sender: { id: "ai", name: "AI Assistant", avatar: "robot", color: "#8B5CF6" },
+          text: "Tôi có thể giúp gia đình lên kế hoạch chi tiết! Hãy cho tôi biết:\n1. Mục tiêu là gì?\n2. Ngân sách dự kiến?\n3. Thời gian thực hiện?",
           timestamp: new Date(),
           type: "ai-suggestion",
         };
@@ -113,9 +115,9 @@ export default function FamilyChatScreen({ navigation }: Props) {
   };
 
   const aiSuggestions = [
-    { icon: "✈️", text: "Lên kế hoạch du lịch" },
-    { icon: "💰", text: "Phân bổ ngân sách" },
-    { icon: "🎯", text: "Tạo mục tiêu chung" },
+    { icon: "airplane", text: "Lên kế hoạch du lịch" },
+    { icon: "currency-usd", text: "Phân bổ ngân sách" },
+    { icon: "target", text: "Tạo mục tiêu chung" },
   ];
 
   return (
@@ -133,7 +135,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
           <Text style={styles.headerSubtitle}>4 thành viên • Online</Text>
         </View>
         <TouchableOpacity style={styles.infoButton}>
-          <Text style={styles.infoIcon}>ℹ️</Text>
+          <Icon name="information" size={20} color="#00796B" />
         </TouchableOpacity>
       </View>
 
@@ -155,7 +157,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
               {message.type === "ai-suggestion" ? (
                 <View style={styles.aiSuggestionCard}>
                   <View style={styles.aiSuggestionHeader}>
-                    <Text style={styles.aiAvatar}>{message.sender.avatar}</Text>
+                    <Icon name={message.sender.avatar as any} size={24} color="#8B5CF6" style={{ marginRight: 8 }} />
                     <Text style={styles.aiName}>{message.sender.name}</Text>
                   </View>
                   <Text style={styles.aiSuggestionText}>{message.text}</Text>
@@ -174,7 +176,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
               ) : (
                 <View style={styles.messageWrapper}>
                   <View style={[styles.avatar, { backgroundColor: `${message.sender.color}22` }]}>
-                    <Text style={styles.avatarText}>{message.sender.avatar}</Text>
+                    <Icon name={message.sender.avatar as any} size={18} color={message.sender.color} />
                   </View>
                   <View style={styles.messageContent}>
                     <Text style={styles.senderName}>{message.sender.name}</Text>
@@ -204,7 +206,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
               style={styles.suggestionChip}
               onPress={() => setInputText(suggestion.text)}
             >
-              <Text style={styles.suggestionIcon}>{suggestion.icon}</Text>
+              <Icon name={suggestion.icon as any} size={14} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
               <Text style={styles.suggestionText}>{suggestion.text}</Text>
             </TouchableOpacity>
           ))}
@@ -214,7 +216,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
       {/* Input Bar */}
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
-          <Text style={styles.attachIcon}>📎</Text>
+          <Icon name="paperclip" size={20} color="rgba(255,255,255,0.6)" />
         </TouchableOpacity>
         <TextInput
           style={styles.input}

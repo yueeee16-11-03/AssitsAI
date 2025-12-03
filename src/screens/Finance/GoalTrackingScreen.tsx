@@ -17,6 +17,7 @@ import { useWalletStore } from '../../store/walletStore';
 import { useTransactionStore } from '../../store/transactionStore';
 import { useGoalStore } from '../../store/goalStore';
 import { computeGoalCurrent, computeTotalCurrent, getProgress as utilGetProgress } from '../../utils/goalProgress';
+import NotificationService from '../../services/NotificationService';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -68,7 +69,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
 
   const getProgress = utilGetProgress;
 
-  const getTimeRemaining = (deadline: any) => {
+  const getTimeRemaining = React.useCallback((deadline: any) => {
     // Accept Date | string | Firestore.Timestamp-like objects
     if (!deadline) return 0;
     let targetDate: Date | null = null;
@@ -84,7 +85,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
     const diff = targetDate.getTime() - now.getTime();
     const months = Math.ceil(diff / (1000 * 60 * 60 * 24 * 30));
     return months;
-  };
+  }, []);
 
   // Format/normalize a deadline input/value: returns formatted localized month/year or placeholder
   const formatDeadlineLabel = (deadline: any) => {
@@ -99,12 +100,12 @@ export default function GoalTrackingScreen({ navigation }: Props) {
     return d ? d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) : '—';
   };
 
-  const getRequiredMonthly = (goal: Goal) => {
+  const getRequiredMonthly = React.useCallback((goal: Goal) => {
     const current = computeGoalCurrent(goal);
     const remaining = goal.targetAmount - current;
     const months = getTimeRemaining(goal.deadline);
     return months > 0 ? remaining / months : 0;
-  };
+  }, [getTimeRemaining]);
 
   // Provide a narrow-but-visible minimum for extremely small percentages
   const progressVisibleWidth = (p: number) => {
@@ -234,6 +235,46 @@ export default function GoalTrackingScreen({ navigation }: Props) {
     // keep default selected wallet if wallets change
     if (!selectedWalletId && wallets && wallets.length > 0) setSelectedWalletId(wallets[0]?.id ?? null);
   }, [wallets, selectedWalletId]);
+
+  // When goals update: schedule payday reminders and send progress alerts as needed
+  React.useEffect(() => {
+    if (!goals || goals.length === 0) return;
+
+    // avoid duplicate progress warnings per session
+    const alerted = new Set<string>();
+
+    (async () => {
+      for (const g of goals) {
+        // Schedule payday reminders for goals with monthly contribution
+        if (g.monthlyContribution && g.monthlyContribution > 0) {
+          try {
+            await NotificationService.scheduleGoalPaydayReminder(
+              { id: g.id, title: g.title, monthlyContribution: g.monthlyContribution },
+              { days: [5, 10], hour: 9, minute: 0 }
+            );
+          } catch (err) {
+            console.warn('GoalTracking: failed to schedule payday reminder', g.id, err);
+          }
+        }
+
+        // Progress Alert: if close to deadline (<=3 months) and monthly contributions insufficient
+        try {
+          const monthsLeft = getTimeRemaining(g.deadline);
+          const current = computeGoalCurrent(g);
+          const pct = getProgress(current, g.targetAmount);
+          const requiredMonthly = getRequiredMonthly(g);
+
+          if (monthsLeft > 0 && monthsLeft <= 3 && pct < 100 && (g.monthlyContribution || 0) < requiredMonthly && !alerted.has(g.id)) {
+            alerted.add(g.id);
+            const body = `Chỉ còn ${monthsLeft} tháng nữa là đến hạn ${g.title || 'mục tiêu'}, bạn mới đạt ${Math.floor(pct)}%. Cần nạp thêm ${formatVNDCompact(Math.round(requiredMonthly))}/tháng.`;
+            NotificationService.displayNotification({ id: `goal-progress-${g.id}`, title: 'Cảnh báo tiến độ', body }).catch(() => {});
+          }
+        } catch (e) {
+          console.warn('GoalTracking: progress check failed', e);
+        }
+      }
+    })();
+  }, [goals, getProgress, getRequiredMonthly, getTimeRemaining]);
 
   const handleConfirmAddToGoal = async (g: Goal, amountOverride?: number, noteOverride?: string, dateOverride?: string) => {
     const amt = amountOverride !== undefined ? Math.round(amountOverride) : Math.round(parseFloat(addAmount.replace(/[^0-9.-]/g, '')) || 0);

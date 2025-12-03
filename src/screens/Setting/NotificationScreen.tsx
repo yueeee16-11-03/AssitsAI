@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import useNotificationStore from '../../store/notificationStore';
 import {
   View,
   Text,
@@ -38,93 +39,18 @@ export default function NotificationScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      type: "warning",
-      title: "Cảnh báo vượt ngân sách",
-      message: "Chi tiêu 'Mua sắm' đã vượt ₫500K so với ngân sách tháng này",
-      timestamp: new Date(Date.now() - 300000),
-      read: false,
-      icon: 'alert-circle-outline',
-      color: "#EF4444",
-      actionRoute: "BudgetPlanner",
-    },
-    {
-      id: "2",
-      type: "ai",
-      title: "Gợi ý tiết kiệm từ AI",
-      message: "Bạn có thể tiết kiệm thêm ₫2M nếu giảm chi tiêu ăn uống 20%",
-      timestamp: new Date(Date.now() - 1800000),
-      read: false,
-      icon: 'robot',
-      color: "#8B5CF6",
-      actionRoute: "AIRecommendation",
-    },
-    {
-      id: "3",
-      type: "reminder",
-      title: "Nhắc nhở check-in thói quen",
-      message: "Đã đến giờ hoàn thành thói quen 'Uống nước' hôm nay",
-      timestamp: new Date(Date.now() - 3600000),
-      read: false,
-      icon: 'clock-outline',
-      color: "#F59E0B",
-      actionRoute: "DailyCheckIn",
-    },
-    {
-      id: "4",
-      type: "achievement",
-      title: "Chúc mừng! Streak mới",
-      message: "Bạn đã duy trì thói quen 'Đọc sách' được 15 ngày liên tiếp 🔥",
-      timestamp: new Date(Date.now() - 7200000),
-      read: true,
-      icon: 'trophy',
-      color: "#10B981",
-      actionRoute: "HabitDashboard",
-    },
-    {
-      id: "5",
-      type: "ai",
-      title: "Phân tích chi tiêu tuần",
-      message: "AI phát hiện bạn đã giảm 15% chi tiêu so với tuần trước. Làm tốt lắm!",
-      timestamp: new Date(Date.now() - 86400000),
-      read: true,
-      icon: 'chart-bar',
-      color: "#8B5CF6",
-      actionRoute: "AIInsight",
-    },
-    {
-      id: "6",
-      type: "warning",
-      title: "Sắp hết ngân sách tháng",
-      message: "Chỉ còn ₫1.2M trong ngân sách 'Giải trí' - còn 10 ngày",
-      timestamp: new Date(Date.now() - 172800000),
-      read: true,
-      icon: 'alert-outline',
-      color: "#F59E0B",
-    },
-    {
-      id: "7",
-      type: "reminder",
-      title: "Mục tiêu 'Du lịch Đà Lạt'",
-      message: "Hãy đóng góp thêm ₫500K để đạt mục tiêu chung gia đình",
-      timestamp: new Date(Date.now() - 259200000),
-      read: true,
-      icon: 'bullseye',
-      color: "#6366F1",
-      actionRoute: "SharedGoal",
-    },
-  ]);
+  // persisted notifications are stored in Firestore: users/{uid}/notifications
+  const notifications = useNotificationStore(state => state.notifications);
+  const initialize = useNotificationStore(state => state.initialize);
+  const markAsRead = useNotificationStore(state => state.markAsRead);
+  const markAllRead = useNotificationStore(state => state.markAllRead);
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(notif => (notif.id === id ? { ...notif, read: true } : notif))
-    );
+  const handleMarkAsRead = async (id: string) => {
+    try { await markAsRead(id); } catch (e: any) { console.warn('Failed to mark read', e.message || e); }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+  const handleMarkAllAsRead = async () => {
+    try { await markAllRead(); } catch (e: any) { console.warn('Failed markAll read', e.message || e); }
   };
 
   const handleNotificationPress = (notif: Notification) => {
@@ -134,12 +60,14 @@ export default function NotificationScreen({ navigation }: Props) {
     }
   };
 
-  const filteredNotifications =
-    selectedTab === "all"
-      ? notifications
-      : notifications.filter(n => !n.read);
+  React.useEffect(() => {
+    initialize();
+    return () => { useNotificationStore.getState().cleanup(); };
+  }, [initialize]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const filteredNotifications = selectedTab === 'all' ? notifications : notifications.filter((n: Notification) => !n.read);
+
+  const unreadCount = notifications.filter((n: Notification) => !n.read).length;
 
   const getTimeAgo = (timestamp: Date) => {
     const seconds = Math.floor((Date.now() - timestamp.getTime()) / 1000);
@@ -153,7 +81,7 @@ export default function NotificationScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-left" size={20} color="#FFFFFF" />
+          <Icon name="chevron-left" size={20} color="#111827" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Thông báo</Text>
@@ -165,6 +93,7 @@ export default function NotificationScreen({ navigation }: Props) {
         </View>
         {unreadCount > 0 && (
           <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
+            <Icon name="bell-check" size={16} color="#111827" style={styles.iconMarginRight} />
             <Text style={styles.markAllText}>Đọc tất cả</Text>
           </TouchableOpacity>
         )}
@@ -203,7 +132,7 @@ export default function NotificationScreen({ navigation }: Props) {
               </Text>
             </View>
           ) : (
-            filteredNotifications.map((notif) => {
+            filteredNotifications.map((notif: Notification) => {
               const leftAccentColor =
                 notif.type === 'warning' || notif.type === 'ai'
                   ? '#10B981'
@@ -263,15 +192,15 @@ export default function NotificationScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: '#10B981', borderBottomWidth: 0 },
-  backButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'transparent', alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#FFFFFF" },
-  headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", marginLeft: 12, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'transparent', alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: "#111827" },
+  headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
   unreadBadge: { backgroundColor: "#EF4444", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 },
   unreadBadgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
-  markAllButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.12)' },
-  markAllText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  markAllButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
+  markAllText: { color: "#111827", fontSize: 13, fontWeight: "700" },
   tabSelector: { flexDirection: "row", backgroundColor: "rgba(0, 137, 123, 0.08)", margin: 16, borderRadius: 12, padding: 4 },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
   tabActive: { backgroundColor: "#E5E7EB" },
@@ -305,4 +234,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   ctaText: { fontSize: 12, fontWeight: '700' },
+  iconMarginRight: { marginRight: 8 },
 });

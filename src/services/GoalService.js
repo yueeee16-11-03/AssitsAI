@@ -1,4 +1,5 @@
 import GoalApi from '../api/goalApi';
+import NotificationService from './NotificationService';
 
 class GoalService {
   async getAllGoals() {
@@ -55,10 +56,40 @@ class GoalService {
   async addMoneyToGoal(goalId, transaction) {
     try {
       console.log('💳 [GoalService] addMoneyToGoal:', goalId, transaction.amount);
+      // Read the goal before updating so we can compute progress delta
+      const allBefore = await this.getAllGoals();
+      const beforeGoal = (allBefore || []).find(g => g.id === goalId) || null;
+      const beforeAmount = beforeGoal?.currentAmount || 0;
+
       await GoalApi.addTransactionToGoal(goalId, transaction);
       // small delay to allow server-side timestamps
       await new Promise(r => setTimeout(r, 400));
       const fresh = await this.getAllGoals();
+      // Find updated goal to check milestones
+      const updatedGoal = (fresh || []).find(g => g.id === goalId) || null;
+      const afterAmount = updatedGoal?.currentAmount || 0;
+      const target = updatedGoal?.targetAmount || 0;
+
+      // compute percentage progress before and after
+      const beforePct = target > 0 ? Math.floor((beforeAmount / target) * 100) : 0;
+      const afterPct = target > 0 ? Math.floor((afterAmount / target) * 100) : 0;
+
+      // milestone thresholds
+      const milestones = [25, 50, 75, 100];
+      for (const m of milestones) {
+        if (beforePct < m && afterPct >= m) {
+          try {
+            await NotificationService.displayNotification({
+              id: `goal-${goalId}-milestone-${m}`,
+              title: 'Chúc mừng!',
+              body: `Chúc mừng! Mục tiêu "${updatedGoal?.title || 'Mục tiêu'}" đã đạt ${m}% tiến độ. Tiếp tục giữ vững! 🎉`,
+            });
+            console.log('GoalService: sent milestone notification', goalId, m);
+          } catch (e) {
+            console.warn('GoalService: failed sending milestone notification', e);
+          }
+        }
+      }
       return { success: true, freshData: fresh };
     } catch (error) {
       console.error('❌ [GoalService] addMoneyToGoal error:', error);

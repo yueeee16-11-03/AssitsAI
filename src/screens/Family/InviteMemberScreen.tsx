@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
 
@@ -27,11 +29,11 @@ interface PendingInvitation {
 }
 
 const SHARE_METHODS = [
-  { key: 'whatsapp', name: 'WhatsApp', icon: '💬', color: '#25D366' },
-  { key: 'messenger', name: 'Messenger', icon: '📧', color: '#0084FF' },
-  { key: 'sms', name: 'Tin nhắn', icon: '💬', color: '#34C759' },
-  { key: 'email', name: 'Email', icon: '✉️', color: '#007AFF' },
-  { key: 'copy', name: 'Sao chép', icon: '📋', color: '#6366F1' },
+  { key: 'whatsapp', name: 'WhatsApp', icon: 'whatsapp', color: '#25D366' },
+  { key: 'messenger', name: 'Messenger', icon: 'facebook-messenger', color: '#0084FF' },
+  { key: 'sms', name: 'Tin nhắn', icon: 'message-text', color: '#34C759' },
+  { key: 'email', name: 'Email', icon: 'email', color: '#007AFF' },
+  { key: 'copy', name: 'Sao chép', icon: 'content-copy', color: '#6366F1' },
 ];
 
 export default function InviteMemberScreen({ navigation }: Props) {
@@ -88,7 +90,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
 
   const generateInviteMessage = () => {
     return `🏠 Bạn được mời tham gia "${familyInfo.name}"!\n\n` +
-           `👨‍👩‍👧‍👦 Hiện tại có ${familyInfo.memberCount} thành viên\n` +
+           `Hiện tại có ${familyInfo.memberCount} thành viên\n` +
            `👑 Quản trị viên: ${familyInfo.admin}\n\n` +
            `📱 Tải ứng dụng Assist và nhập mã: ${currentInviteCode}\n` +
            `🔗 Hoặc nhấn link: ${generateInviteLink()}\n\n` +
@@ -247,7 +249,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
       onPress={() => handleShareVia(method.key)}
     >
       <View style={[styles.shareIcon, { backgroundColor: `${method.color}20` }]}>
-        <Text style={styles.shareIconText}>{method.icon}</Text>
+        <Icon name={method.icon as any} size={20} color={method.color} />
       </View>
       <Text style={styles.shareMethodName}>{method.name}</Text>
     </TouchableOpacity>
@@ -336,7 +338,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Family Info */}
         <View style={styles.familyCard}>
-          <Text style={styles.familyIcon}>👨‍👩‍👧‍👦</Text>
+          <Icon name="account-group" size={48} color="#00796B" style={{ marginBottom: 12 }} />
           <Text style={styles.familyName}>{familyInfo.name}</Text>
           <Text style={styles.familyDetails}>
             {familyInfo.memberCount} thành viên • Quản trị: {familyInfo.admin}
@@ -352,7 +354,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
               style={styles.copyCodeButton}
               onPress={() => handleShareVia('copy')}
             >
-              <Text style={styles.copyCodeText}>📋</Text>
+              <Icon name="content-copy" size={20} color="#6366F1" />
             </TouchableOpacity>
           </View>
           <Text style={styles.codeExpiry}>Có hiệu lực trong 7 ngày</Text>
@@ -363,7 +365,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
           style={styles.qrToggleButton}
           onPress={() => setQrCodeVisible(!qrCodeVisible)}
         >
-          <Text style={styles.qrToggleIcon}>📱</Text>
+          <Icon name="qrcode" size={20} color="#00796B" style={{ marginRight: 12 }} />
           <Text style={styles.qrToggleText}>
             {qrCodeVisible ? 'Ẩn mã QR' : 'Hiển thị mã QR'}
           </Text>
@@ -397,7 +399,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
             pendingInvites.map(renderPendingInvite)
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon}>📤</Text>
+              <Icon name="send" size={48} color="#00796B" style={{ marginBottom: 16 }} />
               <Text style={styles.emptyStateText}>Chưa có lời mời nào</Text>
               <Text style={styles.emptyStateSubtext}>
                 Gửi lời mời để thêm thành viên vào gia đình
@@ -411,7 +413,10 @@ export default function InviteMemberScreen({ navigation }: Props) {
 
       {/* Tips */}
       <View style={styles.tipsCard}>
-        <Text style={styles.tipsTitle}>💡 Mẹo</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+          <Icon name="lightbulb-on" size={14} color="#6366F1" style={{ marginRight: 6 }} />
+          <Text style={styles.tipsTitle}>Mẹo</Text>
+        </View>
         <Text style={styles.tipsText}>
           Mã mời có hiệu lực 7 ngày. Bạn có thể tạo mã mới hoặc gia hạn lời mời cũ
         </Text>

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+import NotificationService from '../../services/NotificationService';
 import { useFocusEffect } from "@react-navigation/native";
 import auth from "@react-native-firebase/auth";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -31,6 +32,8 @@ export default function AIRecommendationScreen({ navigation }: Props) {
   useFocusEffect(
     React.useCallback(() => {
       loadAndGenerateRecommendations();
+      // ensure a daily reminder is scheduled for AI recommendations
+      NotificationService.scheduleDailyRecommendationReminder({ hour: 7, minute: 0 }).catch(err => console.warn('AIRecommendation: schedule failed', err));
     }, [])
   );
 

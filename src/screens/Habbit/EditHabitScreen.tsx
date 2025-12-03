@@ -46,6 +46,8 @@ export default function EditHabitScreen({ navigation, route }: Props) {
   const [selectedColor, setSelectedColor] = useState("#6366F1");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+  const [isDaily, setIsDaily] = useState(false);
+  const [dailyReminderTime, setDailyReminderTime] = useState("08:00");
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [tempTime, setTempTime] = useState("06:00");
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -64,7 +66,15 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         setSelectedIcon(foundHabit.icon || "⭐");
         setSelectedColor(foundHabit.color || "#6366F1");
         setSelectedCategory(foundHabit.category || "");
-        setSchedule(foundHabit.schedule || []);
+        // Only keep the first schedule entry (app uses single-schedule mode)
+        setSchedule(foundHabit.schedule && foundHabit.schedule.length > 0 ? [foundHabit.schedule[0]] : []);
+        // Prefer explicit isDaily flag if present; otherwise infer from schedule having all 7 days
+        const firstSchedule = foundHabit.schedule?.[0];
+        const inferredIsDaily = !!(firstSchedule && Array.isArray(firstSchedule.daysOfWeek) && firstSchedule.daysOfWeek.length === 7);
+        setIsDaily(foundHabit.isDaily ?? inferredIsDaily);
+        if (firstSchedule && firstSchedule.daysOfWeek?.length === 7) {
+          setDailyReminderTime(firstSchedule.time || "08:00");
+        }
       }
     }, [habitId, habits])
   );
@@ -103,15 +113,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
     );
   };
 
-  const addSchedule = () => {
-    const newSchedule: ScheduleItem = {
-      id: Date.now().toString(),
-      time: "06:00",
-      daysOfWeek: [1, 2, 3, 4, 5, 6, 0],
-      reminder: true,
-    };
-    setSchedule([...schedule, newSchedule]);
-  };
+  // (single schedule mode: use schedule[0] or empty)
 
   const removeSchedule = (scheduleId: string) => {
     setSchedule(schedule.filter((s) => s.id !== scheduleId));
@@ -125,14 +127,21 @@ export default function EditHabitScreen({ navigation, route }: Props) {
       return;
     }
 
-    if (schedule.length === 0) {
+    if (!isDaily && schedule.length === 0) {
       Alert.alert("Thông báo", "Vui lòng thêm ít nhất một lịch trình");
       return;
     }
 
     try {
+      // Nếu là Hàng ngày, tạo schedule mặc định với giờ đã chọn
+      const finalSchedule = isDaily
+        ? [{ id: "1", time: dailyReminderTime, daysOfWeek: [0, 1, 2, 3, 4, 5, 6], reminder: true }]
+        : schedule;
+
+      console.log('EditHabitScreen: isDaily=', isDaily, 'finalSchedule=', JSON.stringify(finalSchedule));
+
       // Determine reminder metadata from schedule
-      const reminders = schedule.filter(s => s.reminder);
+      const reminders = finalSchedule.filter(s => s.reminder);
       const hasReminder = reminders.length > 0;
       const reminderTime = hasReminder ? reminders[0].time : null;
 
@@ -144,7 +153,8 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         category: selectedCategory,
         target: parseInt(target, 10),
         unit,
-        schedule,
+        schedule: finalSchedule,
+        isDaily,
         hasReminder,
         reminderTime,
       });
@@ -160,13 +170,14 @@ export default function EditHabitScreen({ navigation, route }: Props) {
           await NotificationService.requestPermission();
           for (const r of reminders) {
             // When editing an existing habit, schedule reminders for the exact user time
-            // (minutesBefore: 0) so the updated reminder can fire the same day if appropriate.
+            // Pass daysOfWeek to schedule weekly triggers for selected days
             await NotificationService.scheduleHabitReminder({
               id: savedId,
               name: habitName,
               reminderTime: r.time,
+              daysOfWeek: r.daysOfWeek,
               timeZone: 'Asia/Ho_Chi_Minh',
-            }, { minutesBefore: 0 });
+            });
           }
         }
       } catch (e) {
@@ -339,25 +350,89 @@ export default function EditHabitScreen({ navigation, route }: Props) {
 
         {/* Schedule Section */}
         <View style={styles.section}>
-          <View style={styles.scheduleHeader}>
-            <View>
-              <Text style={styles.label}>Lịch trình sinh hoạt</Text>
-              <Text style={styles.scheduleSubtitle}>Chọn những ngày bạn muốn thực hiện thói quen</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Tần suất</Text>
+            <View style={styles.frequencyToggle}>
+              <TouchableOpacity
+                style={[
+                  styles.frequencyButton,
+                  isDaily && styles.frequencyButtonActive,
+                ]}
+                onPress={() => {
+                  setIsDaily(true);
+                  // Không cần xóa schedule vì edit có thể giữ lại dữ liệu cũ
+                }}
+              >
+                <Icon name="calendar-today" size={16} color={isDaily ? "#10B981" : "#999999"} style={styles.iconMarginRight} />
+                <Text style={[
+                  styles.frequencyButtonText,
+                  isDaily && styles.frequencyButtonTextActive,
+                ]}>
+                  Hàng ngày
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.frequencyButton,
+                  !isDaily && styles.frequencyButtonActive,
+                ]}
+                onPress={() => {
+                  setIsDaily(false);
+                  // Nếu chưa có schedule nào, tạo một cái mặc định
+                  if (schedule.length === 0) {
+                    setSchedule([{
+                      id: "1",
+                      time: "08:00",
+                      daysOfWeek: [1, 2, 3, 4, 5], // T2-T6
+                      reminder: true,
+                    }]);
+                  }
+                }}
+              >
+                <Icon name="calendar-check" size={16} color={!isDaily ? "#10B981" : "#999999"} style={styles.iconMarginRight} />
+                <Text style={[
+                  styles.frequencyButtonText,
+                  !isDaily && styles.frequencyButtonTextActive,
+                ]}>
+                  Ngày cụ thể
+                </Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.addScheduleButton}
-              onPress={addSchedule}
-            >
-              <Icon name="plus" size={16} color="#FFFFFF" style={styles.iconMarginRight} />
-              <Text style={styles.addScheduleText}>Thêm lịch</Text>
-            </TouchableOpacity>
-          </View>
 
-          {schedule.length === 0 ? (
-            <Text style={styles.emptyText}>Chưa có lịch trình. Hãy thêm một.</Text>
-          ) : (
-            schedule.map((item) => (
-              <View key={item.id} style={styles.scheduleCard}>
+            {/* Schedule Details */}
+            {isDaily ? (
+              <>
+                <View style={styles.dailyScheduleInfo}>
+                  <Icon name="information" size={16} color="#10B981" style={styles.iconMarginRight} />
+                  <Text style={styles.dailyScheduleText}>Mỗi ngày, cả tuần</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.timeDisplay}
+                  onPress={() => {
+                    setEditingScheduleId('daily');
+                    setTempTime(dailyReminderTime);
+                    setShowTimePicker(true);
+                  }}
+                >
+                  <View style={styles.flexRow}>
+                    <Icon name="clock-outline" size={16} color={selectedColor} />
+                    <Text style={[styles.timeText, styles.iconMarginRight]}>{dailyReminderTime}</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.scheduleSubtitle}>Chọn những ngày bạn muốn thực hiện thói quen</Text>
+
+                {schedule.length === 0 ? (
+                  <View style={styles.scheduleCard}>
+                    <Text style={styles.emptyText}>Chưa có lịch trình. Chọn "Ngày cụ thể" để thiết lập.</Text>
+                  </View>
+                ) : (
+                  (() => {
+                    const item = schedule[0];
+                    return (
+                      <View key={item.id} style={styles.scheduleCard}>
                 {/* Time */}
                 <View style={styles.scheduleTimeRow}>
                   <TouchableOpacity
@@ -436,8 +511,12 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                   </View>
                 </TouchableOpacity>
               </View>
-            ))
-          )}
+                    );
+                  })()
+                )}
+              </>
+            )}
+          </View>
         </View>
 
         {/* Stats */}
@@ -510,7 +589,13 @@ export default function EditHabitScreen({ navigation, route }: Props) {
             const hh = String(selectedDate.getHours()).padStart(2, '0');
             const mm = String(selectedDate.getMinutes()).padStart(2, '0');
             const newTime = `${hh}:${mm}`;
-            setSchedule((prev) => prev.map((s) => s.id === editingScheduleId ? { ...s, time: newTime } : s));
+            
+            if (editingScheduleId === 'daily') {
+              setDailyReminderTime(newTime);
+            } else {
+              setSchedule((prev) => prev.map((s) => s.id === editingScheduleId ? { ...s, time: newTime } : s));
+            }
+            
             setTempTime(newTime);
             setShowTimePicker(false);
             setEditingScheduleId(null);
@@ -582,7 +667,7 @@ const styles = StyleSheet.create({
   iconButtonActive: { borderColor: "#6366F1", backgroundColor: "#6366F1" },
   iconText: { fontSize: 28 },
   colorsGrid: { flexDirection: "row", gap: 12, justifyContent: "center", flexWrap: "wrap" },
-  colorButton: { width: 48, height: 48, borderRadius: 24, borderWidth: 3, borderColor: "transparent" },
+  colorButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: "transparent" },
   colorButtonActive: { borderColor: "#10B981" },
   categoriesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   categoryButton: { flex: 1, minWidth: "45%", flexDirection: "row", alignItems: "center", backgroundColor: "#F3F4F6", borderRadius: 12, padding: 12, borderWidth: 2, borderColor: "transparent" },
@@ -590,6 +675,13 @@ const styles = StyleSheet.create({
   categoryIcon: { fontSize: 24, marginRight: 8 },
   categoryName: { fontSize: 14, fontWeight: "700", color: "#111827" },
   categoryNameActive: { color: "#111827" },
+  frequencyToggle: { flexDirection: "row", gap: 8, backgroundColor: "#F3F4F6", borderRadius: 10, padding: 4, marginBottom: 12 },
+  frequencyButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: "transparent", alignItems: "center", justifyContent: "center", flexDirection: "row" },
+  frequencyButtonActive: { backgroundColor: "#FFFFFF", borderWidth: 2, borderColor: "#10B981" },
+  frequencyButtonText: { fontSize: 13, fontWeight: "700", color: "#999999" },
+  frequencyButtonTextActive: { color: "#10B981" },
+  dailyScheduleInfo: { flexDirection: "row", alignItems: "center", backgroundColor: "#F0F9FF", borderRadius: 12, padding: 16, borderLeftWidth: 4, borderLeftColor: "#10B981", marginBottom: 12 },
+  dailyScheduleText: { fontSize: 14, fontWeight: "600", color: "#10B981" },
   scheduleHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 12 },
   addScheduleButton: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: "#6366F1", borderRadius: 10, flexDirection: "row", alignItems: "center" },
   addScheduleText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },

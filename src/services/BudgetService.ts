@@ -157,9 +157,63 @@ class BudgetService {
 
       console.log('🔵 [SERVICE] Updating budget:', budgetId, updateData);
 
+      // Read current budget before updating so we can detect crossing into overrun
+      let beforeBudgetValue: number | null = null;
+      let categoryId: string | null = null;
+      try {
+        const currentUser = auth().currentUser;
+        if (currentUser) {
+          const doc = await firestore()
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('budgets')
+            .doc(budgetId)
+            .get({ source: 'server' });
+          if (doc && doc.exists) {
+            beforeBudgetValue = doc.data()?.budget || null;
+            categoryId = String(doc.data()?.categoryId || '');
+          }
+        }
+      } catch (e) {
+        console.warn('BudgetService: failed reading pre-update budget', e?.message || e);
+      }
+
       await budgetApi.updateBudget(budgetId, updateData);
 
       console.log('✅ [SERVICE] Budget updated:', budgetId);
+
+      // If budget value changed to a lower number, and current spending already exceeds it,
+      // create an immediate notification to alert user.
+      try {
+        if (typeof updateData.budget === 'number' && categoryId) {
+          const newBudgetValue = updateData.budget;
+
+          // compute current month/year spending for this category
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = now.getMonth();
+          const spent = await this.getCategorySpending(categoryId, year, month);
+
+          // Trigger notification only if previously not over budget and now over budget
+          if ((beforeBudgetValue === null || beforeBudgetValue >= spent) && spent > newBudgetValue) {
+            const notifId = `budget-overrun-${budgetId}-${year}-${month}`;
+            const overAmount = spent - newBudgetValue;
+            // Lazy require NotificationService to avoid module cycle issues in some environments
+            const NotificationService = require('./NotificationService').default;
+            NotificationService.displayNotification({
+              id: notifId,
+              title: `Vượt ngân sách: ${categoryId}`,
+              body: `Ngân sách cho danh mục đã được điều chỉnh và hiện đã vượt ${overAmount.toLocaleString('vi-VN')} VNĐ.`,
+              type: 'warning',
+              icon: 'alert-circle-outline',
+              actionRoute: 'BudgetPlanner',
+            }).catch(() => {});
+            console.log('BudgetService: created budget overrun notification', notifId);
+          }
+        }
+      } catch (e) {
+        console.warn('BudgetService: post-update overrun notification failed', e?.message || e);
+      }
       return true;
     } catch (error) {
       console.error('❌ [SERVICE] Error updating budget:', error);

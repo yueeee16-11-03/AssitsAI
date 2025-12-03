@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "FamilyOverview">;
 
@@ -46,7 +48,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
     {
       id: "1",
       name: "Bố",
-      avatar: "👨",
+      avatar: "account",
       role: "Trụ cột gia đình",
       finance: { income: 25000000, expense: 18000000, saving: 7000000 },
       habits: { completed: 4, total: 5, streak: 15 },
@@ -56,7 +58,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
     {
       id: "2",
       name: "Mẹ",
-      avatar: "👩",
+      avatar: "account-outline",
       role: "Quản lý tài chính",
       finance: { income: 15000000, expense: 12000000, saving: 3000000 },
       habits: { completed: 5, total: 5, streak: 20 },
@@ -66,7 +68,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
     {
       id: "3",
       name: "Con trai",
-      avatar: "👦",
+      avatar: "human-child",
       role: "Học sinh",
       finance: { income: 2000000, expense: 1500000, saving: 500000 },
       habits: { completed: 3, total: 4, streak: 8 },
@@ -76,7 +78,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
     {
       id: "4",
       name: "Con gái",
-      avatar: "👧",
+      avatar: "human-female",
       role: "Học sinh",
       finance: { income: 1500000, expense: 1200000, saving: 300000 },
       habits: { completed: 4, total: 4, streak: 12 },
@@ -100,7 +102,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
           style={styles.addButton}
           onPress={() => navigation.navigate("FamilyChat")}
         >
-          <Text style={styles.addIcon}>💬</Text>
+          <Icon name="message-text" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -155,7 +157,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                   <View style={styles.memberHeader}>
                     <View style={styles.memberInfo}>
                       <View style={[styles.memberAvatar, { backgroundColor: `${member.color}22` }]}>
-                        <Text style={styles.memberAvatarText}>{member.avatar}</Text>
+                        <Icon name={member.avatar as any} size={32} color={member.color} />
                       </View>
                       <View style={styles.memberDetails}>
                         <Text style={styles.memberName}>{member.name}</Text>
@@ -172,7 +174,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                   {/* Finance Stats */}
                   <View style={styles.memberStats}>
                     <View style={styles.statRow}>
-                      <Text style={styles.statIcon}>💰</Text>
+                      <Icon name="currency-usd" size={20} color="#10B981" style={{ marginRight: 6 }} />
                       <View style={styles.statInfo}>
                         <Text style={styles.statLabel}>Thu nhập</Text>
                         <Text style={styles.statValue}>
@@ -181,7 +183,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                       </View>
                     </View>
                     <View style={styles.statRow}>
-                      <Text style={styles.statIcon}>💸</Text>
+                      <Icon name="cash-remove" size={20} color="#EF4444" style={{ marginRight: 6 }} />
                       <View style={styles.statInfo}>
                         <Text style={styles.statLabel}>Chi tiêu</Text>
                         <Text style={styles.statValue}>
@@ -190,7 +192,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                       </View>
                     </View>
                     <View style={styles.statRow}>
-                      <Text style={styles.statIcon}>🎯</Text>
+                      <Icon name="piggy-bank" size={20} color={member.color} style={{ marginRight: 6 }} />
                       <View style={styles.statInfo}>
                         <Text style={styles.statLabel}>Tiết kiệm</Text>
                         <Text style={[styles.statValue, { color: member.color }]}>
@@ -217,8 +219,14 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                       />
                     </View>
                     <View style={styles.habitMeta}>
-                      <Text style={styles.habitStreak}>🔥 {member.habits.streak} ngày</Text>
-                      <Text style={styles.habitGoals}>🎯 {member.goals} mục tiêu</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon name="fire" size={12} color="#F59E0B" style={{ marginRight: 4 }} />
+                        <Text style={styles.habitStreak}>{member.habits.streak} ngày</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon name="target" size={12} color="#00796B" style={{ marginRight: 4 }} />
+                        <Text style={styles.habitGoals}>{member.goals} mục tiêu</Text>
+                      </View>
                     </View>
                   </View>
 
@@ -239,32 +247,41 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
           {/* AI Family Insights */}
           <View style={styles.aiCard}>
             <View style={styles.aiHeader}>
-              <Text style={styles.aiIcon}>🤖</Text>
+              <Icon name="robot" size={24} color="#8B5CF6" style={{ marginRight: 8 }} />
               <Text style={styles.aiTitle}>Phân tích AI</Text>
             </View>
-            <Text style={styles.aiText}>
-              💡 <Text style={styles.aiBold}>Mẹ</Text> đang duy trì thói quen tốt nhất với 100% hoàn thành.
-              Cả gia đình nên học hỏi!
-            </Text>
-            <Text style={styles.aiText}>
-              ⚠️ <Text style={styles.aiBold}>Con trai</Text> cần cải thiện thói quen đọc sách.
-              Đề xuất đặt nhắc nhở 8PM mỗi tối.
-            </Text>
-            <Text style={styles.aiText}>
-              📊 Gia đình đang tiết kiệm được <Text style={styles.aiHighlight}>
-                {((totalSaving / totalIncome) * 100).toFixed(1)}%
-              </Text> thu nhập. Mục tiêu là 25%!
-            </Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              <Icon name="lightbulb-on" size={14} color="#F59E0B" style={{ marginRight: 6, marginTop: 2 }} />
+              <Text style={styles.aiText}>
+                <Text style={styles.aiBold}>Mẹ</Text> đang duy trì thói quen tốt nhất với 100% hoàn thành.
+                Cả gia đình nên học hỏi!
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              <Icon name="alert" size={14} color="#EF4444" style={{ marginRight: 6, marginTop: 2 }} />
+              <Text style={styles.aiText}>
+                <Text style={styles.aiBold}>Con trai</Text> cần cải thiện thói quen đọc sách.
+                Đề xuất đặt nhắc nhở 8PM mỗi tối.
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', marginBottom: 0 }}>
+              <Icon name="chart-bar" size={14} color="#10B981" style={{ marginRight: 6, marginTop: 2 }} />
+              <Text style={styles.aiText}>
+                Gia đình đang tiết kiệm được <Text style={styles.aiHighlight}>
+                  {((totalSaving / totalIncome) * 100).toFixed(1)}%
+                </Text> thu nhập. Mục tiêu là 25%!
+              </Text>
+            </View>
           </View>
 
           {/* Quick Actions */}
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("SharedGoal")}>
-              <Text style={styles.actionIcon}>🎯</Text>
+              <Icon name="target" size={32} color="#6366F1" style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Mục tiêu chung</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("FinanceDashboard")}>
-              <Text style={styles.actionIcon}>💰</Text>
+              <Icon name="cash-multiple" size={32} color="#10B981" style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Tài chính</Text>
             </TouchableOpacity>
           </View>

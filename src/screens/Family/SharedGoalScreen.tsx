@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "SharedGoal">;
 
@@ -48,46 +50,46 @@ export default function SharedGoalScreen({ navigation }: Props) {
     {
       id: "1",
       title: "Du lịch Đà Lạt gia đình",
-      icon: "✈️",
+      icon: "airplane",
       target: 30000000,
       current: 18000000,
       deadline: "01/06/2025",
       category: "Giải trí",
       contributors: [
-        { id: "1", name: "Bố", avatar: "👨", contribution: 10000000, suggested: 12000000, color: "#6366F1" },
-        { id: "2", name: "Mẹ", avatar: "👩", contribution: 8000000, suggested: 10000000, color: "#EC4899" },
-        { id: "3", name: "Con trai", avatar: "👦", contribution: 0, suggested: 4000000, color: "#10B981" },
-        { id: "4", name: "Con gái", avatar: "👧", contribution: 0, suggested: 4000000, color: "#F59E0B" },
+        { id: "1", name: "Bố", avatar: "account", contribution: 10000000, suggested: 12000000, color: "#6366F1" },
+        { id: "2", name: "Mẹ", avatar: "account-outline", contribution: 8000000, suggested: 10000000, color: "#EC4899" },
+        { id: "3", name: "Con trai", avatar: "human-child", contribution: 0, suggested: 4000000, color: "#10B981" },
+        { id: "4", name: "Con gái", avatar: "human-female", contribution: 0, suggested: 4000000, color: "#F59E0B" },
       ],
     },
     {
       id: "2",
       title: "Quỹ học phí con",
-      icon: "🎓",
+      icon: "school",
       target: 100000000,
       current: 45000000,
       deadline: "01/09/2025",
       category: "Giáo dục",
       contributors: [
-        { id: "1", name: "Bố", avatar: "👨", contribution: 25000000, suggested: 30000000, color: "#6366F1" },
-        { id: "2", name: "Mẹ", avatar: "👩", contribution: 20000000, suggested: 25000000, color: "#EC4899" },
-        { id: "3", name: "Con trai", avatar: "👦", contribution: 0, suggested: 0, color: "#10B981" },
-        { id: "4", name: "Con gái", avatar: "👧", contribution: 0, suggested: 0, color: "#F59E0B" },
+        { id: "1", name: "Bố", avatar: "account", contribution: 25000000, suggested: 30000000, color: "#6366F1" },
+        { id: "2", name: "Mẹ", avatar: "account-outline", contribution: 20000000, suggested: 25000000, color: "#EC4899" },
+        { id: "3", name: "Con trai", avatar: "human-child", contribution: 0, suggested: 0, color: "#10B981" },
+        { id: "4", name: "Con gái", avatar: "human-female", contribution: 0, suggested: 0, color: "#F59E0B" },
       ],
     },
     {
       id: "3",
       title: "Sửa chữa nhà cửa",
-      icon: "🏠",
+      icon: "home-variant",
       target: 50000000,
       current: 15000000,
       deadline: "31/12/2024",
       category: "Gia đình",
       contributors: [
-        { id: "1", name: "Bố", avatar: "👨", contribution: 10000000, suggested: 20000000, color: "#6366F1" },
-        { id: "2", name: "Mẹ", avatar: "👩", contribution: 5000000, suggested: 15000000, color: "#EC4899" },
-        { id: "3", name: "Con trai", avatar: "👦", contribution: 0, suggested: 0, color: "#10B981" },
-        { id: "4", name: "Con gái", avatar: "👧", contribution: 0, suggested: 0, color: "#F59E0B" },
+        { id: "1", name: "Bố", avatar: "account", contribution: 10000000, suggested: 20000000, color: "#6366F1" },
+        { id: "2", name: "Mẹ", avatar: "account-outline", contribution: 5000000, suggested: 15000000, color: "#EC4899" },
+        { id: "3", name: "Con trai", avatar: "human-child", contribution: 0, suggested: 0, color: "#10B981" },
+        { id: "4", name: "Con gái", avatar: "human-female", contribution: 0, suggested: 0, color: "#F59E0B" },
       ],
     },
   ];
@@ -132,14 +134,14 @@ export default function SharedGoalScreen({ navigation }: Props) {
           {/* AI Allocation Card */}
           <View style={styles.aiCard}>
             <View style={styles.aiHeader}>
-              <Text style={styles.aiIcon}>🤖</Text>
+              <Icon name="robot" size={18} color="#6366F1" style={{ marginRight: 8 }} />
               <Text style={styles.aiTitle}>Gợi ý phân bổ AI</Text>
             </View>
             <Text style={styles.aiText}>
               AI đã phân tích thu nhập và chi tiêu của từng thành viên. Dưới đây là gợi ý đóng góp công bằng cho mỗi mục tiêu:
             </Text>
             <View style={styles.aiInsight}>
-              <Text style={styles.aiInsightIcon}>💡</Text>
+              <Icon name="lightbulb-on" size={16} color="#F59E0B" style={{ marginRight: 8 }} />
               <Text style={styles.aiInsightText}>
                 Bố và Mẹ nên đóng góp nhiều hơn vì thu nhập ổn định. Con cái có thể đóng góp từ tiền lì xì hoặc học bổng.
               </Text>
@@ -157,10 +159,10 @@ export default function SharedGoalScreen({ navigation }: Props) {
                 <View key={goal.id} style={styles.goalCard}>
                   <View style={styles.goalHeader}>
                     <View style={styles.goalInfo}>
-                      <Text style={styles.goalIcon}>{goal.icon}</Text>
+                      <Icon name={goal.icon as any} size={24} color="#00796B" />
                       <View style={styles.goalDetails}>
                         <Text style={styles.goalTitle}>{goal.title}</Text>
-                        <Text style={styles.goalCategory}>{goal.category} • 📅 {goal.deadline}</Text>
+                        <Text style={styles.goalCategory}>{goal.category} • <Icon name="calendar" size={12} color="#999" /> {goal.deadline}</Text>
                       </View>
                     </View>
                   </View>
@@ -182,7 +184,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
                       <View key={contributor.id} style={styles.contributorRow}>
                         <View style={styles.contributorInfo}>
                           <View style={[styles.contributorAvatar, { backgroundColor: `${contributor.color}22` }]}>
-                            <Text style={styles.contributorAvatarText}>{contributor.avatar}</Text>
+                            <Icon name={contributor.avatar as any} size={20} color={contributor.color} />
                           </View>
                           <Text style={styles.contributorName}>{contributor.name}</Text>
                         </View>
@@ -204,7 +206,8 @@ export default function SharedGoalScreen({ navigation }: Props) {
 
                   <View style={styles.goalActions}>
                     <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Đóng góp", `Thêm tiền vào "${goal.title}"`)}>
-                      <Text style={styles.actionBtnText}>💰 Đóng góp</Text>
+                      <Icon name="currency-usd" size={16} color="#00796B" style={{ marginRight: 8 }} />
+                      <Text style={styles.actionBtnText}>Đóng góp</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.actionBtn, styles.actionBtnSecondary]}>
                       <Text style={styles.actionBtnTextSecondary}>Chi tiết</Text>
@@ -218,11 +221,11 @@ export default function SharedGoalScreen({ navigation }: Props) {
           {/* Quick Actions */}
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("GoalTracking")}>
-              <Text style={styles.actionIcon}>🎯</Text>
+              <Icon name="target" size={32} color="#00796B" style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Mục tiêu cá nhân</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("FamilyOverview")}>
-              <Text style={styles.actionIcon}>👨‍👩‍👧‍👦</Text>
+              <Icon name="account-group" size={32} color="#00796B" style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Tổng quan gia đình</Text>
             </TouchableOpacity>
           </View>

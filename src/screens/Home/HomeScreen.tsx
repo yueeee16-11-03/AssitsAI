@@ -19,12 +19,14 @@ import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useUserStore } from '../../store/userStore';
+import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 export default function HomeScreen({ navigation }: Props) {
   const [loading] = useState(false);
   const user = useUserStore((s: any) => s.user);
+  const { unreadCount } = useUnreadNotificationCount();
   const displayName = (user && (user.displayName || user.email || user.phoneNumber)) || 'Người dùng';
   const [cameraOptionsVisible, setCameraOptionsVisible] = useState(false);
   const [chatPulse] = useState(new Animated.Value(0));
@@ -95,9 +97,11 @@ export default function HomeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate("Notification")}
             >
               <Icon name="bell" size={24} color="#111827" />
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>3</Text>
-              </View>
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.familyButton}
@@ -348,7 +352,7 @@ export default function HomeScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={[styles.personalGoalButton, styles.commonGoalButton]}
-            onPress={() => {} }
+            onPress={() => navigation.navigate('SharedGoal') }
             activeOpacity={0.85}
           >
             <View style={styles.personalGoalInlineRow}>

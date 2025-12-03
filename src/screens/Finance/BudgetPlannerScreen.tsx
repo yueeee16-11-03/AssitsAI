@@ -14,6 +14,7 @@ import {
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from "@react-navigation/native";
+import NotificationService from '../../services/NotificationService';
 // AI helpers removed from header — suggestions are computed locally
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -164,6 +165,16 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
       console.log('   Budget items:', budgets.map(b => `${b.category}(${b.id})`).join(', '));
     }
   }, [budgets, selectedMonth, selectedYear, isLoading, error]);
+  
+  // Ensure daily expense reminder is scheduled (20:00 local time)
+  React.useEffect(() => {
+    NotificationService.scheduleDailyExpenseReminder().catch((err: any) => {
+      console.warn('BudgetPlannerScreen: failed scheduling daily expense reminder', err);
+    });
+    NotificationService.scheduleWeeklyMonthlyReports().catch((err: any) => {
+      console.warn('BudgetPlannerScreen: failed scheduling weekly/monthly reports', err);
+    });
+  }, []);
 
   const formatCurrency = (v: number) => {
     const val = Math.round(v || 0);

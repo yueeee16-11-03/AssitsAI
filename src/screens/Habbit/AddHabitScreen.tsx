@@ -53,9 +53,8 @@ export default function AddHabitScreen({ navigation }: Props) {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [isMeasurable, setIsMeasurable] = useState(true); // Toggle: Yes/No hoặc Measurable
   const [isDaily, setIsDaily] = useState(true); // Toggle: Hàng ngày hay chọn ngày cụ thể
-  const [schedule, setSchedule] = useState<ScheduleItem[]>([
-    { id: "1", time: "06:00", daysOfWeek: [1, 2, 3, 4, 5, 6, 0], reminder: true },
-  ]);
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+  const [dailyReminderTime, setDailyReminderTime] = useState("08:00");
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [tempTime, setTempTime] = useState("06:00");
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -133,15 +132,7 @@ export default function AddHabitScreen({ navigation }: Props) {
     );
   };
 
-  const addSchedule = () => {
-    const newSchedule: ScheduleItem = {
-      id: Date.now().toString(),
-      time: "06:00",
-      daysOfWeek: [1, 2, 3, 4, 5, 6, 0],
-      reminder: true,
-    };
-    setSchedule([...schedule, newSchedule]);
-  };
+  // single schedule mode: creation handled when switching to specific-days (if empty)
 
   const removeSchedule = (scheduleId: string) => {
     setSchedule(schedule.filter((s) => s.id !== scheduleId));
@@ -169,10 +160,12 @@ export default function AddHabitScreen({ navigation }: Props) {
     }
 
     try {
-      // Nếu là Hàng ngày, tạo schedule mặc định (nhắc nhở bật)
+      // Nếu là Hàng ngày, tạo schedule mặc định (nhắc nhở bật) với giờ đã chọn
       const finalSchedule = isDaily
-        ? [{ id: "1", time: "06:00", daysOfWeek: [0, 1, 2, 3, 4, 5, 6], reminder: true }]
+        ? [{ id: "1", time: dailyReminderTime, daysOfWeek: [0, 1, 2, 3, 4, 5, 6], reminder: true }]
         : schedule;
+
+      console.log('AddHabitScreen: isDaily=', isDaily, 'finalSchedule=', JSON.stringify(finalSchedule));
 
       // Nếu không đo lường, set target = 1 và unit = "lần"
       const finalTarget = isMeasurable ? parseInt(target, 10) : 1;
@@ -506,7 +499,10 @@ export default function AddHabitScreen({ navigation }: Props) {
                       styles.frequencyButton,
                       isDaily && styles.frequencyButtonActive,
                     ]}
-                    onPress={() => setIsDaily(true)}
+                    onPress={() => {
+                      setIsDaily(true);
+                      setSchedule([]); // Xóa schedule khi chuyển sang Hàng ngày
+                    }}
                   >
                     <Text
                       style={[
@@ -522,7 +518,18 @@ export default function AddHabitScreen({ navigation }: Props) {
                       styles.frequencyButton,
                       !isDaily && styles.frequencyButtonActive,
                     ]}
-                    onPress={() => setIsDaily(false)}
+                    onPress={() => {
+                      setIsDaily(false);
+                      // Nếu chưa có schedule nào, tạo một cái mặc định với T2-T6
+                      if (schedule.length === 0) {
+                        setSchedule([{
+                          id: "1",
+                          time: "08:00",
+                          daysOfWeek: [1, 2, 3, 4, 5], // Chỉ T2-T6, không có CN và T7
+                          reminder: true,
+                        }]);
+                      }
+                    }}
                   >
                     <Text
                       style={[
@@ -537,31 +544,39 @@ export default function AddHabitScreen({ navigation }: Props) {
 
               {/* Schedule Details */}
               {isDaily ? (
-                <View style={styles.dailyScheduleInfo}>
-                  <Icon name="check-circle" size={20} color="#10B981" style={styles.iconMarginRight} />
-                  <Text style={styles.dailyScheduleText}>Mỗi ngày, cả tuần</Text>
-                </View>
-              ) : (
                 <>
-                  <View style={styles.scheduleHeader}>
-                    <View>
-                      <Text style={styles.label}>Lựa chọn ngày</Text>
-                      <Text style={styles.scheduleSubtitle}>Chọn những ngày bạn muốn thực hiện thói quen</Text>
-                    </View>
+                  <View style={styles.dailyScheduleInfo}>
+                    <Icon name="check-circle" size={20} color="#10B981" style={styles.iconMarginRight} />
+                    <Text style={styles.dailyScheduleText}>Mỗi ngày, cả tuần</Text>
+                  </View>
+                  <View style={styles.scheduleCard}>
+                    <Text style={styles.label}>Giờ nhắc nhở</Text>
                     <TouchableOpacity
-                      style={styles.addScheduleButton}
-                      onPress={addSchedule}
+                      style={styles.timeDisplay}
+                      onPress={() => {
+                        setEditingScheduleId('daily');
+                        setTempTime(dailyReminderTime);
+                        setShowTimePicker(true);
+                      }}
                     >
-                      <Icon name="plus" size={16} color="#FFFFFF" style={styles.iconMarginRight} />
-                      <Text style={styles.addScheduleText}>Thêm lịch</Text>
+                      <Icon name="clock-outline" size={16} color="#00796B" />
+                      <Text style={[styles.timeText, styles.ml8]}>{dailyReminderTime}</Text>
                     </TouchableOpacity>
                   </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.scheduleSubtitle}>Chọn những ngày bạn muốn thực hiện thói quen</Text>
 
                   {schedule.length === 0 ? (
-                    <Text style={styles.emptyText}>Chưa có lịch trình. Hãy thêm một.</Text>
+                    <View style={styles.scheduleCard}>
+                      <Text style={styles.emptyText}>Chưa có lịch trình. Chọn "Ngày cụ thể" để thiết lập.</Text>
+                    </View>
                   ) : (
-                    schedule.map((item) => (
-                      <View key={item.id} style={styles.scheduleCard}>
+                    (() => {
+                      const item = schedule[0];
+                      return (
+                        <View key={item.id} style={styles.scheduleCard}>
                         {/* Time */}
                         <View style={styles.scheduleTimeRow}>
                           <TouchableOpacity
@@ -636,8 +651,9 @@ export default function AddHabitScreen({ navigation }: Props) {
                           <Text style={[styles.reminderText, styles.ml8]}>Nhắc nhở</Text>
                         </TouchableOpacity>
                       </View>
-                    ))
-                  )}
+                    );
+                  })()
+                )}
                 </>
               )}
             </View>
@@ -701,7 +717,13 @@ export default function AddHabitScreen({ navigation }: Props) {
             const hh = String(selectedDate.getHours()).padStart(2, '0');
             const mm = String(selectedDate.getMinutes()).padStart(2, '0');
             const newTime = `${hh}:${mm}`;
-            setSchedule((prev) => prev.map((s) => s.id === editingScheduleId ? { ...s, time: newTime } : s));
+            
+            if (editingScheduleId === 'daily') {
+              setDailyReminderTime(newTime);
+            } else {
+              setSchedule((prev) => prev.map((s) => s.id === editingScheduleId ? { ...s, time: newTime } : s));
+            }
+            
             setTempTime(newTime);
             setShowTimePicker(false);
             setEditingScheduleId(null);
@@ -767,7 +789,7 @@ const styles = StyleSheet.create({
   iconButtonActive: { borderColor: "#6366F1", backgroundColor: "#F3F4F6" },
   colorsGridContainer: { justifyContent: "center", alignItems: "center", marginVertical: 8 },
   colorsGrid: { flexDirection: "row", gap: 12, justifyContent: "center", flexWrap: "wrap" },
-  colorButton: { width: 48, height: 48, borderRadius: 24, borderWidth: 3, borderColor: "transparent" },
+  colorButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: "transparent" },
   colorButtonActive: { borderColor: "#00897B" },
   categoriesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   categoryButton: { flex: 1, minWidth: "45%", flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, borderWidth: 2, borderColor: "transparent" },

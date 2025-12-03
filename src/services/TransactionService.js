@@ -1,6 +1,8 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import AIDataParserService from './AIDataParserService';
+import budgetApi from '../api/budgetApi';
+import NotificationService from './NotificationService';
 
 /**
  * TransactionService: Xử lý tất cả logic CRUD cho giao dịch
@@ -132,6 +134,55 @@ class TransactionService {
 
       // Step 4: Lấy lại toàn bộ dữ liệu mới nhất
       const freshTransactions = await this.getAllTransactions();
+
+      // After adding a new expense, detect if this pushes the category over budget
+      try {
+        if (normalizedData.type === 'expense' && normalizedData.categoryId) {
+          // Resolve transaction date used for month/year
+          const txDate = dataToSave.date ? (dataToSave.date.toDate ? dataToSave.date.toDate() : new Date(dataToSave.date)) : new Date();
+          const year = txDate.getFullYear();
+          const month = txDate.getMonth();
+
+          // Fetch budget for this category
+          try {
+            const budgetDoc = await budgetApi.getBudgetByCategory(String(normalizedData.categoryId));
+            if (budgetDoc && typeof budgetDoc.budget === 'number' && budgetDoc.budget > 0) {
+              // compute total spent for the same month from freshly fetched transactions
+              const totalSpent = (freshTransactions || [])
+                .filter(t => (t.type === 'expense') && (String(t.categoryId) === String(normalizedData.categoryId)))
+                .reduce((s, t) => {
+                  try {
+                    const d = t.date?.toDate ? t.date.toDate() : new Date(t.date || t.createdAt);
+                    if (d.getFullYear() === year && d.getMonth() === month) return s + (parseInt(t.amount, 10) || 0);
+                  } catch (e) {
+                    return s;
+                  }
+                  return s;
+                }, 0);
+
+              const prevSpent = totalSpent - (parseInt(normalizedData.amount, 10) || 0);
+              if (prevSpent <= budgetDoc.budget && totalSpent > budgetDoc.budget) {
+                // Unique id so we don't duplicate the same overrun notification
+                const notifId = `budget-overrun-${budgetDoc.id}-${year}-${month}`;
+                const overAmount = totalSpent - budgetDoc.budget;
+                await NotificationService.displayNotification({
+                  id: notifId,
+                  title: `Vượt ngân sách: ${budgetDoc.category || ''}`,
+                  body: `Bạn đã chi vượt ${overAmount.toLocaleString('vi-VN')} VNĐ trong ${budgetDoc.category || 'danh mục'}. Xem chi tiết.`,
+                  type: 'warning',
+                  icon: 'alert-circle-outline',
+                  actionRoute: 'BudgetPlanner',
+                }).catch(() => {});
+                console.log('TransactionService: created budget overrun notification', notifId);
+              }
+            }
+          } catch (e) {
+            console.warn('TransactionService: failed checking budget/notify', e?.message || e);
+          }
+        }
+      } catch (e) {
+        console.warn('TransactionService: post-add overrun check failed', e?.message || e);
+      }
 
       return {
         success: true,

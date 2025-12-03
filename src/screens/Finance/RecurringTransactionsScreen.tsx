@@ -15,6 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+import NotificationService from '../../services/NotificationService';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
 
@@ -150,6 +151,27 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
+  // Schedule reminders for active transactions when list changes
+  useEffect(() => {
+    (async () => {
+      for (const t of transactions) {
+        if (!t.isActive) {
+          // cancel any existing reminder
+          try { await NotificationService.cancelReminder(`recurring-${t.id}`); } catch { }
+          continue;
+        }
+
+        if (t.reminderDays && t.reminderDays > 0) {
+          try {
+            await NotificationService.scheduleRecurringTransactionReminder(t, { hour: 9, minute: 0 });
+          } catch (err) {
+            console.warn('RecurringTransactions: failed to schedule reminder for', t.id, err);
+          }
+        }
+      }
+    })();
+  }, [transactions]);
+
   const formatCurrency = (amount: number) => {
     // Format without currency symbol and append ' VNĐ'
     return new Intl.NumberFormat('vi-VN', {
@@ -281,7 +303,11 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
         {
           text: 'Xóa',
           style: 'destructive',
-          onPress: () => setTransactions(prev => prev.filter(t => t.id !== transactionId))
+          onPress: async () => {
+            // cancel any scheduled reminder for this transaction
+            try { await NotificationService.cancelReminder(`recurring-${transactionId}`); } catch { }
+            setTransactions(prev => prev.filter(t => t.id !== transactionId));
+          }
         }
       ]
     );
@@ -630,7 +656,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={[styles.backButtonText, { color: '#111827' }]}>←</Text>
+          <Text style={[styles.backButtonText, styles.backButtonTextDark]}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitleText}>Giao dịch lặp lại</Text>
@@ -639,7 +665,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           style={styles.addButton}
           onPress={() => setShowAddModal(true)}
         >
-          <Text style={[styles.addButtonText, { color: '#111827' }]}>+</Text>
+          <Text style={[styles.addButtonText, styles.addButtonTextDark]}>+</Text>
         </TouchableOpacity>
       </View>
 
@@ -786,6 +812,8 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: 'bold',
   },
+  addButtonTextDark: { color: '#111827' },
+  backButtonTextDark: { color: '#111827' },
   filterTabs: {
     flexDirection: 'row',
     paddingHorizontal: 20,

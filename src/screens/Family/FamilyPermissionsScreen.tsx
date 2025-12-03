@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
 
@@ -123,7 +125,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
       name: 'Nguyễn Văn A',
       email: 'nguyenvana@gmail.com',
       role: 'admin',
-      avatar: '👨',
+      avatar: 'account',
       isCurrentUser: true,
     },
     {
@@ -131,7 +133,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
       name: 'Nguyễn Thị B',
       email: 'nguyenthib@gmail.com',
       role: 'parent',
-      avatar: '👩',
+      avatar: 'account-outline',
       isCurrentUser: false,
     },
     {
@@ -139,7 +141,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
       name: 'Nguyễn Văn C',
       email: 'nguyenvanc@gmail.com',
       role: 'child',
-      avatar: '👦',
+      avatar: 'human-child',
       isCurrentUser: false,
     },
   ]);
@@ -238,7 +240,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
             ]}
             onPress={() => setSelectedMember(member.id)}
           >
-            <Text style={styles.memberAvatar}>{member.avatar}</Text>
+              <Text style={styles.memberAvatar}><Icon name={member.avatar as any} size={24} color="#00796B" /></Text>
             <Text style={[
               styles.memberTabName,
               selectedMember === member.id && styles.memberTabNameActive
@@ -261,33 +263,45 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
         style={[styles.permissionTab, selectedTab === 'finance' && styles.permissionTabActive]}
         onPress={() => setSelectedTab('finance')}
       >
-        <Text style={[styles.permissionTabText, selectedTab === 'finance' && styles.permissionTabTextActive]}>
-          💰 Tài chính
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Icon name="currency-usd" size={14} color={selectedTab === 'finance' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'} style={{ marginRight: 4 }} />
+          <Text style={[styles.permissionTabText, selectedTab === 'finance' && styles.permissionTabTextActive]}>
+            Tài chính
+          </Text>
+        </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.permissionTab, selectedTab === 'habits' && styles.permissionTabActive]}
         onPress={() => setSelectedTab('habits')}
       >
-        <Text style={[styles.permissionTabText, selectedTab === 'habits' && styles.permissionTabTextActive]}>
-          🎯 Thói quen
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Icon name="target" size={14} color={selectedTab === 'habits' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'} style={{ marginRight: 4 }} />
+          <Text style={[styles.permissionTabText, selectedTab === 'habits' && styles.permissionTabTextActive]}>
+            Thói quen
+          </Text>
+        </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.permissionTab, selectedTab === 'ai' && styles.permissionTabActive]}
         onPress={() => setSelectedTab('ai')}
       >
-        <Text style={[styles.permissionTabText, selectedTab === 'ai' && styles.permissionTabTextActive]}>
-          🤖 AI
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Icon name="robot" size={14} color={selectedTab === 'ai' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'} style={{ marginRight: 4 }} />
+          <Text style={[styles.permissionTabText, selectedTab === 'ai' && styles.permissionTabTextActive]}>
+            AI
+          </Text>
+        </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.permissionTab, selectedTab === 'general' && styles.permissionTabActive]}
         onPress={() => setSelectedTab('general')}
       >
-        <Text style={[styles.permissionTabText, selectedTab === 'general' && styles.permissionTabTextActive]}>
-          ⚙️ Chung
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Icon name="cog" size={14} color={selectedTab === 'general' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'} style={{ marginRight: 4 }} />
+          <Text style={[styles.permissionTabText, selectedTab === 'general' && styles.permissionTabTextActive]}>
+            Chung
+          </Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -300,7 +314,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
   ) => (
     <View style={styles.permissionItem}>
       <View style={styles.permissionInfo}>
-        <Text style={styles.permissionIcon}>{icon}</Text>
+        <Icon name={icon as any} size={20} color="#00796B" style={{ marginRight: 12 }} />
         <View style={styles.permissionText}>
           <Text style={styles.permissionTitle}>{title}</Text>
           <Text style={styles.permissionDescription}>{description}</Text>
@@ -323,7 +337,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
   ) => (
     <View style={styles.permissionItem}>
       <View style={styles.permissionInfo}>
-        <Text style={styles.permissionIcon}>{icon}</Text>
+        <Icon name={icon as any} size={20} color="#00796B" style={{ marginRight: 12 }} />
         <View style={styles.permissionText}>
           <Text style={styles.permissionTitle}>{title}</Text>
           <Text style={styles.permissionDescription}>{description}</Text>
@@ -357,35 +371,35 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
         'viewPersonalWallets',
         'Xem ví cá nhân',
         'Cho phép xem thông tin ví cá nhân của nhau',
-        '👛'
+        'wallet'
       )}
       
       {renderLevelPermission(
         'viewIncomeDetails',
         'Thông tin thu nhập',
         'Mức độ truy cập thông tin thu nhập',
-        '💰'
+        'currency-usd'
       )}
       
       {renderLevelPermission(
         'editSharedBudget',
         'Ngân sách chung',
         'Quyền chỉnh sửa ngân sách gia đình',
-        '📊'
+        'chart-bar'
       )}
       
       {renderTogglePermission(
         'addSharedTransactions',
         'Thêm giao dịch chung',
         'Cho phép thêm giao dịch vào ví chung',
-        '💳'
+        'credit-card'
       )}
       
       {renderTogglePermission(
         'viewFamilyFinanceReport',
         'Báo cáo tài chính',
         'Xem báo cáo tài chính tổng hợp gia đình',
-        '📈'
+        'chart-line'
       )}
     </View>
   );
@@ -396,21 +410,21 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
         'viewPersonalHabits',
         'Xem thói quen cá nhân',
         'Cho phép xem thói quen của thành viên khác',
-        '📝'
+        'notebook'
       )}
       
       {renderLevelPermission(
         'editSharedGoals',
         'Mục tiêu chung',
         'Quyền chỉnh sửa mục tiêu gia đình',
-        '🎯'
+        'target'
       )}
       
       {renderTogglePermission(
         'viewHabitReports',
         'Báo cáo thói quen',
         'Xem báo cáo tiến độ thói quen của gia đình',
-        '📊'
+        'chart-bar'
       )}
     </View>
   );
@@ -421,14 +435,14 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
         'aiAnalyzeSharedData',
         'Phân tích dữ liệu chung',
         'Cho phép AI phân tích dữ liệu gia đình',
-        '🤖'
+        'robot'
       )}
       
       {renderTogglePermission(
         'aiPersonalRecommendations',
         'Gợi ý cá nhân',
         'Nhận gợi ý AI dựa trên dữ liệu cá nhân',
-        '💡'
+        'lightbulb-on'
       )}
     </View>
   );
@@ -439,21 +453,21 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
         'inviteMembers',
         'Mời thành viên',
         'Cho phép mời thành viên mới vào gia đình',
-        '👥'
+        'account-group'
       )}
       
       {renderTogglePermission(
         'changePermissions',
         'Thay đổi quyền hạn',
         'Có thể thay đổi quyền hạn của thành viên khác',
-        '⚙️'
+        'cog'
       )}
       
       {renderTogglePermission(
         'removeMembers',
         'Xóa thành viên',
         'Có thể xóa thành viên khỏi gia đình',
-        '🚪'
+        'door'
       )}
     </View>
   );
@@ -508,7 +522,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
         {/* Current Member Info */}
         {currentMember && (
           <View style={styles.memberInfoCard}>
-            <Text style={styles.memberInfoAvatar}>{currentMember.avatar}</Text>
+            <Icon name={currentMember.avatar as any} size={32} color="#00796B" style={{ marginRight: 12 }} />
             <View style={styles.memberInfoDetails}>
               <Text style={styles.memberInfoName}>
                 {currentMember.name}
@@ -534,7 +548,10 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
 
       {/* Warning */}
       <View style={styles.warningCard}>
-        <Text style={styles.warningTitle}>⚠️ Lưu ý bảo mật</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Icon name="alert" size={14} color="#EF4444" style={{ marginRight: 6 }} />
+          <Text style={styles.warningTitle}>Lưu ý bảo mật</Text>
+        </View>
         <Text style={styles.warningText}>
           Cài đặt quyền hạn cẩn thận để bảo vệ thông tin tài chính và riêng tư của gia đình
         </Text>
