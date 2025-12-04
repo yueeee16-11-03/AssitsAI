@@ -12,11 +12,12 @@
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import ENV from '../config/env';
 
-const API_KEY = "AIzaSyDJLD8XW6lD2gU2iE6n4c_4q9aRgcsZG4I";
+const API_KEY = ENV.GEMINI_API_KEY_IMAGE;
 
 if (!API_KEY) {
-  throw new Error("⚠️ Thiếu GEMINI_API_KEY");
+  throw new Error("⚠️ Thiếu GEMINI_API_KEY - vui lòng cấu hình trong src/config/env.ts");
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);

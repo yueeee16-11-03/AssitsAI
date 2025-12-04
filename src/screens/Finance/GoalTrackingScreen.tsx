@@ -9,6 +9,7 @@ import {
   Animated,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -18,6 +19,8 @@ import { useTransactionStore } from '../../store/transactionStore';
 import { useGoalStore } from '../../store/goalStore';
 import { computeGoalCurrent, computeTotalCurrent, getProgress as utilGetProgress } from '../../utils/goalProgress';
 import NotificationService from '../../services/NotificationService';
+import GoalSuggestionService from '../../services/GoalSuggestionService';
+import type { GoalSuggestion } from '../../services/GoalSuggestionService';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -152,26 +155,38 @@ export default function GoalTrackingScreen({ navigation }: Props) {
   const [addAmount, setAddAmount] = useState('');
   const [addNote, setAddNote] = useState('');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
-  // detailed per-transaction fields removed from add-money modal
+  // AI suggestions state
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [aiSuggestions, setAISuggestions] = useState<GoalSuggestion[]>([]);
 
-  const suggestionTemplates = [
-    { title: 'Mua xe hơi', desc: 'Xe hơi gia đình', target: '500000000', monthly: '15000000', deadline: '12/2025', category: 'purchase' as Goal['category'], priority: 'high' as const },
-    { title: 'Học phí con', desc: 'Lập quỹ học hành', target: '200000000', monthly: '5000000', deadline: '08/2026', category: 'education' as Goal['category'], priority: 'medium' as const },
-    { title: 'Quỹ khẩn cấp', desc: '3-6 tháng chi phí', target: '100000000', monthly: '8000000', deadline: '12/2024', category: 'saving' as Goal['category'], priority: 'high' as const },
-    { title: 'Du lịch châu Âu', desc: 'Kế hoạch du lịch', target: '80000000', monthly: '4000000', deadline: '06/2025', category: 'saving' as Goal['category'], priority: 'low' as const },
-  ];
-
-  const applySuggestion = (t: typeof suggestionTemplates[number]) => {
+  const applySuggestion = (t: GoalSuggestion) => {
     setNewTitle(t.title);
-    setNewDesc(t.desc);
-    setNewTarget(t.target);
-    setNewMonthly(t.monthly);
+    setNewDesc(t.description);
+    setNewTarget(t.targetAmount.toString());
+    setNewMonthly(t.monthlyContribution.toString());
     setNewDeadline(t.deadline);
     setNewCategory(t.category);
     setNewPriority(t.priority);
   };
 
-  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  // Fetch AI suggestions
+  const fetchAISuggestions = async () => {
+    setSuggestionLoading(true);
+    try {
+      console.log('📞 [GoalTracking] Gọi GoalSuggestionService...');
+      const response = await GoalSuggestionService.suggestGoals();
+      
+      console.log('✅ [GoalTracking] Nhận được gợi ý từ AI:', response.suggestions.length);
+      setAISuggestions(response.suggestions);
+      Alert.alert('Thành công', `Nhận được ${response.suggestions.length} gợi ý từ AI`);
+    } catch (error: any) {
+      console.error('❌ [GoalTracking] Error:', error?.message);
+      Alert.alert('Lỗi', error?.message || 'Không thể lấy gợi ý từ AI');
+    } finally {
+      setSuggestionLoading(false);
+    }
+  };
 
   const handleAddNewGoal = () => {
     if (!newTitle.trim()) { Alert.alert('Lỗi', 'Nhập tên mục tiêu'); return; }
@@ -544,23 +559,41 @@ export default function GoalTrackingScreen({ navigation }: Props) {
               <Text style={styles.formLabel}>Gợi ý</Text>
               <TouchableOpacity
                 style={[styles.aiSuggestToggle, showAISuggestions && styles.aiSuggestToggleActive]}
-                onPress={() => setShowAISuggestions(v => !v)}
+                onPress={() => {
+                  if (!showAISuggestions && !suggestionLoading) {
+                    setShowAISuggestions(true);
+                    fetchAISuggestions();
+                  } else {
+                    setShowAISuggestions(!showAISuggestions);
+                  }
+                }}
+                disabled={suggestionLoading}
               >
-                <Icon name="robot" size={14} color={showAISuggestions ? '#FFFFFF' : '#10B981'} style={styles.aiToggleIcon} />
-                <Text style={[styles.aiSuggestText, showAISuggestions && styles.aiSuggestTextActive]}>AI gợi ý</Text>
+                {suggestionLoading ? (
+                  <ActivityIndicator size="small" color={showAISuggestions ? '#FFFFFF' : '#10B981'} style={styles.aiToggleIcon} />
+                ) : (
+                  <Icon name="robot" size={14} color={showAISuggestions ? '#FFFFFF' : '#10B981'} style={styles.aiToggleIcon} />
+                )}
+                <Text style={[styles.aiSuggestText, showAISuggestions && styles.aiSuggestTextActive]}>
+                  {suggestionLoading ? 'Đang tải...' : 'AI gợi ý'}
+                </Text>
               </TouchableOpacity>
             </View>
 
             {showAISuggestions && (
               <View style={styles.formGroup}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionRowScroll}>
-                  {suggestionTemplates.map(s => (
-                    <TouchableOpacity key={s.title} style={styles.suggestionButton} onPress={() => applySuggestion(s)}>
-                      <Text style={styles.suggestionText}>{s.title}</Text>
-                      <Text style={styles.suggestionSub}>{s.target.replace(/(\d)(?=(\d{3})+$)/g, '$1,')}₫</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                {aiSuggestions.length > 0 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionRowScroll}>
+                    {aiSuggestions.map(s => (
+                      <TouchableOpacity key={s.title} style={styles.suggestionButton} onPress={() => applySuggestion(s)}>
+                        <Text style={styles.suggestionText}>{s.title}</Text>
+                        <Text style={styles.suggestionSub}>{s.targetAmount.toLocaleString("vi-VN")}₫</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <Text style={styles.noSuggestionsText}>Chưa có gợi ý. Hãy bấm lại để tải.</Text>
+                )}
               </View>
             )}
               <Text style={styles.formLabel}>Tên mục tiêu</Text>
@@ -1054,4 +1087,5 @@ const styles = StyleSheet.create({
   walletChipText: { fontSize: 13, fontWeight: '800', color: '#111827' },
   walletChipTextActive: { color: '#FFFFFF' },
   walletChipSub: { fontSize: 11, color: '#6B7280', marginTop: 4 },
+  noSuggestionsText: { fontSize: 13, color: 'rgba(15,23,36,0.5)', textAlign: 'center', paddingVertical: 16 },
 });

@@ -15,6 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from "@react-navigation/native";
 import NotificationService from '../../services/NotificationService';
+import AIBudgetSuggestionService from '../../services/AIBudgetSuggestionService';
 // AI helpers removed from header — suggestions are computed locally
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -58,7 +59,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
   });
   const [modalSuggestions, setModalSuggestions] = useState<Array<{ categoryId: string; category: string; icon: string; amount: number; color: string }>>([]);
   const [showModalSuggestionButtons, setShowModalSuggestionButtons] = useState(false);
-  // AI suggestion spinner not needed; suggestions are revealed by the AI icon
+  const [modalSuggestionsLoading, setModalSuggestionsLoading] = useState(false);
 
   // Firebase store
   const budgets = useBudgetStore(state => state.budgets) as BudgetItem[];
@@ -292,31 +293,52 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
   useEffect(() => {
     if (!addModalVisible || !showModalSuggestionButtons) return;
 
-    const compute = () => {
-      const candidates = [...(budgets || [])].sort((a, b) => (b.spent || 0) - (a.spent || 0)).slice(0, 6);
-      if (candidates.length === 0) {
-        // fallback suggestions
-        return [
-          { categoryId: 'food', category: 'Ăn uống', icon: 'silverware-fork-knife', amount: 5000000, color: '#EC4899' },
-          { categoryId: 'transport', category: 'Di chuyển', icon: 'car', amount: 2000000, color: '#F59E0B' },
-          { categoryId: 'entertainment', category: 'Giải trí', icon: 'movie', amount: 1500000, color: '#8B5CF6' },
-        ];
-      }
+    const compute = async () => {
+      try {
+        setModalSuggestionsLoading(true);
 
-      return candidates.map((c) => {
-        const base = Math.max(c.spent || 0, c.predicted || 0, 1000000);
-        const amount = Math.max(1000000, Math.ceil((base * 1.15) / 1000000) * 1000000);
-        const icon = isIconName(c.icon) ? c.icon : 'briefcase-outline';
-        return { categoryId: c.categoryId, category: c.category, icon, amount, color: c.color || '#6366F1' };
-      });
+        // Gọi AI service để gợi ý 3-4 danh mục theo tháng hiện tại
+        if (budgets && budgets.length > 0) {
+          const response = await AIBudgetSuggestionService.suggestBudgets(
+            budgets,
+            selectedMonth,
+            selectedYear
+          );
+          
+          // Convert suggestions to modal suggestion format
+          const colorMap: { [key: string]: string } = {
+            '1': '#EC4899',   // Ăn uống
+            '2': '#F59E0B',   // Mua sắm
+            '3': '#8B5CF6',   // Di chuyển
+            '4': '#6366F1',   // Nhà ở
+            '5': '#10B981',   // Y tế
+            '6': '#06B6D4',   // Giải trí
+            '7': '#F59E0B',   // Lương
+            '8': '#10B981',   // Thưởng
+            '9': '#8B5CF6',   // Đầu tư
+          };
+
+          const suggestions = response.suggestions.map((s) => ({
+            categoryId: s.categoryId,
+            category: s.category,
+            icon: s.icon,
+            amount: s.suggestedBudget,
+            color: colorMap[s.categoryId] || '#6366F1',
+          }));
+
+          setModalSuggestions(suggestions);
+        }
+
+        setModalSuggestionsLoading(false);
+      } catch (err) {
+        console.error('❌ [SCREEN] Error getting AI suggestion:', err);
+        Alert.alert('Lỗi', 'Không thể lấy gợi ý từ AI');
+        setModalSuggestionsLoading(false);
+      }
     };
 
-    try {
-      setModalSuggestions(compute());
-    } catch {
-      setModalSuggestions([]);
-    }
-  }, [addModalVisible, budgets, showModalSuggestionButtons]);
+    compute();
+  }, [addModalVisible, budgets, showModalSuggestionButtons, selectedMonth, selectedYear]);
 
   return (
     <View style={styles.container}>
@@ -658,10 +680,17 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                       <TouchableOpacity
                         style={[styles.modalAISmall, showModalSuggestionButtons && styles.modalAISmallActive]}
                         onPress={() => setShowModalSuggestionButtons(v => !v)}
+                        disabled={modalSuggestionsLoading}
                       >
-                        <Icon name="robot" size={18} color={showModalSuggestionButtons ? '#ffffff' : '#0f1724'} />
+                        {modalSuggestionsLoading ? (
+                          <ActivityIndicator size="small" color={showModalSuggestionButtons ? '#ffffff' : '#0f1724'} />
+                        ) : (
+                          <Icon name="robot" size={18} color={showModalSuggestionButtons ? '#ffffff' : '#0f1724'} />
+                        )}
                       </TouchableOpacity>
-                    <Text style={styles.modalSuggestionsLabel}>Gợi ý tạo ngân sách</Text>
+                    <Text style={styles.modalSuggestionsLabel}>
+                      {modalSuggestionsLoading ? 'Đang phân tích...' : 'Gợi ý tạo ngân sách'}
+                    </Text>
                   </View>
                   {showModalSuggestionButtons && modalSuggestions && modalSuggestions.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modalSuggestionsScroll}>

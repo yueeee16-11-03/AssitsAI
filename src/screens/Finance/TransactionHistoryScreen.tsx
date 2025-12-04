@@ -29,6 +29,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useTransactionStore } from "../../store/transactionStore";
+import { useRecurringTransactionStore } from "../../store/recurringTransactionStore";
 import TransactionHistoryService from "../../services/TransactionHistoryService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TransactionHistory">;
@@ -59,6 +60,9 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
   // ✅ Subscribe to Store - transactions từ Store
   const transactions = useTransactionStore((state) => state.transactions);
 
+  // ⭐ RECURRING: Subscribe to recurring transaction store
+  const recurringTransactions = useRecurringTransactionStore((state) => state.recurringTransactions);
+
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -84,6 +88,11 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       // ✅ Gọi Store để fetch fresh data từ Firebase
       await useTransactionStore.getState().fetchTransactions();
       console.log("✅ [HISTORY-SCREEN] Transactions loaded from Store");
+      
+      // ⭐ Also fetch recurring transactions
+      console.log("📄 [HISTORY-SCREEN] Loading recurring transactions from Store");
+      await useRecurringTransactionStore.getState().fetchRecurringTransactions();
+      console.log("✅ [HISTORY-SCREEN] Recurring transactions loaded from Store");
     } catch (error) {
       console.error("❌ [HISTORY-SCREEN] Error loading transactions:", error);
       Alert.alert("Lỗi", "Không thể tải lịch sử giao dịch");
@@ -99,6 +108,11 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       // ✅ Pull-to-refresh - fetch fresh data từ Store
       await useTransactionStore.getState().fetchTransactions();
       console.log("✅ [HISTORY-SCREEN] Transactions refreshed");
+      
+      // ⭐ Also refresh recurring transactions
+      console.log("🔄 [HISTORY-SCREEN] Refreshing recurring transactions");
+      await useRecurringTransactionStore.getState().fetchRecurringTransactions();
+      console.log("✅ [HISTORY-SCREEN] Recurring transactions refreshed");
     } catch (error) {
       console.error("❌ [HISTORY-SCREEN] Error refreshing transactions:", error);
       Alert.alert("Lỗi", "Không thể làm mới danh sách");
@@ -149,24 +163,41 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
   };
 
   const groupedTransactions = TransactionHistoryService.groupTransactionsByDate(
-    transactions
+    // ⭐ COMBINE: Merge regular transactions with recurring transactions
+    // Convert recurring transactions to match transaction format (use nextDue as date)
+    [
+      ...(transactions || []),
+      ...(recurringTransactions || []).map((rt: any) => ({
+        ...rt,
+        date: rt.nextDue, // Use nextDue as the date for sorting/grouping
+        isRecurring: true, // Mark as recurring for visual distinction
+      })),
+    ]
   ) as Record<string, Transaction[]>;
   
-  // 🎯 Tính tổng thu nhập, chi tiêu, balance từ tất cả transactions
-  const totalIncome = transactions
-    .filter((t: Transaction) => t.type === 'income')
-    .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0);
+  // 🎯 Tính tổng thu nhập, chi tiêu, balance từ tất cả transactions ⭐ NOW INCLUDING RECURRING
+  const allTransactions = [
+    ...(transactions || []),
+    ...(recurringTransactions || []).map((rt: any) => ({
+      ...rt,
+      isRecurring: true,
+    })),
+  ];
+
+  const totalIncome = allTransactions
+    .filter((t: any) => t.type === 'income')
+    .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
   
-  const totalExpense = transactions
-    .filter((t: Transaction) => t.type === 'expense')
-    .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0);
+  const totalExpense = allTransactions
+    .filter((t: any) => t.type === 'expense')
+    .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
   
   const balance = totalIncome - totalExpense;
   const savingRate = totalIncome > 0 
     ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1)
     : '0.0';
 
-  console.log(`📊 [HISTORY-CALC] Total: Income=${totalIncome}, Expense=${totalExpense}, Balance=${balance}, SavingRate=${savingRate}%`);
+  console.log(`📊 [HISTORY-CALC] ⭐ Total with RECURRING: Income=${totalIncome}, Expense=${totalExpense}, Balance=${balance}, SavingRate=${savingRate}%`);
   
   // 🔧 SỬA LỖI 1: Sắp xếp dateKeys + LOGGING CHI TIẾT
   const dateKeys: string[] = Object.keys(groupedTransactions).sort((a, b) => {
@@ -249,7 +280,10 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       return map[categoryId] || { name: 'wallet', color: '#6B7280' };
     };
     const categoryIcon = getCategoryIcon(item.categoryId);
-    const displayTitle = item.description || item.category;
+    // Display transaction name if recurring, otherwise description or category
+    const displayTitle = (item as any).isRecurring && (item as any).name 
+      ? (item as any).name 
+      : item.description || item.category;
 
     // 🔧 FIX: Xử lý Firebase Timestamp + LOGGING CHI TIẾT
     let date: Date;
@@ -335,9 +369,18 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
         
         {/* Thông tin giữa */}
         <View style={styles.bankInfoContainer}>
-          <Text style={styles.bankItemTitle} numberOfLines={1}>
-            {displayTitle}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.bankItemTitle} numberOfLines={1}>
+              {displayTitle}
+            </Text>
+            {/* ⭐ RECURRING BADGE */}
+            {(item as any).isRecurring && (
+              <View style={styles.recurringBadge}>
+                <MaterialCommunityIcons name="repeat" size={10} color="#6366F1" />
+                <Text style={styles.recurringBadgeText}>Lặp lại</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.bankItemDateTime}>
             {timeStr} • {dateStr}
           </Text>
@@ -717,6 +760,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     color: "#111827",
+  },
+
+  /* ⭐ [NEW] Recurring Badge */
+  recurringBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  recurringBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6366F1',
   },
   
   /* 🎨 [NEW] Amount Container - Bên phải (Số tiền) */

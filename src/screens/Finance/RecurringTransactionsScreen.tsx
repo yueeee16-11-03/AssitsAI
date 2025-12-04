@@ -10,12 +10,15 @@ import {
   TextInput,
   Animated,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 // @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+import { useFocusEffect } from '@react-navigation/native';
 import NotificationService from '../../services/NotificationService';
+import { useRecurringTransactionStore } from '../../store/recurringTransactionStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
 
@@ -55,83 +58,40 @@ const REMINDER_OPTIONS = [
 
 export default function RecurringTransactionsScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [transactions, setTransactions] = useState<RecurringTransaction[]>([
-    {
-      id: '1',
-      name: 'Tiền nhà',
-      amount: 8000000,
-      categoryId: 'housing',
-      categoryName: 'Nhà ở',
-      categoryIcon: 'home',
-      walletId: 'bank1',
-      walletName: 'Vietcombank',
-      frequency: 'monthly',
-      dueDate: 5,
-      isAutomatic: false,
-      isActive: true,
-      nextDue: '2025-11-05',
-      reminderDays: 3,
-      type: 'expense',
-      notes: 'Tiền thuê nhà hàng tháng',
-    },
-    {
-      id: '2',
-      name: 'Lương công ty',
-      amount: 25000000,
-      categoryId: 'salary',
-      categoryName: 'Lương',
-      categoryIcon: 'cash',
-      walletId: 'bank1',
-      walletName: 'Vietcombank',
-      frequency: 'monthly',
-      dueDate: 15,
-      isAutomatic: true,
-      isActive: true,
-      nextDue: '2025-11-15',
-      reminderDays: 0,
-      type: 'income',
-      lastPaid: '2025-10-15',
-    },
-    {
-      id: '3',
-      name: 'Netflix',
-      amount: 180000,
-      categoryId: 'entertainment',
-      categoryName: 'Giải trí',
-      categoryIcon: 'movie-open',
-      walletId: 'momo',
-      walletName: 'Momo',
-      frequency: 'monthly',
-      dueDate: 20,
-      isAutomatic: true,
-      isActive: true,
-      nextDue: '2025-11-20',
-      reminderDays: 1,
-      type: 'expense',
-      lastPaid: '2025-10-20',
-    },
-    {
-      id: '4',
-      name: 'Tiền điện',
-      amount: 1200000,
-      categoryId: 'utilities',
-      categoryName: 'Tiện ích',
-      categoryIcon: 'flash',
-      walletId: 'cash',
-      walletName: 'Tiền mặt',
-      frequency: 'monthly',
-      dueDate: 10,
-      isAutomatic: false,
-      isActive: true,
-      nextDue: '2025-11-10',
-      reminderDays: 7,
-      type: 'expense',
-    },
-  ]);
+  
+  // Store hooks
+  const recurringTransactions = useRecurringTransactionStore((state: any) => state.recurringTransactions);
+  const isLoading = useRecurringTransactionStore((state: any) => state.isLoading);
+  const fetchRecurringTransactions = useRecurringTransactionStore((state: any) => state.fetchRecurringTransactions);
+  const addRecurringTransaction = useRecurringTransactionStore((state: any) => state.addRecurringTransaction);
+  const updateRecurringTransaction = useRecurringTransactionStore((state: any) => state.updateRecurringTransaction);
+  const deleteRecurringTransaction = useRecurringTransactionStore((state: any) => state.deleteRecurringTransaction);
+  const initialize = useRecurringTransactionStore((state: any) => state.initialize);
+
+  // Initialize on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        await initialize();
+      } catch (err) {
+        console.error('Failed to initialize:', err);
+      }
+    })();
+  }, [initialize]);
+
+  // Fetch on focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchRecurringTransactions().catch((err: any) => {
+        console.error('Error fetching:', err);
+      });
+    }, [fetchRecurringTransactions])
+  );
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<RecurringTransaction | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [_isSubmitting, _setIsSubmitting] = useState(false);
 
   // Form states
   const [transactionName, setTransactionName] = useState('');
@@ -154,9 +114,8 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
   // Schedule reminders for active transactions when list changes
   useEffect(() => {
     (async () => {
-      for (const t of transactions) {
+      for (const t of recurringTransactions) {
         if (!t.isActive) {
-          // cancel any existing reminder
           try { await NotificationService.cancelReminder(`recurring-${t.id}`); } catch { }
           continue;
         }
@@ -165,12 +124,12 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           try {
             await NotificationService.scheduleRecurringTransactionReminder(t, { hour: 9, minute: 0 });
           } catch (err) {
-            console.warn('RecurringTransactions: failed to schedule reminder for', t.id, err);
+            console.warn('Failed to schedule reminder:', err);
           }
         }
       }
     })();
-  }, [transactions]);
+  }, [recurringTransactions]);
 
   const formatCurrency = (amount: number) => {
     // Format without currency symbol and append ' VNĐ'
@@ -213,7 +172,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
     setEditingTransaction(null);
   };
 
-  const handleAddTransaction = () => {
+  const handleAddTransaction = async () => {
     if (!transactionName.trim() || !transactionAmount.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
@@ -225,7 +184,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       return;
     }
 
-    // Calculate next due date based on frequency and due date
+    // Calculate next due date
     const today = new Date();
     let nextDue: Date;
     
@@ -249,12 +208,12 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
     }
 
     const newTransaction: RecurringTransaction = {
-      id: Date.now().toString(),
+      id: editingTransaction?.id || Date.now().toString(),
       name: transactionName.trim(),
       amount,
       categoryId: transactionType === 'income' ? 'salary' : 'housing',
       categoryName: transactionType === 'income' ? 'Thu nhập' : 'Chi phí',
-      categoryIcon: transactionType === 'income' ? '💰' : '🏠',
+      categoryIcon: transactionType === 'income' ? 'cash' : 'home',
       walletId: 'default',
       walletName: 'Ví mặc định',
       frequency,
@@ -267,18 +226,19 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       notes: notes.trim() || undefined,
     };
 
-    if (editingTransaction) {
-      setTransactions(prev => prev.map(t => 
-        t.id === editingTransaction.id 
-          ? { ...newTransaction, id: editingTransaction.id }
-          : t
-      ));
-    } else {
-      setTransactions(prev => [...prev, newTransaction]);
+    try {
+      if (editingTransaction?.id) {
+        await updateRecurringTransaction(editingTransaction.id, newTransaction);
+        Alert.alert('Thành công', 'Cập nhật thành công');
+      } else {
+        await addRecurringTransaction(newTransaction);
+        Alert.alert('Thành công', 'Thêm thành công');
+      }
+      setShowAddModal(false);
+      resetForm();
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.message || 'Không thể lưu giao dịch');
     }
-
-    setShowAddModal(false);
-    resetForm();
   };
 
   const handleEditTransaction = (transaction: RecurringTransaction) => {
@@ -304,19 +264,107 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           text: 'Xóa',
           style: 'destructive',
           onPress: async () => {
-            // cancel any scheduled reminder for this transaction
-            try { await NotificationService.cancelReminder(`recurring-${transactionId}`); } catch { }
-            setTransactions(prev => prev.filter(t => t.id !== transactionId));
+            try {
+              // Step 1: Cancel reminder
+              try {
+                await NotificationService.cancelReminder(`recurring-${transactionId}`);
+              } catch (e) {
+                console.warn('Failed to cancel reminder:', e);
+              }
+
+              // Step 2: Delete from Firebase with retry logic
+              console.log('🗑️ [SCREEN] Starting deletion of:', transactionId);
+              let deleteSuccess = false;
+              let retries = 0;
+              const maxRetries = 3;
+
+              while (!deleteSuccess && retries < maxRetries) {
+                try {
+                  await deleteRecurringTransaction(transactionId);
+                  console.log('✅ [SCREEN] Delete action executed');
+                  deleteSuccess = true;
+                } catch (deleteError) {
+                  retries++;
+                  console.error(`❌ [SCREEN] Delete failed (retry ${retries}/${maxRetries}):`, deleteError);
+                  if (retries < maxRetries) {
+                    await new Promise((resolve: any) => setTimeout(resolve, 500));
+                  }
+                }
+              }
+
+              if (!deleteSuccess) {
+                throw new Error('Không thể xóa sau 3 lần thử');
+              }
+
+              // Step 3: Wait for Firestore propagation
+              console.log('⏳ [SCREEN] Waiting for Firestore sync...');
+              await new Promise((resolve: any) => setTimeout(resolve, 1000));
+
+              // Step 4: Fetch fresh data and verify deletion
+              console.log('🔄 [SCREEN] Fetching fresh data to verify deletion...');
+              let verifyAttempts = 0;
+              const maxVerifyAttempts = 5;
+              let isDeleted = false;
+              let lastFetchedList: any[] = [];
+
+              while (verifyAttempts < maxVerifyAttempts) {
+                try {
+                  // Fetch directly from service to get fresh data (not from state)
+                  lastFetchedList = await fetchRecurringTransactions();
+                  console.log(`🔍 [SCREEN] Verify attempt ${verifyAttempts + 1}: Fetched ${lastFetchedList.length} items`);
+                  
+                  // Check if ID still in the fetched list
+                  const stillExists = lastFetchedList.some((t: any) => t.id === transactionId);
+                  console.log(`   → Transaction still exists? ${stillExists}`);
+                  
+                  if (!stillExists) {
+                    isDeleted = true;
+                    console.log('✅ [SCREEN] Deletion verified in Firebase');
+                    break; // Exit loop on success
+                  }
+                } catch (fetchErr: any) {
+                  console.error(`❌ [SCREEN] Fetch attempt ${verifyAttempts + 1} failed:`, fetchErr?.message);
+                }
+
+                verifyAttempts++;
+                if (verifyAttempts < maxVerifyAttempts) {
+                  console.log(`⏳ [SCREEN] Retrying verification in 500ms (attempt ${verifyAttempts}/${maxVerifyAttempts})...`);
+                  await new Promise((resolve: any) => setTimeout(resolve, 500));
+                }
+              }
+
+              if (!isDeleted) {
+                console.error(`❌ [SCREEN] Deletion verification failed after ${maxVerifyAttempts} attempts`);
+                console.error(`   → Last fetched list count: ${lastFetchedList.length}`);
+                console.error(`   → Looking for ID: ${transactionId}`);
+                throw new Error('Không thể xác nhận xóa trên Firebase. Vui lòng thử lại.');
+              }
+
+              // Step 5: Show success alert only after verification
+              Alert.alert('Thành công', 'Xóa giao dịch thành công');
+              console.log('✅ [SCREEN] Deletion complete and verified');
+            } catch (error: any) {
+              console.error('❌ [SCREEN] Deletion error:', error?.message);
+              Alert.alert('Lỗi xóa', error?.message || 'Không thể xóa giao dịch. Vui lòng kiểm tra kết nối mạng.');
+            }
           }
         }
       ]
     );
   };
 
-  const handleToggleActive = (transactionId: string) => {
-    setTransactions(prev => prev.map(t => 
-      t.id === transactionId ? { ...t, isActive: !t.isActive } : t
-    ));
+  const handleToggleActive = async (transactionId: string) => {
+    try {
+      const transaction = recurringTransactions.find((t: any) => t.id === transactionId);
+      if (transaction) {
+        await updateRecurringTransaction(transactionId, {
+          ...transaction,
+          isActive: !transaction.isActive
+        });
+      }
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.message || 'Không thể cập nhật');
+    }
   };
 
   const handleMarkAsPaid = (transactionId: string) => {
@@ -327,31 +375,33 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
         { text: 'Hủy', style: 'cancel' },
         {
           text: 'Xác nhận',
-          onPress: () => {
-            setTransactions(prev => prev.map(t => {
-              if (t.id === transactionId) {
+          onPress: async () => {
+            try {
+              const transaction = recurringTransactions.find((t: any) => t.id === transactionId);
+              if (transaction) {
                 const today = new Date();
-                let nextDue = new Date(t.nextDue);
+                let nextDue = new Date(transaction.nextDue);
                 
-                // Calculate next due date
-                if (t.frequency === 'weekly') {
+                if (transaction.frequency === 'weekly') {
                   nextDue.setDate(nextDue.getDate() + 7);
-                } else if (t.frequency === 'monthly') {
+                } else if (transaction.frequency === 'monthly') {
                   nextDue.setMonth(nextDue.getMonth() + 1);
-                } else if (t.frequency === 'quarterly') {
+                } else if (transaction.frequency === 'quarterly') {
                   nextDue.setMonth(nextDue.getMonth() + 3);
-                } else if (t.frequency === 'yearly') {
+                } else if (transaction.frequency === 'yearly') {
                   nextDue.setFullYear(nextDue.getFullYear() + 1);
                 }
 
-                return {
-                  ...t,
+                await updateRecurringTransaction(transactionId, {
+                  ...transaction,
                   lastPaid: today.toISOString().split('T')[0],
                   nextDue: nextDue.toISOString().split('T')[0],
-                };
+                });
+                Alert.alert('Thành công', 'Đánh dấu đã thanh toán');
               }
-              return t;
-            }));
+            } catch (error: any) {
+              Alert.alert('Lỗi', error?.message || 'Không thể đánh dấu');
+            }
           }
         }
       ]
@@ -359,10 +409,10 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
   };
 
   const getFilteredTransactions = () => {
-    return transactions.filter(t => {
+    return recurringTransactions.filter((t: any) => {
       if (filterType === 'all') return true;
       return t.type === filterType;
-    }).sort((a, b) => {
+    }).sort((a: any, b: any) => {
       const aDays = getDaysUntilDue(a.nextDue);
       const bDays = getDaysUntilDue(b.nextDue);
       return aDays - bDays;
@@ -466,181 +516,181 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
     <Modal
       visible={showAddModal}
       animationType="slide"
-      transparent={true}
+      transparent={false}
       onRequestClose={() => {
         setShowAddModal(false);
         resetForm();
       }}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {editingTransaction ? 'Chỉnh sửa giao dịch' : 'Thêm giao dịch lặp lại'}
+      <View style={styles.modalContainer}>
+        <View style={styles.modalFullHeader}>
+          <TouchableOpacity
+            onPress={() => {
+              setShowAddModal(false);
+              resetForm();
+            }}
+          >
+            <Text style={styles.modalBackButton}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalFullTitle}>
+            {editingTransaction ? 'Chỉnh sửa giao dịch' : 'Thêm giao dịch lặp lại'}
+          </Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+
+        <ScrollView style={styles.modalFullBody}>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Tên giao dịch *</Text>
+            <TextInput
+              style={styles.formInput}
+              value={transactionName}
+              onChangeText={setTransactionName}
+              placeholder="Ví dụ: Tiền nhà, Netflix, Lương..."
+              placeholderTextColor="#6B7280"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Loại giao dịch *</Text>
+            <View style={styles.typeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.typeOption,
+                  transactionType === 'expense' && styles.typeOptionSelected
+                ]}
+                onPress={() => setTransactionType('expense')}
+              >
+                <Icon name="cash-minus" size={20} color={transactionType === 'expense' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
+                <Text style={styles.typeLabel}>Chi tiêu</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.typeOption,
+                  transactionType === 'income' && styles.typeOptionSelected
+                ]}
+                onPress={() => setTransactionType('income')}
+              >
+                <Icon name="cash-plus" size={20} color={transactionType === 'income' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
+                <Text style={styles.typeLabel}>Thu nhập</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Số tiền *</Text>
+            <TextInput
+              style={styles.formInput}
+              value={transactionAmount}
+              onChangeText={setTransactionAmount}
+              placeholder="0"
+              keyboardType="numeric"
+              placeholderTextColor="#6B7280"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Tần suất lặp lại *</Text>
+            <View style={styles.frequencySelector}>
+              {FREQUENCY_OPTIONS.map(option => (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[
+                    styles.frequencyOption,
+                    frequency === option.key && styles.frequencyOptionSelected
+                  ]}
+                  onPress={() => setFrequency(option.key as any)}
+                >
+                  <Icon name={option.icon as any} size={16} color={frequency === option.key ? '#FFFFFF' : '#111827'} />
+                    <Text style={[styles.frequencyLabel, frequency === option.key ? styles.frequencyLabelSelected : undefined]}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>
+              {frequency === 'weekly' ? 'Thứ trong tuần *' : 'Ngày trong tháng *'}
             </Text>
-            <TouchableOpacity
-              onPress={() => {
-                setShowAddModal(false);
-                resetForm();
-              }}
-            >
-              <Text style={styles.modalClose}>✕</Text>
-            </TouchableOpacity>
+            <TextInput
+              style={styles.formInput}
+              value={dueDate}
+              onChangeText={setDueDate}
+              placeholder={frequency === 'weekly' ? '1-7 (1=Chủ nhật)' : '1-31'}
+              keyboardType="numeric"
+              placeholderTextColor="#6B7280"
+            />
           </View>
 
-          <ScrollView style={styles.modalBody}>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Tên giao dịch *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={transactionName}
-                onChangeText={setTransactionName}
-                placeholder="Ví dụ: Tiền nhà, Netflix, Lương..."
-                placeholderTextColor="#6B7280"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Loại giao dịch *</Text>
-              <View style={styles.typeSelector}>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Nhắc nhở trước</Text>
+            <View style={styles.reminderSelector}>
+              {REMINDER_OPTIONS.map(option => (
                 <TouchableOpacity
+                  key={option.value}
                   style={[
-                    styles.typeOption,
-                    transactionType === 'expense' && styles.typeOptionSelected
+                    styles.reminderOption,
+                    reminderDays === option.value && styles.reminderOptionSelected
                   ]}
-                  onPress={() => setTransactionType('expense')}
+                  onPress={() => setReminderDays(option.value)}
                 >
-                  <Icon name="cash-minus" size={20} color={transactionType === 'expense' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
-                  <Text style={styles.typeLabel}>Chi tiêu</Text>
+                  <Text style={[styles.reminderLabel, reminderDays === option.value ? styles.reminderLabelSelected : undefined]}>{option.label}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeOption,
-                    transactionType === 'income' && styles.typeOptionSelected
-                  ]}
-                  onPress={() => setTransactionType('income')}
-                >
-                  <Icon name="cash-plus" size={20} color={transactionType === 'income' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
-                  <Text style={styles.typeLabel}>Thu nhập</Text>
-                </TouchableOpacity>
-              </View>
+              ))}
             </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Số tiền *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={transactionAmount}
-                onChangeText={setTransactionAmount}
-                placeholder="0"
-                keyboardType="numeric"
-                placeholderTextColor="#6B7280"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Tần suất lặp lại *</Text>
-              <View style={styles.frequencySelector}>
-                {FREQUENCY_OPTIONS.map(option => (
-                  <TouchableOpacity
-                    key={option.key}
-                    style={[
-                      styles.frequencyOption,
-                      frequency === option.key && styles.frequencyOptionSelected
-                    ]}
-                    onPress={() => setFrequency(option.key as any)}
-                  >
-                    <Icon name={option.icon as any} size={16} color={frequency === option.key ? '#FFFFFF' : '#111827'} />
-                      <Text style={[styles.frequencyLabel, frequency === option.key ? styles.frequencyLabelSelected : undefined]}>{option.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>
-                {frequency === 'weekly' ? 'Thứ trong tuần *' : 'Ngày trong tháng *'}
-              </Text>
-              <TextInput
-                style={styles.formInput}
-                value={dueDate}
-                onChangeText={setDueDate}
-                placeholder={frequency === 'weekly' ? '1-7 (1=Chủ nhật)' : '1-31'}
-                keyboardType="numeric"
-                placeholderTextColor="#6B7280"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Nhắc nhở trước</Text>
-              <View style={styles.reminderSelector}>
-                {REMINDER_OPTIONS.map(option => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.reminderOption,
-                      reminderDays === option.value && styles.reminderOptionSelected
-                    ]}
-                    onPress={() => setReminderDays(option.value)}
-                  >
-                    <Text style={[styles.reminderLabel, reminderDays === option.value ? styles.reminderLabelSelected : undefined]}>{option.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <View style={styles.switchContainer}>
-                <Text style={styles.formLabel}>Tự động tạo giao dịch</Text>
-                <Switch
-                  value={isAutomatic}
-                  onValueChange={setIsAutomatic}
-                  trackColor={{ false: '#374151', true: '#6366F1' }}
-                  thumbColor={isAutomatic ? '#FFFFFF' : '#9CA3AF'}
-                />
-              </View>
-              <Text style={styles.formHint}>
-                {isAutomatic 
-                  ? 'Giao dịch sẽ tự động được tạo khi đến hạn' 
-                  : 'Bạn sẽ nhận thông báo và cần xác nhận thủ công'
-                }
-              </Text>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Ghi chú (tùy chọn)</Text>
-              <TextInput
-                style={[styles.formInput, styles.textArea]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Thêm ghi chú..."
-                placeholderTextColor="#6B7280"
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonSecondary]}
-              onPress={() => {
-                setShowAddModal(false);
-                resetForm();
-              }}
-            >
-              <Text style={styles.modalButtonTextSecondary}>Hủy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonPrimary]}
-              onPress={handleAddTransaction}
-            >
-              <Text style={styles.modalButtonTextPrimary}>
-                {editingTransaction ? 'Cập nhật' : 'Thêm'}
-              </Text>
-            </TouchableOpacity>
           </View>
+
+          <View style={styles.formGroup}>
+            <View style={styles.switchContainer}>
+              <Text style={styles.formLabel}>Tự động tạo giao dịch</Text>
+              <Switch
+                value={isAutomatic}
+                onValueChange={setIsAutomatic}
+                trackColor={{ false: '#374151', true: '#6366F1' }}
+                thumbColor={isAutomatic ? '#FFFFFF' : '#9CA3AF'}
+              />
+            </View>
+            <Text style={styles.formHint}>
+              {isAutomatic 
+                ? 'Giao dịch sẽ tự động được tạo khi đến hạn' 
+                : 'Bạn sẽ nhận thông báo và cần xác nhận thủ công'
+              }
+            </Text>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Ghi chú (tùy chọn)</Text>
+            <TextInput
+              style={[styles.formInput, styles.textArea]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Thêm ghi chú..."
+              placeholderTextColor="#6B7280"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+          <View style={styles.bottomSpace} />
+        </ScrollView>
+
+        <View style={styles.modalFullFooter}>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.modalButtonSecondary]}
+            onPress={() => {
+              setShowAddModal(false);
+              resetForm();
+            }}
+          >
+            <Text style={styles.modalButtonTextSecondary}>Hủy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.modalButtonPrimary]}
+            onPress={handleAddTransaction}
+          >
+            <Text style={styles.modalButtonTextPrimary}>
+              {editingTransaction ? 'Cập nhật' : 'Thêm'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -661,12 +711,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitleText}>Giao dịch lặp lại</Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Text style={[styles.addButtonText, styles.addButtonTextDark]}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.headerPlaceholder} />
       </View>
 
       {/* Filter Tabs */}
@@ -676,7 +721,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           onPress={() => setFilterType('all')}
         >
           <Text style={[styles.filterTabText, filterType === 'all' && styles.filterTabTextActive]}>
-            Tất cả ({transactions.length})
+            Tất cả ({recurringTransactions.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -684,7 +729,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           onPress={() => setFilterType('expense')}
         >
           <Text style={[styles.filterTabText, filterType === 'expense' && styles.filterTabTextActive]}>
-            Chi tiêu ({transactions.filter(t => t.type === 'expense').length})
+            Chi tiêu ({recurringTransactions.filter((t: any) => t.type === 'expense').length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -692,35 +737,42 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           onPress={() => setFilterType('income')}
         >
           <Text style={[styles.filterTabText, filterType === 'income' && styles.filterTabTextActive]}>
-            Thu nhập ({transactions.filter(t => t.type === 'income').length})
+            Thu nhập ({recurringTransactions.filter((t: any) => t.type === 'income').length})
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Summary Card */}
       <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Chi tiêu/tháng</Text>
-            <Text style={[styles.summaryAmount, styles.expenseAmountText]}>
-              -{formatCurrency(
-                transactions
-                  .filter(t => t.type === 'expense' && t.frequency === 'monthly' && t.isActive)
-                  .reduce((sum, t) => sum + t.amount, 0)
-              )}
-            </Text>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#6366F1" />
+            <Text style={styles.loadingText}>Đang tải...</Text>
           </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Thu nhập/tháng</Text>
-            <Text style={[styles.summaryAmount, styles.incomeAmountText]}>
-              +{formatCurrency(
-                transactions
-                  .filter(t => t.type === 'income' && t.frequency === 'monthly' && t.isActive)
-                  .reduce((sum, t) => sum + t.amount, 0)
-              )}
-            </Text>
+        ) : (
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Chi tiêu</Text>
+              <Text style={[styles.summaryAmount, styles.expenseAmountText]}>
+                -{formatCurrency(
+                  recurringTransactions
+                    .filter((t: any) => t.type === 'expense' && t.isActive)
+                    .reduce((sum: number, t: any) => sum + t.amount, 0)
+                )}
+              </Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Thu nhập</Text>
+              <Text style={[styles.summaryAmount, styles.incomeAmountText]}>
+                +{formatCurrency(
+                  recurringTransactions
+                    .filter((t: any) => t.type === 'income' && t.isActive)
+                    .reduce((sum: number, t: any) => sum + t.amount, 0)
+                )}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       {/* Transactions List */}
@@ -747,6 +799,17 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
 
       {/* Add Modal */}
       {renderAddModal()}
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          resetForm();
+          setShowAddModal(true);
+        }}
+      >
+        <Icon name="plus" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
 
       {/* Decorative Elements */}
       <View style={[styles.decorativeCircle, styles.decorativeCircle1]} />
@@ -791,11 +854,31 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
+    flex: 1,
   },
   headerTitleText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  headerPlaceholder: {
+    width: 40,
   },
   addButton: {
     width: 40,
@@ -1077,6 +1160,44 @@ const styles = StyleSheet.create({
     height: 100,
   },
   // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  modalFullHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  modalBackButton: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  modalFullTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1,
+    textAlign: 'center',
+  },
+  modalFullBody: {
+    flex: 1,
+    padding: 20,
+  },
+  modalFullFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -1145,8 +1266,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
   },
   typeOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: '#6366F1',
+    borderColor: '#9CA3AF',
+    backgroundColor: '#E5E7EB',
   },
   typeIcon: {
     fontSize: 24,
@@ -1159,6 +1280,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#111827',
     textAlign: 'center',
+    fontWeight: '600',
   },
   frequencySelector: {
     flexDirection: 'row',
@@ -1176,8 +1298,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
   },
   frequencyOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: '#6366F1',
+    borderColor: '#9CA3AF',
+    backgroundColor: '#E5E7EB',
   },
   frequencyIcon: {
     marginRight: 6,
@@ -1187,7 +1309,8 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   frequencyLabelSelected: {
-    color: '#FFFFFF',
+    color: '#111827',
+    fontWeight: '600',
   },
   reminderSelector: {
     flexDirection: 'row',
@@ -1203,15 +1326,16 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   reminderOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: '#6366F1',
+    borderColor: '#9CA3AF',
+    backgroundColor: '#E5E7EB',
   },
   reminderLabel: {
     fontSize: 12,
     color: '#111827',
   },
   reminderLabelSelected: {
-    color: '#FFFFFF',
+    color: '#111827',
+    fontWeight: '600',
   },
   switchContainer: {
     flexDirection: 'row',
@@ -1290,5 +1414,15 @@ const styles = StyleSheet.create({
   },
   expenseAmountText: {
     color: '#EF4444',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 8,
   },
 });

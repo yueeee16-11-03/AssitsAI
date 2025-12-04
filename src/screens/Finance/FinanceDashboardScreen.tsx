@@ -13,9 +13,10 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useTransactionStore } from "../../store/transactionStore";
-import { useFinancialData } from "../../hooks/useFinancialData";
+import { useRecurringFinancialData } from "../../hooks/useRecurringFinancialData";
 import useIncomeChartData from "../../hooks/useIncomeChartData";
 import useExpenseCategories from "../../hooks/useExpenseCategories";
+import { useRecurringTransactionStore } from "../../store/recurringTransactionStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FinanceDashboard">;
 
@@ -29,9 +30,31 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
   const fetchTransactions = useTransactionStore((state) => state.fetchTransactions);
   const transactionsLoading = useTransactionStore((state) => state.isLoading);
 
-  // Recent transactions derived from store (most recent first)
-  // Computed lại mỗi khi transactions thay đổi
-  const recentTransactions = transactions ? transactions.slice(0, 5) : [];
+  // ⭐ RECURRING: Subscribe to recurring transaction store
+  const recurringTransactions = useRecurringTransactionStore((state: any) => state.recurringTransactions);
+  const fetchRecurringTransactions = useRecurringTransactionStore((state: any) => state.fetchRecurringTransactions);
+
+  // ⭐ Recent transactions derived from store (most recent first)
+  // INCLUDE BOTH: regular transactions + recurring transactions
+  const allTransactionsForRecent = React.useMemo(() => {
+    const combined = [
+      ...(transactions || []),
+      ...(recurringTransactions || []).map((rt: any) => ({
+        ...rt,
+        date: rt.nextDue, // Use nextDue for sorting
+        isRecurring: true, // Mark as recurring
+      })),
+    ];
+    
+    // Sort by date (newest first)
+    return combined.sort((a: any, b: any) => {
+      const dateA = a.date?.toDate?.() || new Date(a.date || a.createdAt);
+      const dateB = b.date?.toDate?.() || new Date(b.date || b.createdAt);
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    }).slice(0, 5);
+  }, [transactions, recurringTransactions]);
+
+  const recentTransactions = allTransactionsForRecent;
 
   // Load transactions helper (declare before useFocusEffect to avoid TDZ error)
   const loadRecentTransactions = React.useCallback(async () => {
@@ -39,10 +62,15 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
       console.log('📊 [DASHBOARD] Fetching fresh transactions...');
       await fetchTransactions();
       console.log('✅ [DASHBOARD] Fresh transactions fetched');
+      
+      // ⭐ Also fetch recurring transactions
+      console.log('📊 [DASHBOARD] Fetching fresh recurring transactions...');
+      await fetchRecurringTransactions();
+      console.log('✅ [DASHBOARD] Fresh recurring transactions fetched');
     } catch (error) {
       console.error("Error loading transactions:", error);
     }
-  }, [fetchTransactions]);
+  }, [fetchTransactions, fetchRecurringTransactions]);
 
   // ⚠️ IMPORTANT: Fetch fresh data khi screen focus
   // Đây đảm bảo nếu có thay đổi từ tab khác → fetch fresh
@@ -61,6 +89,22 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
+  // ⭐ INITIALIZE: Fetch recurring transactions on mount
+  React.useEffect(() => {
+    const initializeRecurringTransactions = async () => {
+      try {
+        console.log('📊 [DASHBOARD] Initializing recurring transactions...');
+        const initAction = (useRecurringTransactionStore.getState() as any).initialize;
+        await initAction();
+        console.log('✅ [DASHBOARD] Recurring transactions initialized');
+      } catch (error) {
+        console.error('❌ [DASHBOARD] Error initializing recurring transactions:', error);
+      }
+    };
+
+    initializeRecurringTransactions();
+  }, []);
+
   // ⚠️ AUTO-UPDATE: Mỗi khi transactions thay đổi (từ Store)
   // Component tự động re-render với dữ liệu mới
   React.useEffect(() => {
@@ -68,8 +112,17 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
     // recentTransactions sẽ được computed lại tự động
   }, [transactions]);
 
-  // 🎯 Sử dụng custom hook để tính toán dữ liệu tài chính
-  const financialData = useFinancialData(transactions, selectedPeriod);
+  // ⭐ AUTO-UPDATE: When recurring transactions change, log for debug
+  React.useEffect(() => {
+    console.log('🔄 [DASHBOARD] Recurring transactions updated from store. Count:', recurringTransactions.length);
+    console.log('🔄 [DASHBOARD] Recurring transactions:', recurringTransactions);
+    
+    // 💡 This triggers useRecurringFinancialData to recalculate
+    console.log('💹 [DASHBOARD] useRecurringFinancialData will recalculate automatically due to dependency');
+  }, [recurringTransactions]);
+
+  // 🎯 Sử dụng custom hook để tính toán dữ liệu tài chính ⭐ NOW WITH RECURRING TRANSACTIONS
+  const financialData = useRecurringFinancialData(transactions, recurringTransactions, selectedPeriod);
 
   // Income chart data (last 6 months) — moved to hook for separation
   const incomeData = useIncomeChartData(transactions);
@@ -233,20 +286,17 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
             </TouchableOpacity>
             <View style={styles.categoryListContainer}>
               {expenseCategories.filter((category) => category.name !== "Ghi chú").map((category, index) => {
-              const getCategoryIcon = (categoryName: string) => {
-                const iconMap: { [key: string]: { name: string; color: string } } = {
-                  "Ăn uống": { name: "food", color: "#EF4444" },
-                  "Di chuyển": { name: "car", color: "#F97316" },
-                  "Mua sắm": { name: "shopping", color: "#EC4899" },
-                  "Giải trí": { name: "gamepad-variant", color: "#8B5CF6" },
-                  "Sức khỏe": { name: "hospital-box", color: "#EF4444" },
-                  "Giáo dục": { name: "book", color: "#3B82F6" },
-                  "Nhà cửa": { name: "home", color: "#10B981" },
-                  "Khác": { name: "dots-horizontal", color: "#6B7280" },
-                };
-                return iconMap[categoryName] || { name: "wallet", color: "#6B7280" };
+              const iconMapCategory: { [key: string]: { name: string; color: string } } = {
+                "Ăn uống": { name: "food", color: "#EF4444" },
+                "Di chuyển": { name: "car", color: "#F97316" },
+                "Mua sắm": { name: "shopping", color: "#EC4899" },
+                "Giải trí": { name: "gamepad-variant", color: "#8B5CF6" },
+                "Sức khỏe": { name: "hospital-box", color: "#EF4444" },
+                "Giáo dục": { name: "book", color: "#3B82F6" },
+                "Nhà cửa": { name: "home", color: "#10B981" },
+                "Khác": { name: "dots-horizontal", color: "#6B7280" },
               };
-              const icon = getCategoryIcon(category.name);
+              const icon = iconMapCategory[category.name] || { name: "wallet", color: "#6B7280" };
               return (
               <View key={index} style={styles.categoryItem}>
                 <View style={styles.categoryHeader}>
@@ -385,7 +435,26 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                                       style={styles.transactionIcon}
                                     />
                           <View style={styles.transactionInfo}>
-                            <Text style={styles.transactionCategory}>{transaction.category}</Text>
+                            {/* Display transaction name if recurring, otherwise category */}
+                            {transaction.isRecurring && transaction.name ? (
+                              <View style={styles.transactionNameRow}>
+                                <Text style={styles.transactionName}>{transaction.name}</Text>
+                                <View style={styles.recurringBadge}>
+                                  <MaterialCommunityIcons name="repeat" size={10} color="#6366F1" />
+                                  <Text style={styles.recurringBadgeText}>Lặp lại</Text>
+                                </View>
+                              </View>
+                            ) : (
+                              <View style={styles.transactionCategoryRow}>
+                                <Text style={styles.transactionCategory}>{transaction.category}</Text>
+                                {transaction.isRecurring && (
+                                  <View style={styles.recurringBadge}>
+                                    <MaterialCommunityIcons name="repeat" size={10} color="#6366F1" />
+                                    <Text style={styles.recurringBadgeText}>Lặp lại</Text>
+                                  </View>
+                                )}
+                              </View>
+                            )}
                             <Text style={styles.transactionTime}>
                               <MaterialCommunityIcons name="clock-outline" size={12} color="#9CA3AF" /> {dateTime.time} · <MaterialCommunityIcons name="calendar-outline" size={12} color="#9CA3AF" /> {dateTime.date}
                             </Text>
@@ -731,10 +800,40 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginBottom: 2,
   },
+  transactionNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  transactionName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  transactionCategoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   transactionTime: {
     fontSize: 11,
     color: "#000000",
     marginBottom: 2,
+  },
+  recurringBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  recurringBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6366F1',
   },
   transactionDescription: {
     fontSize: 12,

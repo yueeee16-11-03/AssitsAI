@@ -1,19 +1,19 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import ENV from '../config/env';
 
 /**
  * TextAIProcessingService: Xử lý Gemini AI cho TEXT/NOTE
- * (Đã được sửa lại để dùng chung API Key và model từ file GeminiAIService.ts)
+ * (Lấy API Key từ env.ts - được .gitignore bảo vệ)
  */
 
-// 1. LẤY CẤU HÌNH API KEY TỪ FILE "GeminiAIService.ts" ĐANG CHẠY
-// Đây là chìa khóa: Dùng chung một API_KEY đã được xác nhận là chạy được.
-const API_KEY = "AIzaSyDdOT4GOrEspBTjvv5YmAsOjxhQkYyJR_Y";
+// Lấy API key từ env.ts (được .gitignore - không bị commit)
+const API_KEY = ENV.GEMINI_API_KEY_TEXT;
 
 if (!API_KEY) {
-  throw new Error("⚠️ Thiếu GEMINI_API_KEY");
+  throw new Error("⚠️ Thiếu GEMINI_API_KEY - vui lòng cấu hình trong src/config/env.ts");
 }
 
-// 2. TẠO INSTANCE genAI (Giống hệt file GeminiAIService.ts)
+// Tạo instance genAI
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 

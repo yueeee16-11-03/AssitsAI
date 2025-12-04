@@ -1,4 +1,12 @@
-import { generateGeminiText } from './GeminiAIService';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import ENV from '../config/env';
+
+// Khởi tạo Gemini client với API key riêng cho AIInsightService
+const API_KEY = ENV.GEMINI_API_KEY_SIGHT;
+if (!API_KEY) {
+  console.warn("⚠️ Thiếu GEMINI_API_KEY_IMAGE - vui lòng cấu hình trong src/config/env.ts");
+}
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 type Transaction = {
   id?: string;
@@ -180,7 +188,12 @@ export async function analyzeTransactionsWithAI(
     }
 
     console.log('🚀 [AIInsightService] Gọi Gemini với prompt:', prompt.substring(0, 200));
-    const raw = await generateGeminiText(prompt);
+    
+    // Gọi Gemini trực tiếp với API key riêng
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text();
+    
     console.log('✅ [AIInsightService] Kết quả trả về:', raw.substring(0, 200));
 
     // Try to parse JSON from the raw text. Gemini should return JSON only per instruction.

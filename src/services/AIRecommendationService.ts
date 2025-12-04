@@ -16,11 +16,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import NotificationService from './NotificationService';
 import firestore from "@react-native-firebase/firestore";
+import ENV from '../config/env';
 
-const API_KEY = "AIzaSyAB1q3_1T9mRMd1xvmYJBJxtXATyeStQuU";
+const API_KEY = ENV.GEMINI_API_KEY_RECOM;
 
 if (!API_KEY) {
-  throw new Error("⚠️ Thiếu GEMINI_API_KEY");
+  throw new Error("⚠️ Thiếu GEMINI_API_KEY - vui lòng cấu hình trong src/config/env.ts");
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);

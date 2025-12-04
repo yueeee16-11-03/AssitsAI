@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import ENV from '../config/env';
 
 interface HabitSuggestion {
   id: string;
@@ -101,9 +102,13 @@ class AIHabitSuggestionService {
   private client: GoogleGenerativeAI;
 
   constructor() {
-    // Set API key trực tiếp
-    this.apiKey = "AIzaSyD7VodkGA34LK1m6qruc9NVY_bFPny4978";
+    // Lấy API key từ env.ts (được .gitignore bảo vệ)
+    this.apiKey = ENV.GEMINI_API_KEY_HABIT;
     this.client = new GoogleGenerativeAI(this.apiKey);
+    
+    if (!this.apiKey) {
+      console.warn("⚠️ Thiếu GEMINI_API_KEY - vui lòng cấu hình trong src/config/env.ts");
+    }
   }
 
   /**
