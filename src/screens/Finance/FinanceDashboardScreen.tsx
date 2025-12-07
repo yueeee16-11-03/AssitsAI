@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -17,12 +17,37 @@ import { useRecurringFinancialData } from "../../hooks/useRecurringFinancialData
 import useIncomeChartData from "../../hooks/useIncomeChartData";
 import useExpenseCategories from "../../hooks/useExpenseCategories";
 import { useRecurringTransactionStore } from "../../store/recurringTransactionStore";
+import { PieChart, BarChart } from "react-native-gifted-charts";
+import LinearGradient from "react-native-linear-gradient";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FinanceDashboard">;
 
+const ChartCenterLabel: React.FC<{ activeItem: any; totalExpense: number }> = ({ activeItem, totalExpense }) => {
+  const centerLabel = activeItem ? activeItem.name : 'Tổng Chi tiêu';
+  const centerValue = activeItem ? `${activeItem.percent}%` : `${(totalExpense / 1000000).toFixed(1)}M`;
+  const centerColor = activeItem ? activeItem.color : '#111827';
+  return (
+    <View style={styles.centerLabelWrap}>
+      <Text style={styles.centerLabelSubtitle}>{centerLabel}</Text>
+      <Text style={[styles.centerLabelValue, { color: centerColor }]}>{centerValue}</Text>
+    </View>
+  );
+};
+
 export default function FinanceDashboardScreen({ navigation }: Props) {
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
+  const [activeExpenseIndex, setActiveExpenseIndex] = useState<number | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const selectionAnim = useRef(new Animated.Value(1)).current;
+  const toggleExpenseIndex = (index: number) => {
+    const newIndex = activeExpenseIndex === index ? null : index;
+    setActiveExpenseIndex(newIndex);
+    // Pulse animation for selection feedback
+    Animated.sequence([
+      Animated.timing(selectionAnim, { toValue: 1.06, duration: 120, useNativeDriver: true }),
+      Animated.timing(selectionAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+    ]).start();
+  };
   
   // ⚠️ CRITICAL: Subscribe to store - này là key để auto-update
   // Bất cứ lúc nào state.transactions thay đổi → component re-render
@@ -41,7 +66,8 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
       ...(transactions || []),
       ...(recurringTransactions || []).map((rt: any) => ({
         ...rt,
-        date: rt.nextDue, // Use nextDue for sorting
+        // Prefer lastPaid for sorting (recent occurrence); fallback to createdAt, then nextDue
+        date: rt.lastPaid || rt.createdAt || rt.nextDue,
         isRecurring: true, // Mark as recurring
       })),
     ];
@@ -127,8 +153,44 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
   // Income chart data (last 6 months) — moved to hook for separation
   const incomeData = useIncomeChartData(transactions);
 
+  // Convert income data to bar chart format with enhanced colors
+  const barChartData = React.useMemo(() => {
+    const colors = ["#6366F1", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
+    return incomeData.map((item, idx) => ({
+      value: item.value / 1000000, // Convert to millions for display
+      label: item.month,
+      frontColor: colors[idx % colors.length],
+      labelWidth: 35,
+    }));
+  }, [incomeData]);
+
   // Expense categories computed from real transactions
   const expenseCategories = useExpenseCategories(transactions, selectedPeriod);
+
+  const expensePieData = React.useMemo(() => {
+    const filtered = expenseCategories.filter((c) => c.name !== "Ghi chú" && c.amount > 0);
+    const total = filtered.reduce((s, c) => s + (c.amount || 0), 0);
+    // Rainbow color palette for visual distinction
+    const rainbowColors = [
+      "#EF4444", "#F97316", "#F59E0B", "#10B981", "#3B82F6", "#6366F1", "#8B5CF6", "#EC4899",
+    ];
+    return filtered.map((c, i) => {
+      const color = rainbowColors[i % rainbowColors.length];
+      return {
+        ...c,
+        value: c.amount,
+        percent: total > 0 ? Math.round(((c.amount || 0) / total) * 100) : 0,
+        color,
+        text: `${total > 0 ? Math.round(((c.amount || 0) / total) * 100) : 0}%`, // percent inside donut
+        amountText: `${((c.amount || 0) / 1000000).toFixed(1)}M`, // compact amount for visual layout
+        amountVND: `${(c.amount || 0).toLocaleString('vi-VN')} VND`, // full amount for legend/accessibility
+      };
+    });
+  }, [expenseCategories]);
+
+  const totalIncomeValue = React.useMemo(() => {
+    return incomeData.reduce((sum, item) => sum + item.value, 0);
+  }, [incomeData]);
 
   // 🟢 Xóa hardcoded values, dùng financialData thay vào
   const totalIncome = financialData.totalIncome;
@@ -136,7 +198,12 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
   const balance = financialData.balance;
   const savingRate = financialData.savingRate;
 
-  
+  const activeItem = activeExpenseIndex !== null ? expensePieData[activeExpenseIndex] : null;
+  const activeRef = React.useRef(activeItem);
+  const totalRef = React.useRef(totalExpense);
+  activeRef.current = activeItem;
+  totalRef.current = totalExpense;
+  const centerLabelRenderer = React.useCallback(() => <ChartCenterLabel activeItem={activeRef.current} totalExpense={totalRef.current} />, []);
 
   const getCategoryIcon = (categoryId: string) => {
     const map: { [key: string]: { name: string; color: string } } = {
@@ -180,20 +247,22 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
       >
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Period Selector */}
-          <View style={styles.periodSelector}>
-            {(["day", "week", "month", "year"] as const).map((period) => (
+          <View style={styles.modernPeriodContainer}>
+            {(["day", "week", "month", "year"] as const).map((period, index) => (
               <TouchableOpacity
                 key={period}
                 style={[
-                  styles.periodButton,
-                  selectedPeriod === period && styles.periodButtonActive,
+                  styles.modernPeriodButton,
+                  selectedPeriod === period && styles.modernPeriodButtonActive,
+                  index === 0 && styles.modernPeriodButtonFirst,
+                  index === 3 && styles.modernPeriodButtonLast,
                 ]}
                 onPress={() => setSelectedPeriod(period)}
               >
                 <Text
                   style={[
-                    styles.periodText,
-                    selectedPeriod === period && styles.periodTextActive,
+                    styles.modernPeriodText,
+                    selectedPeriod === period && styles.modernPeriodTextActive,
                   ]}
                 >
                   {period === "day" ? "Ngày" : period === "week" ? "Tuần" : period === "month" ? "Tháng" : "Năm"}
@@ -248,35 +317,41 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
               style={styles.chartContainer}
               onPress={() => navigation.navigate("AIInsight", undefined)}
             >
-              <View style={styles.chart}>
-              {incomeData.map((item, index) => (
-                <View key={index} style={styles.chartColumn}>
-                  <Text style={styles.chartValue}>
-                    {(item.value / 1000000).toFixed(0)}M
-                  </Text>
-                <View
-                    style={[
-                      styles.chartBar,
-                      {
-                        height: `${item.percent}%`,
-                        backgroundColor: item.percent >= 100 ? "#10B981" : "#6366F1",
-                      } as any,
-                    ]}
+              <LinearGradient
+                colors={["rgba(99, 102, 241, 0.05)", "rgba(16, 185, 129, 0.05)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.chartGradientBg}
+              >
+                <View style={styles.barChartContainer}>
+                  <View style={styles.barChartTopInfo}>
+                    <Text style={styles.barChartLabel}>Thu nhập</Text>
+                    <Text style={styles.barChartTotal}>{(totalIncomeValue / 1000000).toFixed(1)}M</Text>
+                  </View>
+                  <BarChart
+                    data={barChartData}
+                    barWidth={26}
+                    spacing={14}
+                    xAxisColor="#E5E7EB"
+                    yAxisColor="#E5E7EB"
+                    yAxisLabelWidth={50}
+                    height={200}
+                    disableScroll
+                    cappedBars
+                    barBorderRadius={6}
                   />
-                  <Text style={styles.chartLabel}>{item.month}</Text>
                 </View>
-              ))}
-              </View>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          {/* Expense Breakdown */}
+          {/* Expense Breakdown - Pie Chart */}
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.sectionHeaderButton}
               onPress={() => navigation.navigate("AIInsight", undefined)}
             >
-              <View style={styles.sectionBadgeFull}>
+              <View style={[styles.sectionBadgeFull, styles.sectionBadgeBorder]}>
                 <View style={styles.sectionBadgeLeft}>
                   <MaterialCommunityIcons name="wallet" size={18} color="#6B7280" />
                   <Text style={styles.sectionBadgeText}>Chi tiêu theo danh mục</Text>
@@ -284,53 +359,69 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                 <MaterialCommunityIcons name="chevron-right" size={16} color="#6B7280" />
               </View>
             </TouchableOpacity>
-            <View style={styles.categoryListContainer}>
-              {expenseCategories.filter((category) => category.name !== "Ghi chú").map((category, index) => {
-              const iconMapCategory: { [key: string]: { name: string; color: string } } = {
-                "Ăn uống": { name: "food", color: "#EF4444" },
-                "Di chuyển": { name: "car", color: "#F97316" },
-                "Mua sắm": { name: "shopping", color: "#EC4899" },
-                "Giải trí": { name: "gamepad-variant", color: "#8B5CF6" },
-                "Sức khỏe": { name: "hospital-box", color: "#EF4444" },
-                "Giáo dục": { name: "book", color: "#3B82F6" },
-                "Nhà cửa": { name: "home", color: "#10B981" },
-                "Khác": { name: "dots-horizontal", color: "#6B7280" },
-              };
-              const icon = iconMapCategory[category.name] || { name: "wallet", color: "#6B7280" };
-              return (
-              <View key={index} style={styles.categoryItem}>
-                <View style={styles.categoryHeader}>
-                  <View style={styles.categoryInfo}>
-                    <MaterialCommunityIcons name={icon.name} size={24} color={icon.color} style={styles.categoryIconMargin} />
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                  </View>
-                  <View style={styles.categoryAmount}>
-                    <Text style={styles.amountText}>
-                      {(category.amount / 1000000).toFixed(1)}M VND
-                    </Text>
-                    <Text
-                      style={[
-                        styles.trendText,
-                        category.trend.startsWith("+") ? styles.trendUp : styles.trendDown,
-                      ]}
-                    >
-                      {category.trend}
-                    </Text>
+            <TouchableOpacity 
+              style={styles.chartContainer}
+              onPress={() => navigation.navigate("AIInsight", undefined)}
+            >
+              <LinearGradient
+                colors={["rgba(239, 68, 68, 0.02)", "rgba(168, 85, 247, 0.02)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.chartGradientBgCompact}
+              >
+                <View style={styles.expenseChartColumn}>
+                  <View style={[styles.chartArea, styles.chartAreaPieSize]} accessible accessibilityRole="image" accessibilityLabel={`Biểu đồ tròn Chi tiêu. Tổng ${(totalExpense || 0).toLocaleString("vi-VN")} VND. Chạm vào một phần để xem chi tiết.`}> 
+                    {expensePieData.length === 0 ? (
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>Chưa có chi tiêu</Text>
+                      </View>
+                    ) : (
+                      <PieChart
+                        data={expensePieData.map((c, i) => ({ value: c.value, color: c.color, label: c.name, text: activeExpenseIndex === i ? `${c.percent}%` : '' }))}
+                        donut
+                        radius={90}
+                        innerRadius={60}
+                        innerCircleColor="#FFFFFF"
+                        textBackgroundRadius={22}
+                        textColor="#FFFFFF"
+                        textSize={11}
+                        showText={false}
+                        fontWeight="700"
+                        strokeWidth={0}
+                        centerLabelComponent={centerLabelRenderer}
+                        onPress={(_item: any, index: number) => toggleExpenseIndex(index)}
+                        focusOnPress={false}
+                        selectedIndex={activeExpenseIndex ?? undefined}
+                      />
+                    )}
+                    </View>
+                  
+                  {/* Total shown beneath the pie chart if nothing is selected */}
+                  {activeExpenseIndex === null && (
+                    <View style={styles.chartTotalBelow}>
+                      <Text style={styles.chartTotalLabel}>Tổng Chi tiêu</Text>
+                      <Text style={styles.chartTotalValue}>{(totalExpense / 1000000).toFixed(1)}M</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.expenseLegendAreaBelow}>
+                    <View style={styles.expenseLegendContainer}>
+                {expensePieData.map((item, i) => (
+                  <Animated.View key={item.name} style={{ transform: [{ scale: activeExpenseIndex === i ? selectionAnim : 1 }] }}>
+                  <TouchableOpacity accessible accessibilityRole="button" accessibilityLabel={`${item.name}. ${item.percent}% of total. ${item.amountVND}`} style={[styles.expenseLegendItem, activeExpenseIndex === i && styles.expenseLegendItemActive]} onPress={() => toggleExpenseIndex(i)}>
+                    <View style={[styles.expenseLegendDot, { backgroundColor: item.color }]} />
+                    <View style={styles.expenseLegendInfo}>
+                      <Text style={styles.expenseLegendLabel} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+                    </View>
+                    <Text style={styles.expenseLegendValue} numberOfLines={1} ellipsizeMode="tail">{item.amountVND ?? item.amountText}</Text>
+                  </TouchableOpacity>
+                  </Animated.View>
+                ))}
+                    </View>
                   </View>
                 </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${category.percent}%`, backgroundColor: icon.color },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.percentText}>{category.percent}% tổng chi tiêu</Text>
-              </View>
-            );
-            })}
-          </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
 
           {/* AI Analysis */}
@@ -418,6 +509,9 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                   };
 
                   const dateTime = getFormattedDateTime(transaction.date || transaction.createdAt);
+                  const categoryStr = String(transaction.category || '').trim();
+                  const isNoteCategory = categoryStr === '' || /ghi chú/i.test(categoryStr) || categoryStr.includes('📝');
+                  const displayTitle = transaction.isRecurring && transaction.name ? transaction.name : (isNoteCategory ? (transaction.description || transaction.category || 'Giao dịch') : transaction.category);
 
                   return (
                     <TouchableOpacity
@@ -446,7 +540,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
                               </View>
                             ) : (
                               <View style={styles.transactionCategoryRow}>
-                                <Text style={styles.transactionCategory}>{transaction.category}</Text>
+                                <Text style={styles.transactionCategory}>{displayTitle}</Text>
                                 {transaction.isRecurring && (
                                   <View style={styles.recurringBadge}>
                                     <MaterialCommunityIcons name="repeat" size={10} color="#6366F1" />
@@ -572,6 +666,47 @@ const styles = StyleSheet.create({
   periodButtonActive: { backgroundColor: "#10B981" },
   periodText: { color: "#374151", fontWeight: "600", fontSize: 13 },
   periodTextActive: { color: "#FFFFFF" },
+  modernPeriodContainer: {
+    flexDirection: 'row',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  modernPeriodButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+  },
+  modernPeriodButtonFirst: {
+    borderLeftWidth: 0,
+  },
+  modernPeriodButtonLast: {
+    borderRightWidth: 0,
+  },
+  modernPeriodButtonActive: {
+    backgroundColor: '#10B981',
+    borderRightColor: '#10B981',
+  },
+  modernPeriodText: {
+    color: '#6B7280',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  modernPeriodTextActive: {
+    color: '#FFFFFF',
+  },
   balanceCard: {
     backgroundColor: "#F3F4F6",
     borderRadius: 20,
@@ -646,14 +781,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   viewAllLink: { fontSize: 13, color: "#000000", fontWeight: "700" },
-  chartContainer: {
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#9CA3AF",
-  },
   chart: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -673,7 +800,7 @@ const styles = StyleSheet.create({
   chartBar: { width: "100%", borderRadius: 6, marginBottom: 8 },
   chartLabel: { fontSize: 11, color: "#000000", fontWeight: "600" },
   categoryItem: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#ECFDF5",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -784,6 +911,73 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     marginBottom: 12,
   },
+  categoryGridContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+  },
+  categoryCardButton: {
+    flex: 1,
+    minWidth: '48%',
+    backgroundColor: '#FFFBEB',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  categoryCardIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  categoryCardContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  categoryCardName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  categoryCardAmount: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000000',
+  },
+  categoryCardRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  categoryCardProgressSmall: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  categoryCardProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  categoryCardPercent: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
+  },
   transactionIcon: { marginRight: 12 },
   transactionHeader: {
     flexDirection: "row",
@@ -866,4 +1060,242 @@ const styles = StyleSheet.create({
   },
   amountExpense: { color: "#EF4444" },
   amountIncome: { color: "#10B981" },
+  chartContainer: {
+    borderRadius: 12,
+    padding: 0,
+    paddingBottom: 12,
+    marginBottom: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    overflow: 'hidden',
+  },
+  chartGradientBg: {
+    borderRadius: 12,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  chartGradientBgCompact: {
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    minHeight: 340,
+  },
+  chartPieContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    position: 'relative',
+  },
+  chartAreaPieSize: {
+    width: 190,
+    height: 190,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 95,
+  },
+  expenseChartColumn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 4,
+    width: '100%',
+  },
+  chartArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  chartCenterLabelOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ translateY: -22 }],
+    zIndex: 10,
+  },
+  chartCenterValue: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#000000',
+  },
+  chartCenterLabelText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  chartCenterSmallText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 6,
+    fontWeight: '600',
+  },
+  centerLabelWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerLabelSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  centerLabelValue: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  chartTotalBelow: {
+    marginTop: 6,
+    marginBottom: 4,
+    alignItems: 'center',
+  },
+  chartTotalLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  chartTotalValue: {
+    fontSize: 16,
+    color: '#111827',
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  chartLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    minWidth: '48%',
+    paddingVertical: 6,
+  },
+  chartLegendColor: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  chartLegendInfo: {
+    flex: 1,
+  },
+  chartLegendText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  chartLegendValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#000000',
+    marginTop: 2,
+  },
+  chartNote: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FEF3C7',
+    borderTopWidth: 1,
+    borderTopColor: '#FCD34D',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  chartNoteText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  expenseLegendAreaBelow: {
+    width: '100%',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  expenseLegendContainer: {
+    paddingTop: 6,
+    paddingBottom: 4,
+    paddingHorizontal: 8,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  expenseLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    justifyContent: 'space-between',
+    width: '100%',
+    backgroundColor: '#F3F4F6',
+  },
+  expenseLegendItemActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  expenseLegendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  expenseLegendInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  expenseLegendLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 0,
+  },
+  expenseLegendPercent: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  expenseLegendValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'right',
+    minWidth: 100,
+  },
+  barChartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+  },
+  barChartTopInfo: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  barChartLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  barChartTotal: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#111827',
+  },
 });

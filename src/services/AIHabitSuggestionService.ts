@@ -176,6 +176,20 @@ class AIHabitSuggestionService {
    * Parse JSON response từ Gemini
    */
   private parseAIResponse(responseText: string): HabitSuggestion[] {
+    const shortenToSingleSentence = (text: string, maxLen = 120) => {
+      if (!text) return text;
+      // Prefer the first sentence
+      const sentenceEnd = text.indexOf('.') >= 0 ? text.indexOf('.') + 1 : -1;
+      let short = sentenceEnd > 0 ? text.slice(0, sentenceEnd) : text;
+      // If still too long, truncate to maxLen and remove trailing partial words
+      if (short.length > maxLen) {
+        short = short.slice(0, maxLen);
+        const lastSpace = short.lastIndexOf(' ');
+        if (lastSpace > 0) short = short.slice(0, lastSpace);
+        short = `${short}…`;
+      }
+      return short.trim();
+    };
     try {
       // Tìm JSON trong response
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
@@ -188,19 +202,31 @@ class AIHabitSuggestionService {
 
       // Validate và enrich data
       return suggestions.map((item: any, index: number) => {
-        const habitName = item.name || "";
-        const icon = this.findIconForHabit(habitName);
-        const { target, unit } = this.getDefaultTargetAndUnit(habitName);
+        const habitName = (item.name || "").trim();
+        const defaultIcon = this.findIconForHabit(habitName);
+        const { target: defaultTarget, unit: defaultUnit } = this.getDefaultTargetAndUnit(habitName);
+
+        // Use values returned by AI when possible, otherwise fallback to defaults
+        const parsedIcon = item.icon || defaultIcon;
+        const parsedTarget = item.target || defaultTarget;
+        const parsedUnit = item.unit || defaultUnit;
+
+        const shortName = habitName.length > 30 ? `${habitName.slice(0, 30).trim()}…` : habitName;
+        const rawDescription = item.description || `Thực hiện ${habitName} thường xuyên`;
+        const rawBenefits = item.benefits || "Cải thiện chất lượng cuộc sống";
+
+        const shortDescription = shortenToSingleSentence(rawDescription, 120);
+        const shortBenefits = shortenToSingleSentence(rawBenefits, 80);
 
         return {
           id: `ai-${Date.now()}-${index}`,
-          name: habitName,
-          icon,
-          target: item.target || target,
-          unit: item.unit || unit,
+          name: shortName,
+          icon: parsedIcon,
+          target: parsedTarget,
+          unit: parsedUnit,
           category: item.category || "",
-          description: item.description || `Thực hiện ${habitName} thường xuyên`,
-          benefits: item.benefits || "Cải thiện chất lượng cuộc sống",
+          description: shortDescription,
+          benefits: shortBenefits,
         };
       });
     } catch (error) {
@@ -230,26 +256,33 @@ class AIHabitSuggestionService {
 
       const prompt = `
 Bạn là một trợ lý AI chuyên tư vấn các thói quen tốt cho con người.
-Hãy đề xuất ${categoryConfig.suggestionsCount} thói quen phù hợp cho danh mục: ${categoryConfig.name}
+Hãy đề xuất ${categoryConfig.suggestionsCount} thói quen phù hợp cho danh mục: ${categoryConfig.name}.
 
 Mô tả danh mục: ${categoryConfig.description}
 
 Yêu cầu:
-1. Đề xuất những thói quen thực tế, dễ thực hiện
-2. Phù hợp với người bận rộn
-3. Có lợi ích rõ ràng
+1. Đề xuất những thói quen thực tế, dễ thực hiện.
+2. Phù hợp với người bận rộn.
+3. Mỗi thói quen nêu rõ lợi ích và cách thực hiện ngắn gọn.
+  YÊU CẦU NGẮN GỌN: tên ngắn (<= 30 ký tự), mô tả 1 câu (<= 120 ký tự), benefits ngắn (<= 80 ký tự).
 
-Trả lời dưới dạng JSON array với cấu trúc sau (không thêm gì khác):
+Trả lời dưới dạng JSON array với cấu trúc sau (không thêm text khác):
 [
   {
-    "name": "Tên thói quen",
-    "description": "Mô tả ngắn cách thực hiện",
+    "name": "Tên thói quen ngắn gọn",
+    "description": "Mô tả ngắn cách thực hiện (1-2 câu)",
     "benefits": "Lợi ích chính",
-    "category": "${categoryId}"
+    "category": "${categoryId}",
+    "target": 20,
+    "unit": "phút",
+    "icon": "meditation"
   }
 ]
 
-Chỉ trả về JSON, không có text khác.
+Ghi chú:
+- "target" và "unit" giúp app hiển thị mục tiêu (vd: 20 phút, 8 cốc, 1 lần).
+- "icon" là tên icon MaterialCommunityIcons ngắn (vd: meditation, water, book-open-variant).
+Chỉ trả về JSON, KHÔNG kèm text ngoài JSON. Các trường mô tả và benefits nên ngắn gọn.
 `;
 
       console.log("📤 Sending prompt to Gemini for category:", categoryId);

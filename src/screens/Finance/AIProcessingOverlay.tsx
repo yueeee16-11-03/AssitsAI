@@ -90,12 +90,7 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
   // ===== RENDER TEXT FLOW =====
   if (textNote) {
     if (isTextProcessing) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00897B" />
-          <Text style={styles.loadingText}>Đang xử lý...</Text>
-        </View>
-      );
+      return <LoadingOverlay />;
     }
 
     if (textError) {

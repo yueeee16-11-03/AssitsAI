@@ -41,6 +41,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState<CoachingInsight[]>([]);
+  const [aiEnabled, setAiEnabled] = useState(false);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -52,6 +53,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
 
   // Định nghĩa loadAIInsights callback trước useEffect
   const loadAIInsights = React.useCallback(async () => {
+    if (!aiEnabled) return; // Don't load when AI suggestions are disabled
     if (habits.length === 0) {
       setAiInsights([]);
       return;
@@ -88,17 +90,40 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
     } finally {
       setInsightsLoading(false);
     }
-  }, [habits]);
+  }, [habits, aiEnabled]);
 
-  // Load insights từ AI khi screen mount
+  // Load insights từ AI khi screen mount (only when enabled)
   React.useEffect(() => {
-    loadAIInsights();
-  }, [habits, loadAIInsights]);
+    if (aiEnabled) loadAIInsights();
+  }, [habits, loadAIInsights, aiEnabled]);
 
   // Insights mặc định nếu AI không khả dụng
-  const getDefaultInsights = (): CoachingInsight[] => [];
+  const getDefaultInsights = (): CoachingInsight[] => [
+    {
+      id: 'default-1',
+      type: 'opportunity',
+      title: 'Thói quen nhỏ, lợi ích lớn',
+      description: 'Bắt đầu với 5-10 phút mỗi ngày để tạo đà cho thói quen lớn hơn.',
+      action: 'Bắt đầu với 5 phút/1 lần',
+      icon: 'lightbulb-on-outline',
+      color: '#3B82F6'
+    },
+    {
+      id: 'default-2',
+      type: 'strength',
+      title: 'Duy trì thói quen hiện tại',
+      description: 'Bạn đang có những thói quen tốt. Hãy cố gắng duy trì nhịp độ hàng ngày.',
+      action: 'Tiếp tục giữ tần suất',
+      icon: 'star',
+      color: '#10B981'
+    }
+  ];
 
-  const coachScore = aiInsights.length > 0 ? Math.round((aiInsights.length / 4) * 100) : 0;
+  const coachScore = (() => {
+    const denom = habits.length > 0 ? Math.max(1, habits.length * 3) : 4;
+    const raw = Math.round((aiInsights.length / denom) * 100);
+    return Math.max(0, Math.min(100, raw));
+  })();
 
   const [reminders, setReminders] = useState<SmartReminder[]>([]);
 
@@ -182,10 +207,22 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
             <View style={styles.sectionHeader}>
               <Icon name="bullseye" size={18} color="#00796B" style={styles.iconMarginRight} />
               <Text style={styles.sectionTitle}>Phân tích chi tiết</Text>
+              <TouchableOpacity
+                style={[styles.aiToggleButton, aiEnabled ? styles.aiToggleActive : null]}
+                onPress={() => {
+                  // toggle AI suggestions
+                  const next = !aiEnabled;
+                  setAiEnabled(next);
+                  if (next) loadAIInsights();
+                  else setAiInsights([]);
+                }}
+              >
+                <Icon name={aiEnabled ? 'robot' : 'robot-outline'} size={16} color={aiEnabled ? '#ffffff' : '#8B5CF6'} />
+              </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.refreshButton}
                 onPress={loadAIInsights}
-                disabled={insightsLoading}
+                disabled={!aiEnabled || insightsLoading}
               >
                 <Icon 
                   name={insightsLoading ? "loading" : "refresh"} 
@@ -194,7 +231,15 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
                 />
               </TouchableOpacity>
             </View>
-            {insightsLoading ? (
+            {!aiEnabled ? (
+              <View style={styles.disabledAiContainer}>
+                <Icon name="robot-off" size={28} color="#D1D5DB" style={styles.infoIcon} />
+                <Text style={styles.noSuggestionsText}>Gợi ý AI hiện tắt. Bật để tạo gợi ý.</Text>
+                <TouchableOpacity style={styles.enableButton} onPress={() => { setAiEnabled(true); loadAIInsights(); }}>
+                  <Text style={styles.enableButtonText}>Bật gợi ý AI</Text>
+                </TouchableOpacity>
+              </View>
+            ) : insightsLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#8B5CF6" />
                 <Text style={styles.loadingText}>Đang tạo gợi ý từ AI...</Text>
@@ -303,6 +348,8 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 8 },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8, justifyContent: "space-between" },
+  aiToggleButton: { marginLeft: 8, width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#8B5CF6' },
+  aiToggleActive: { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' },
   refreshButton: { padding: 8 },
   behaviorFillStyled: { height: "100%", borderRadius: 4 },
   behaviorFillGood: { backgroundColor: "#10B981" },
@@ -312,7 +359,12 @@ const styles = StyleSheet.create({
   reminderTimeMargin: { marginLeft: 6 },
   reminderReasonMargin: { marginLeft: 6 },
   sectionSubtitle: { fontSize: 13, color: "#6B7280", marginBottom: 16 },
-  loadingContainer: { paddingVertical: 40, alignItems: "center", justifyContent: "center" },
+  disabledAiContainer: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
+  noSuggestionsText: { fontSize: 14, color: '#999999', fontStyle: 'italic', textAlign: 'center', marginTop: 8 },
+  infoIcon: { marginBottom: 8 },
+  enableButton: { marginTop: 12, backgroundColor: '#8B5CF6', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
+  loadingContainer: { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
+    enableButtonText: { color: '#FFFFFF', fontWeight: '700' },
   loadingText: { marginTop: 16, fontSize: 14, color: "#666666", fontStyle: "italic" },
   emptyContainer: { paddingVertical: 40, alignItems: "center", justifyContent: "center" },
   emptyText: { marginTop: 12, fontSize: 14, color: "#999999" },

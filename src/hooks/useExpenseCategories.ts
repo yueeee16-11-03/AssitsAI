@@ -57,7 +57,12 @@ export default function useExpenseCategories(transactions: any[] | undefined, se
       const txDate = parseTxDate(tx);
       if (!txDate) return;
       if (txDate < startDate || txDate > endDate) return;
-      const cat = tx.category || 'Khác';
+      const rawCat = String(tx.category || '').trim();
+      let cat = rawCat || '';
+      // If no category or default note ('Ghi chú' or emoji), use description as the grouping key
+      if (!cat || /ghi chú/i.test(cat) || cat.includes('📝')) {
+        cat = (tx.description || '').trim() || 'Khác';
+      }
       byCat[cat] = (byCat[cat] || 0) + (Number(tx.amount) || 0);
     });
 

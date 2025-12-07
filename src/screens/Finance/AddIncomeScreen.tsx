@@ -18,6 +18,10 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
 import { launchImageLibrary } from "react-native-image-picker";
+import TransactionService from '../../services/TransactionService';
+import firestore from '@react-native-firebase/firestore';
+import { useTransactionStore } from "../../store/transactionStore";
+import { useVoiceRecognition } from '../../hooks/useVoiceRecognition';
 // Removed unused imports - now using AIProcessingOverlay for AI processing
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddIncome">;
@@ -30,15 +34,28 @@ export default function AddIncomeScreen({ navigation }: Props) {
   const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
   
   // UI state
-  const [isRecording, setIsRecording] = useState(false);
   const [_isLoading, _setIsLoading] = useState(false);
+
+  // Voice hook
+  const { isRecording, isProcessing, transcript, startRecording, stopRecording, clearTranscript } = useVoiceRecognition();
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [billImage, setBillImage] = useState<string | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [successBannerAnim] = useState(new Animated.Value(0));
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successText, setSuccessText] = useState('');
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
   const [type] = useState<TransactionType>("income"); // ✅ KHÁC: income thay vì expense
   const [isInputFocused, setIsInputFocused] = useState(false);
   // (header color now fixed to green header + white icons)
+  
+  // Manual form state
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualAmount, setManualAmount] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   
   // 🤖 AI Processing state - now handled by AIProcessingOverlay
   const [_processedText, _setProcessedText] = useState<string | null>(null);
@@ -50,6 +67,10 @@ export default function AddIncomeScreen({ navigation }: Props) {
   const [_aiDescription, _setAiDescription] = useState<string | null>(null);
   
   const { hasPermission, requestPermission } = useCameraPermission();
+  const transactions = useTransactionStore((s) => s.transactions);
+  const fetchTransactions = useTransactionStore((s) => s.fetchTransactions);
+  const addTransaction = useTransactionStore((s) => s.addTransaction);
+  const incomeTemplates = (transactions || []).filter((tx: any) => String(tx.type || '').toLowerCase() === 'income');
 
   // ===== 🎯 PHÉP THUẬT: Bắt processedData từ ResultScreen =====
   // Note: processedData handling removed - now handled by AIProcessingOverlay
@@ -88,17 +109,30 @@ export default function AddIncomeScreen({ navigation }: Props) {
     }
   }, [isRecording, pulseAnim]);
 
-  const handleVoiceInput = () => {
-    setIsRecording(!isRecording);
-    // TODO: Implement voice recognition
-    if (!isRecording) {
+  // Auto-add transcript to note when ready
+  React.useEffect(() => {
+    if (transcript && !isRecording && !isProcessing) {
+      setNote(prev => prev ? `${prev}\n${transcript}` : transcript);
+      setSuccessText(`Đã thêm: "${transcript}"`);
+      setShowSuccess(true);
+      Animated.timing(successBannerAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
       setTimeout(() => {
-        // Add note about what was recorded
-        const voiceNote = "[Ghi âm]: Lương tháng";
-        setNote(note + (note ? "\n" : "") + voiceNote);
-        setIsRecording(false);
-        Alert.alert("Ghi nhận giọng nói", "Đã thêm ghi chú từ giọng nói");
+        Animated.timing(successBannerAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setShowSuccess(false));
       }, 2000);
+      clearTranscript();
+    }
+  }, [transcript, isRecording, isProcessing, clearTranscript, successBannerAnim]);
+
+  const handleVoiceInput = async () => {
+    try {
+      if (isRecording) {
+        await stopRecording();
+      } else {
+        await startRecording();
+      }
+    } catch (err) {
+      console.error('Error with voice control:', err);
+      Alert.alert('Lỗi', 'Có lỗi khi thao tác ghi âm');
     }
   };
 
@@ -165,15 +199,24 @@ export default function AddIncomeScreen({ navigation }: Props) {
         <Text style={styles.headerTitle}>Thêm thu nhập</Text>
 
         <TouchableOpacity
-          style={[styles.voiceButton, { backgroundColor: '#FFFFFF' }]}
+          style={styles.saveButtonHeader}
           onPress={handleSave}
         >
-          <MaterialCommunityIcons name="check" size={18} color="#10B981" />
+          <Text style={styles.saveButtonHeaderText}>Lưu</Text>
         </TouchableOpacity>
       </View>
 
       {/* Main Content */}
       <View style={styles.mainContent}>
+        {showSuccess && (
+          <Animated.View style={[styles.successBanner, { opacity: successBannerAnim }]}>
+            <MaterialCommunityIcons name="check-circle" size={20} color="#065F46" />
+            <View style={styles.successBannerContent}>
+              <Text style={styles.successBannerTitle}>Thành công</Text>
+              <Text style={styles.successBannerText}>{successText}</Text>
+            </View>
+          </Animated.View>
+        )}
         {/* ScrollView for content that scrolls */}
         <ScrollView
           style={styles.scrollViewContainer}
@@ -182,6 +225,39 @@ export default function AddIncomeScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View style={{ opacity: fadeAnim }}>
+            {/* Recording Status Indicator */}
+            {(isRecording || isProcessing) && (
+              <View style={styles.recordingIndicator}>
+                <MaterialCommunityIcons
+                  name={isRecording ? 'microphone' : 'progress-clock'}
+                  size={18}
+                  color="#065F46"
+                />
+                <Text style={styles.recordingText}>
+                  {isRecording ? 'Đang ghi âm...' : 'Đang xử lý...'}
+                </Text>
+              </View>
+            )}
+
+            {/* Transcript Preview */}
+            {transcript && !isRecording && !isProcessing && (
+              <View style={styles.transcriptPreview}>
+                <View style={styles.rowCenter}>
+                  <MaterialCommunityIcons name="file-document-outline" size={16} color="#1F2937" />
+                  <Text style={[styles.transcriptPreviewTitle, styles.transcriptTitleMargin]}>Kết quả phiên âm:</Text>
+                </View>
+                <Text style={styles.transcriptPreviewText}>{transcript}</Text>
+                <TouchableOpacity
+                  style={styles.clearTranscriptButton}
+                  onPress={() => {
+                    clearTranscript();
+                  }}
+                >
+                  <Text style={styles.clearTranscriptButtonText}>Xóa</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Note Input */}
             <View style={styles.section}>
               <TextInput
@@ -211,7 +287,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
                     style={styles.billRemoveButton}
                     onPress={handleRemoveBillImage}
                   >
-                    <Text style={styles.billRemoveButtonText}>✕</Text>
+                    <MaterialCommunityIcons name="close" size={14} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -219,47 +295,65 @@ export default function AddIncomeScreen({ navigation }: Props) {
           </Animated.View>
         </ScrollView>
 
+        {/* Floating Form Toggle Button - Bottom Right */}
+        <TouchableOpacity
+          style={styles.floatingFormButton}
+          onPress={() => {
+            if (!showManualForm) {
+              const now = new Date();
+              const formatted = `${now.toLocaleDateString('vi-VN')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+              setSelectedTime(formatted);
+            }
+            setShowManualForm(!showManualForm);
+          }}
+        >
+          <MaterialCommunityIcons
+            name={showManualForm ? "close" : "plus"}
+            size={28}
+            color="#FFFFFF"
+          />
+        </TouchableOpacity>
+
         {/* Keyboard Toolbar - Only shows when input focused, automatically pushed above keyboard */}
         {isInputFocused && (
           <View style={styles.keyboardToolbar}>
-            <TouchableOpacity style={styles.toolbarButton} onPress={toggleFontStyle}>
+            <TouchableOpacity onPress={toggleFontStyle}>
               <MaterialCommunityIcons 
                 name={fontStyle === 'title' ? 'format-bold' : fontStyle === 'regular' ? 'format-size' : 'format-italic'} 
-                size={16} 
-                color="#111827" 
+                size={28} 
+                color="#6B7280" 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.toolbarButton} onPress={handleVoiceInput}>
+            <TouchableOpacity onPress={handleVoiceInput}>
               <MaterialCommunityIcons 
-                name={isRecording ? 'stop-circle' : 'microphone'} 
-                size={16} 
-                color="#111827" 
+                name={isRecording ? 'stop-circle' : 'microphone-outline'} 
+                size={28} 
+                color={isRecording ? '#EF4444' : '#6B7280'} 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.toolbarButton} onPress={handleTakePicture}>
+            <TouchableOpacity onPress={handleTakePicture}>
               <MaterialCommunityIcons 
-                name="camera" 
-                size={16} 
-                color="#111827" 
+                name="camera-outline" 
+                size={28} 
+                color="#6B7280" 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.toolbarButton}
               onPress={() => {
                 if (note.trim()) navigation.navigate('AIProcessingOverlay', { textNote: note, transactionType: type });
                 else Alert.alert('Lỗi', 'Vui lòng nhập ghi chú trước');
               }}
             >
               <MaterialCommunityIcons 
-                name="checkbox-marked-circle" 
-                size={16} 
-                color="#111827" 
+                name="check-circle-outline" 
+                size={28} 
+                color="#6B7280" 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
@@ -287,6 +381,229 @@ export default function AddIncomeScreen({ navigation }: Props) {
           }}
           onClose={() => setIsCameraOpen(false)}
         />
+      </Modal>
+
+      {/* Manual Entry Form - Full Screen Modal */}
+      <Modal
+        visible={showManualForm}
+        animationType="slide"
+        onRequestClose={() => setShowManualForm(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowManualForm(false)}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#111827" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Thêm Thu Nhập</Text>
+            <View style={styles.headerPlaceholder} />
+          </View>
+
+          <ScrollView
+            style={styles.modalContent}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.modalScrollContent}
+          >
+            {/* Template Toggle */}
+            <TouchableOpacity
+              style={[styles.aiToggleButton, showTemplateForm && styles.aiToggleButtonActive]}
+              onPress={() => {
+                if (showTemplateForm) {
+                  setManualAmount("");
+                  setSelectedCategory(null);
+                  setSelectedTime(null);
+                } else {
+                  fetchTransactions().catch(() => {});
+                }
+                setShowTemplateForm(!showTemplateForm);
+              }}
+            >
+              <MaterialCommunityIcons
+                name={showTemplateForm ? "file-document" : "file-document-outline"}
+                size={16}
+                color={showTemplateForm ? "#FFFFFF" : "#6B7280"}
+              />
+              <Text style={[styles.aiToggleText, showTemplateForm && styles.aiToggleTextActive]}>
+                {showTemplateForm ? "Sử dụng mẫu: Bật" : "Sử dụng mẫu: Tắt"}
+              </Text>
+            </TouchableOpacity>
+
+            {showTemplateForm && (
+              <View style={styles.aiSuggestionsBox}>
+                <View style={styles.aiSuggestionsHeader}>
+                  <MaterialCommunityIcons name="clipboard-text" size={18} color="#6366F1" />
+                  <Text style={[styles.aiSuggestionsTitle, styles.templateTitle]}>Mẫu giao dịch</Text>
+                  <MaterialCommunityIcons name="file" size={18} color="#10B981" />
+                </View>
+                <View style={styles.aiSuggestionsContent}>
+                  <Text style={styles.suggestionLabel}>Chọn mẫu từ giao dịch thu nhập gần đây:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.templateScroll}>
+                    {incomeTemplates && incomeTemplates.slice(0, 8).map((tx: any) => (
+                      <TouchableOpacity
+                        key={tx.id}
+                        style={[styles.suggestionCard]}
+                        onPress={() => {
+                          setManualAmount(String(tx.amount || ''));
+                          setSelectedCategory(tx.categoryId || tx.category || null);
+                          setDescription(tx.description || '');
+                          try {
+                            const d = tx.date?.toDate ? tx.date.toDate() : new Date(tx.date || tx.createdAt);
+                            setSelectedTime(`${d.toLocaleDateString('vi-VN')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                          } catch (e) {
+                            console.warn('Failed to parse transaction date', e);
+                            setSelectedTime(null);
+                          }
+                        }}
+                      >
+                        <Text style={styles.suggestionName}>{tx.description || 'Thu nhập'}</Text>
+                        <Text style={styles.suggestionValue}>{(tx.amount || 0).toLocaleString('vi-VN')} VNĐ</Text>
+                        <Text style={styles.suggestionLabel}>{tx.category || tx.categoryId || ''}</Text>
+                      </TouchableOpacity>
+                    ))}
+                    {(!incomeTemplates || incomeTemplates.length === 0) && (
+                      <View style={styles.templateEmptyContainer}>
+                        <Text style={styles.templateEmptyText}>Không có mẫu thu nhập gần đây</Text>
+                      </View>
+                    )}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Mô tả</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ví dụ: Lương tháng, bán hàng..."
+                placeholderTextColor="#D1D5DB"
+                value={description}
+                onChangeText={setDescription}
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Số tiền</Text>
+              <View style={styles.amountInputField}>
+                <Text style={styles.currencyPrefix}>VNĐ</Text>
+                <TextInput
+                  style={styles.amountFieldInput}
+                  placeholder="0"
+                  placeholderTextColor="#D1D5DB"
+                  value={manualAmount}
+                  onChangeText={setManualAmount}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Nguồn thu</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+                {[
+                  { id: "1", name: "Lương", icon: "briefcase" },
+                  { id: "2", name: "Kinh doanh", icon: "store" },
+                  { id: "3", name: "Đầu tư", icon: "trending-up" },
+                  { id: "4", name: "Cho vay", icon: "hand-coin" },
+                  { id: "5", name: "Quà tặng", icon: "gift" },
+                  { id: "6", name: "Khác", icon: "dots-horizontal" },
+                ].map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.categoryPill, selectedCategory === cat.id && styles.categoryPillActive]}
+                    onPress={() => setSelectedCategory(cat.id)}
+                  >
+                    <MaterialCommunityIcons
+                      name={cat.icon}
+                      size={16}
+                      color={selectedCategory === cat.id ? "#FFFFFF" : "#6B7280"}
+                    />
+                    <Text style={[styles.categoryPillText, selectedCategory === cat.id && styles.categoryPillTextActive]}>
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Thời gian</Text>
+              <TouchableOpacity style={[styles.timePickerButton, selectedTime && styles.timePickerButtonActive]}>
+                <MaterialCommunityIcons
+                  name="calendar-clock"
+                  size={18}
+                  color={selectedTime ? "#FFFFFF" : "#6B7280"}
+                />
+                <Text style={[styles.timePickerButtonText, selectedTime && styles.timePickerButtonTextActive]}>
+                  {selectedTime || "Tự động chọn giờ hiện tại"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+            <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setShowManualForm(false)}>
+              <Text style={styles.cancelButtonText}>Hủy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={async () => {
+                if (manualAmount && selectedCategory) {
+                  const categoryName = [
+                    { id: "1", name: "Lương" },
+                    { id: "2", name: "Kinh doanh" },
+                    { id: "3", name: "Đầu tư" },
+                    { id: "4", name: "Cho vay" },
+                    { id: "5", name: "Quà tặng" },
+                    { id: "6", name: "Khác" },
+                  ].find((c) => c.id === selectedCategory)?.name || "";
+                  const formData: any = {
+                    type: 'income',
+                    amount: String(manualAmount),
+                    description: description || note || `[${categoryName}] ${manualAmount} VNĐ`,
+                    categoryId: selectedCategory,
+                    categoryName,
+                    billImageUri: billImage || null,
+                  };
+
+                  if (selectedTime) {
+                    try {
+                      const [datePart, timePart] = selectedTime.split(' ');
+                      const [d, m, y] = datePart.split('/');
+                      const [hh, min] = (timePart || '00:00').split(':');
+                      const parsed = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10), parseInt(hh, 10), parseInt(min, 10));
+                      formData.date = firestore.Timestamp.fromDate(parsed);
+                    } catch (e) {
+                      console.warn('Failed to parse selectedTime', e);
+                    }
+                  }
+
+                  try {
+                    const txObj = TransactionService.createTransactionObject(formData);
+                    await addTransaction(txObj);
+                    setDescription("");
+                    setNote("");
+                    setManualAmount("");
+                    setSelectedCategory(null);
+                    setSelectedTime(null);
+                    setShowManualForm(false);
+                    try { await fetchTransactions(); } catch {}
+                    navigation.navigate('Home');
+                    Alert.alert("Thành công", "Đã lưu giao dịch thu nhập");
+                  } catch (error) {
+                    console.error('Error saving income transaction:', error);
+                    Alert.alert('Lỗi', 'Không thể lưu thu nhập: ' + (((error as any)?.message) || 'Không xác định'));
+                  }
+                } else {
+                  Alert.alert("Lỗi", "Vui lòng nhập số tiền và chọn nguồn thu");
+                }
+              }}
+            >
+              <Text style={styles.submitButtonText}>Lưu</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -570,9 +887,9 @@ const styles = StyleSheet.create({
   },
   toolbarButton: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    backgroundColor: "#FFFBF0",
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -659,6 +976,74 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "800",
+  },
+  // Recording Indicator Styles
+  recordingIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  recordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#065F46",
+  },
+  recordingText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#065F46",
+  },
+  // Transcript Preview Styles
+  transcriptPreview: {
+    backgroundColor: "#F0F4FF",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#D1D5F5",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  transcriptPreviewTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 6,
+  },
+  rowCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transcriptTitleMargin: {
+    marginLeft: 8,
+  },
+  transcriptPreviewText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#4B5563",
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  clearTranscriptButton: {
+    alignSelf: "flex-end",
+    backgroundColor: "#EFF6FF",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  clearTranscriptButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1E40AF",
   },
   permissionButtonCancel: {
     borderRadius: 16,
@@ -856,5 +1241,314 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#00796B",
     fontWeight: "600",
+  },
+  
+  // Header button styles
+  saveButtonHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveButtonHeaderText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  
+  // Floating button and modal styles
+  floatingFormButton: {
+    position: "absolute",
+    bottom: 120,
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+    flex: 1,
+    textAlign: "center",
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  modalScrollContent: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 24,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  submitButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  submitButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  
+  // Form field styles
+  formField: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  amountInputField: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  currencyPrefix: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#6B7280",
+    marginRight: 6,
+  },
+  amountFieldInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  categoryScroll: {
+    flexGrow: 0,
+  },
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginRight: 8,
+  },
+  categoryPillActive: {
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
+  },
+  categoryPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  categoryPillTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  timePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  timePickerButtonActive: {
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
+  },
+  timePickerButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+    flex: 1,
+  },
+  timePickerButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  
+  // AI styles
+  aiToggleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginBottom: 12,
+  },
+  aiToggleButtonActive: {
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
+  },
+  aiToggleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  aiToggleTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  aiSuggestionsBox: {
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.3)",
+    overflow: "hidden",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  aiSuggestionsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(245, 158, 11, 0.2)",
+    backgroundColor: "rgba(245, 158, 11, 0.05)",
+  },
+  aiSuggestionsTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#F59E0B",
+    flex: 1,
+  },
+  templateTitle: { color: '#6366F1' },
+  templateScroll: { maxHeight: 140, marginBottom: 8 },
+  aiSuggestionsContent: {
+    padding: 12,
+    gap: 10,
+  },
+  suggestionItem: {
+    gap: 4,
+  },
+  suggestionLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  suggestionValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  suggestionTapText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#F59E0B",
+    textAlign: "center",
+    marginTop: 8,
+    fontStyle: "italic",
+  },
+  suggestionCard: { minWidth: 160, width: 170, minHeight: 120, backgroundColor: "#FFFDF6", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E5E7EB", alignItems: 'flex-start', justifyContent: 'space-between', marginRight: 12 },
+  suggestionName: { fontSize: 13, fontWeight: "800", color: "#111827", marginBottom: 4, flexShrink: 1, flexWrap: 'wrap' },
+  templateEmptyContainer: { paddingHorizontal: 12, paddingVertical: 8, justifyContent: 'center', alignItems: 'center' },
+  templateEmptyText: { color: '#6B7280', fontSize: 13 },
+  input: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, color: "#111827", fontSize: 16, borderWidth: 1, borderColor: "#E5E7EB" },
+  successBanner: {
+    position: 'absolute',
+    top: 70,
+    left: 16,
+    right: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    shadowColor: '#065F46',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  successBannerText: {
+    color: '#065F46',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  successBannerContent: {
+    marginLeft: 10,
+  },
+  successBannerTitle: {
+    color: '#065F46',
+    fontWeight: '800',
+    fontSize: 14,
   },
 });

@@ -61,7 +61,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
   const transactions = useTransactionStore((state) => state.transactions);
 
   // ⭐ RECURRING: Subscribe to recurring transaction store
-  const recurringTransactions = useRecurringTransactionStore((state) => state.recurringTransactions);
+  const recurringTransactions = useRecurringTransactionStore((state: any) => state.recurringTransactions);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -91,7 +91,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       
       // ⭐ Also fetch recurring transactions
       console.log("📄 [HISTORY-SCREEN] Loading recurring transactions from Store");
-      await useRecurringTransactionStore.getState().fetchRecurringTransactions();
+      await (useRecurringTransactionStore.getState() as any).fetchRecurringTransactions();
       console.log("✅ [HISTORY-SCREEN] Recurring transactions loaded from Store");
     } catch (error) {
       console.error("❌ [HISTORY-SCREEN] Error loading transactions:", error);
@@ -111,7 +111,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       
       // ⭐ Also refresh recurring transactions
       console.log("🔄 [HISTORY-SCREEN] Refreshing recurring transactions");
-      await useRecurringTransactionStore.getState().fetchRecurringTransactions();
+      await (useRecurringTransactionStore.getState() as any).fetchRecurringTransactions();
       console.log("✅ [HISTORY-SCREEN] Recurring transactions refreshed");
     } catch (error) {
       console.error("❌ [HISTORY-SCREEN] Error refreshing transactions:", error);
@@ -133,7 +133,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       "Xác nhận xóa",
       `Bạn có chắc muốn xóa giao dịch "${transaction.description}" (${transaction.amount.toLocaleString(
         "vi-VN"
-      )}đ)?`,
+      )} VNĐ)?`,
       [
         {
           text: "Hủy",
@@ -345,7 +345,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
     });
     const dateStr = date.toLocaleDateString("vi-VN");
 
-    console.log(`🎫 [RENDER-${item.id}] ${displayTitle} => ${timeStr} • ${dateStr} (${item.type}) ₫${item.amount}`);
+    console.log(`🎫 [RENDER-${item.id}] ${displayTitle} => ${timeStr} • ${dateStr} (${item.type}) ${item.amount} VNĐ`);
 
     return (
       <TouchableOpacity
@@ -369,14 +369,14 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
         
         {/* Thông tin giữa */}
         <View style={styles.bankInfoContainer}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={styles.titleRow}>
             <Text style={styles.bankItemTitle} numberOfLines={1}>
               {displayTitle}
             </Text>
             {/* ⭐ RECURRING BADGE */}
             {(item as any).isRecurring && (
               <View style={styles.recurringBadge}>
-                <MaterialCommunityIcons name="repeat" size={10} color="#6366F1" />
+                <MaterialCommunityIcons name="repeat" size={10} color="#6366F1" style={styles.recurringBadgeIcon} />
                 <Text style={styles.recurringBadgeText}>Lặp lại</Text>
               </View>
             )}
@@ -395,7 +395,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
             ]}
             numberOfLines={1}
           >
-            {isExpense ? "-" : "+"} ₫{Math.abs(item.amount || 0).toLocaleString("vi-VN")}
+            {isExpense ? "-" : "+"} {Math.abs(item.amount || 0).toLocaleString("vi-VN")} VNĐ
           </Text>
         </View>
       </TouchableOpacity>
@@ -474,11 +474,10 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
                   <Text style={styles.summaryLabel}>Chi</Text>
                 </View>
                 <Text style={styles.summaryAmount}>
-                  ₫
                   {dayTransactions
                     .filter((t: Transaction) => t.type === "expense")
                     .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0)
-                    .toLocaleString("vi-VN")}
+                    .toLocaleString("vi-VN")} VNĐ
                 </Text>
               </View>
             )}
@@ -489,11 +488,10 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
                   <Text style={styles.summaryLabel}>Thu</Text>
                 </View>
                 <Text style={[styles.summaryAmount, styles.summaryAmountIncome]}>
-                  ₫
                   {dayTransactions
                     .filter((t: Transaction) => t.type === "income")
                     .reduce((sum: number, t: Transaction) => sum + (t.amount || 0), 0)
-                    .toLocaleString("vi-VN")}
+                    .toLocaleString("vi-VN")} VNĐ
                 </Text>
               </View>
             )}
@@ -523,7 +521,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={[styles.backIcon, { color: '#111827' }]}>←</Text>
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lịch sử giao dịch</Text>
         <View style={styles.placeholderButton} />
@@ -589,7 +587,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 8,
+    paddingTop: 4,
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
@@ -604,7 +602,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#111827" },
+  backIcon: { fontSize: 18, color: "#111827" },
   headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
   placeholderButton: { width: 40, height: 40 },
 
@@ -618,17 +616,17 @@ const styles = StyleSheet.create({
   loadingText: {
     color: "#00796B",
     marginTop: 12,
-    fontSize: 14,
+    fontSize: 13,
   },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
   emptyText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: "#111827",
     marginBottom: 8,
   },
   emptySubText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#6B7280",
     marginBottom: 24,
   },
@@ -638,13 +636,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
-  addButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  addButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
 
   /* List Layout */
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 120,
-    paddingTop: 12,
+    paddingTop: 10,
   },
 
   /* Date Section */
@@ -659,13 +657,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   dateText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "800",
     color: "#111827",
     marginBottom: 4,
   },
   dateSubText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#111827",
     fontWeight: "600",
     opacity: 0.85,
@@ -673,7 +671,6 @@ const styles = StyleSheet.create({
 
   /* Daily Summary */
   dailySummary: {
-    gap: 12,
     alignItems: "flex-end",
   },
   summaryItem: {
@@ -687,13 +684,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#111827",
     fontWeight: "600",
     marginBottom: 2,
   },
   summaryAmount: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     color: "#DC2626", // Red
   },
@@ -730,10 +727,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   bankIconExpense: {
-    backgroundColor: "#FFEBEE", // Red light
+    backgroundColor: "#FFF0F0", // light red (expense)
   },
   bankIconIncome: {
-    backgroundColor: "#E0F2F1", // Teal light
+    backgroundColor: "#E6F9EE", // light green (income)
   },
   bankIconImage: {
     width: "100%",
@@ -749,15 +746,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingRight: 10,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recurringBadgeIcon: {
+    marginRight: 6,
+  },
   bankItemTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     color: "#111827",
     marginBottom: 6,
     letterSpacing: 0.2,
   },
   bankItemDateTime: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "500",
     color: "#111827",
   },
@@ -766,14 +770,14 @@ const styles = StyleSheet.create({
   recurringBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
     backgroundColor: 'rgba(99, 102, 241, 0.1)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+    marginLeft: 6,
   },
   recurringBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     color: '#6366F1',
   },
@@ -784,7 +788,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   bankItemAmount: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
@@ -797,7 +801,6 @@ const styles = StyleSheet.create({
 
   /* 🎨 [NEW] List Container */
   listContainer: {
-    gap: 2,
   },
 
   /* Floating Button (Giữ nguyên) */
@@ -818,9 +821,9 @@ const styles = StyleSheet.create({
   },
   floatingButtonText: {
     color: "#fff",
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "700",
-    lineHeight: 32,
+    lineHeight: 28,
   },
 
   /* 🎨 [NEW] Summary Stats Header */
@@ -830,7 +833,6 @@ const styles = StyleSheet.create({
   summaryStatsHeader: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,
     backgroundColor: "rgba(0, 137, 123, 0.06)",
@@ -848,28 +850,28 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0, 137, 123, 0.15)",
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
     color: "#666666",
     marginBottom: 6,
   },
   statValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#00796B",
   },
   statValueIncome: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#10B981",
   },
   statValueExpense: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#EF4444",
   },
   statValuePercent: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#F59E0B",
   },

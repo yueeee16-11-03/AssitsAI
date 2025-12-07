@@ -30,7 +30,6 @@ export default function HomeScreen({ navigation }: Props) {
   const displayName = (user && (user.displayName || user.email || user.phoneNumber)) || 'Người dùng';
   const [cameraOptionsVisible, setCameraOptionsVisible] = useState(false);
   const [chatPulse] = useState(new Animated.Value(0));
-  const [activeTab, setActiveTab] = useState<'home' | 'habit' | 'finance' | 'ai'>('home');
   const SCREEN_WIDTH = Dimensions.get('window').width;
   const [sheetVisible, setSheetVisible] = React.useState(false);
   const sheetAnim = React.useRef(new Animated.Value(0)).current;
@@ -45,10 +44,6 @@ export default function HomeScreen({ navigation }: Props) {
     Animated.timing(sheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
       setSheetVisible(false);
     });
-  };
-
-  const getTabColor = (tab: 'home' | 'habit' | 'finance' | 'ai') => {
-    return activeTab === tab ? '#059669' : '#9CA3AF';
   };
 
   React.useEffect(() => {
@@ -96,7 +91,7 @@ export default function HomeScreen({ navigation }: Props) {
               style={styles.notificationButton}
               onPress={() => navigation.navigate("Notification")}
             >
-              <Icon name="bell" size={24} color="#111827" />
+              <Icon name="bell-outline" size={24} color="#6B7280" />
               {unreadCount > 0 && (
                 <View style={styles.notificationBadge}>
                   <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
@@ -107,19 +102,19 @@ export default function HomeScreen({ navigation }: Props) {
               style={styles.familyButton}
               onPress={() => navigation.navigate("FamilyOverview")}
             >
-              <Icon name="account-multiple" size={24} color="#111827" />
+              <Icon name="account-multiple-outline" size={24} color="#6B7280" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.settingsButton}
               onPress={() => navigation.navigate("Settings")}
             >
-              <Icon name="cog" size={24} color="#111827" />
+              <Icon name="cog-outline" size={24} color="#6B7280" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.profileButton}
               onPress={() => navigation.navigate("Profile")}
             >
-              <Icon name="account-circle" size={26} color="#111827" />
+              <Icon name="account-circle-outline" size={26} color="#6B7280" />
             </TouchableOpacity>
           </View>
         </View>
@@ -162,28 +157,28 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.accountIconsRow}>
               <TouchableOpacity style={styles.accountIcon} onPress={() => { setCameraOptionsVisible(true); }}>
                 <View style={styles.accountIconCircle}>
-                  <Icon name="barcode-scan" size={24} color="#7C3AED" />
+                  <Icon name="barcode-scan" size={24} color="#6B7280" />
                 </View>
                 <Text style={styles.accountIconLabel}>Quét hóa đơn</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.accountIcon} onPress={() => navigation.navigate('BudgetPlanner')}>
                 <View style={styles.accountIconCircle}>
-                  <Icon name="piggy-bank" size={24} color="#7C3AED" />
+                  <Icon name="piggy-bank-outline" size={24} color="#6B7280" />
                 </View>
                 <Text style={styles.accountIconLabel}>Ngân sách</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.accountIcon} onPress={() => navigation.navigate('GoalTracking')}>
                 <View style={styles.accountIconCircle}>
-                  <Icon name="bullseye" size={24} color="#7C3AED" />
+                  <Icon name="bullseye-arrow" size={24} color="#6B7280" />
                 </View>
                 <Text style={styles.accountIconLabel}>Mục tiêu tiết kiệm</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.accountIcon} onPress={() => navigation.navigate('Report')}>
                 <View style={styles.accountIconCircle}>
-                  <Icon name="chart-box" size={24} color="#7C3AED" />
+                  <Icon name="chart-box-outline" size={24} color="#6B7280" />
                 </View>
                 <Text style={styles.accountIconLabel}>Báo cáo chi thu</Text>
               </TouchableOpacity>
@@ -253,7 +248,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.8}
           >
             <View style={styles.inlineRow}>
-              <Icon name="chart-bar" size={16} color="#6366F1" />
+              <Icon name="chart-line" size={16} color="#6B7280" />
               <Text style={[styles.insightButtonText, styles.iconTextSpacing]}>Xem phân tích AI</Text>
             </View>
           </TouchableOpacity>
@@ -265,7 +260,7 @@ export default function HomeScreen({ navigation }: Props) {
           >
             <View style={styles.spendingChartInner}>
               {sampleBars.map((v, i) => {
-                const barColors = ['#F97316', '#FB923C', '#FB7185', '#F472B6', '#A78BFA', '#7C3AED', '#6366F1'];
+                const barColors = ['#F97316', '#FB923C', '#FB7185', '#F472B6', '#06B6D4', '#06B6D4', '#06B6D4'];
                 const color = barColors[i % barColors.length];
                 const animatedHeight = barAnimsRef[i];
                 return (
@@ -289,7 +284,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.8}
           >
             <View style={styles.inlineRow}>
-              <Icon name="robot" size={16} color="#8B5CF6" />
+              <Icon name="robot-outline" size={16} color="#6B7280" />
               <Text style={[styles.aiCoachButtonText, styles.iconTextSpacing]}>AI Coach</Text>
             </View>
           </TouchableOpacity>
@@ -345,7 +340,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.85}
           >
             <View style={styles.personalGoalInlineRow}>
-              <Icon name="account-heart" size={18} color="#374151" />
+              <Icon name="account-heart-outline" size={18} color="#6B7280" />
               <Text style={styles.personalGoalText}>Mục tiêu cá nhân</Text>
             </View>
           </TouchableOpacity>
@@ -356,7 +351,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.85}
           >
             <View style={styles.personalGoalInlineRow}>
-              <Icon name="bullseye" size={18} color="#374151" />
+              <Icon name="bullseye-arrow" size={18} color="#6B7280" />
               <Text style={styles.commonGoalText}>Mục tiêu chung</Text>
             </View>
           </TouchableOpacity>
@@ -367,7 +362,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.85}
           >
             <View style={styles.personalGoalInlineRow}>
-              <Icon name="repeat" size={18} color="#374151" />
+              <Icon name="repeat" size={18} color="#6B7280" />
               <Text style={styles.personalGoalText}>Khoản thu chi định kỳ</Text>
             </View>
           </TouchableOpacity>
@@ -377,12 +372,12 @@ export default function HomeScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('AIRecommendation')}
             activeOpacity={0.9}
           >
-            <Icon name="lightbulb-on-outline" size={20} color="#10B981" style={styles.personalSuggestIcon} />
+            <Icon name="lightbulb-outline" size={20} color="#6B7280" style={styles.personalSuggestIcon} />
             <View style={styles.personalSuggestContent}>
               <Text style={styles.personalSuggestTitle}>Gợi ý thông minh</Text>
               <Text style={styles.personalSuggestSubtitle}>Xem mẹo tiết kiệm và cải thiện thói quen</Text>
             </View>
-            <Icon name="chevron-right" size={18} color="#10B981" />
+            <Icon name="chevron-right" size={18} color="#6B7280" />
           </TouchableOpacity>
         </View>
 
@@ -399,22 +394,20 @@ export default function HomeScreen({ navigation }: Props) {
           <TouchableOpacity 
             style={styles.tabButton} 
             onPress={() => {
-              setActiveTab('home');
               navigation.navigate('Home');
             }}
           >
-            <Icon name="home" size={26} color={getTabColor('home')} style={styles.tabIconBold} />
+            <Icon name="home-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Trang chủ</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.tabButton} 
             onPress={() => {
-              setActiveTab('habit');
               navigation.navigate('HabitDashboard');
             }}
           >
-            <Icon name="check-circle" size={26} color={getTabColor('habit')} style={styles.tabIconBold} />
+            <Icon name="check-circle-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Thói quen</Text>
           </TouchableOpacity>
 
@@ -423,22 +416,20 @@ export default function HomeScreen({ navigation }: Props) {
           <TouchableOpacity 
             style={styles.tabButton} 
             onPress={() => {
-              setActiveTab('finance');
               navigation.navigate('FinanceDashboard');
             }}
           >
-            <Icon name="wallet" size={26} color={getTabColor('finance')} style={styles.tabIconBold} />
+            <Icon name="wallet-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Tài chính</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.tabButton} 
             onPress={() => {
-              setActiveTab('ai');
               navigation.navigate('AIRecommendation');
             }}
           >
-            <Icon name="lightbulb-on" size={26} color={getTabColor('ai')} style={styles.tabIconBold} />
+            <Icon name="lightbulb-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
             <Text style={styles.tabLabelBold}>Gợi ý</Text>
           </TouchableOpacity>
         </View>
@@ -477,7 +468,7 @@ export default function HomeScreen({ navigation }: Props) {
           onPress={() => navigation.navigate("AIChat")}
           activeOpacity={0.85}
         >
-          <Icon name="chat" size={24} color="#7C3AED" />
+          <Icon name="chat-outline" size={24} color="#6B7280" />
         </TouchableOpacity>
       </Animated.View>
 
@@ -506,17 +497,17 @@ export default function HomeScreen({ navigation }: Props) {
 
         <View style={styles.bottomSheetContent}>
           <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigation.navigate('AddTransaction', {}); }} activeOpacity={0.85}>
-            <View style={styles.sheetIcon}><Icon name="minus" size={20} color="#000000" /></View>
+            <View style={styles.sheetIcon}><Icon name="cash-minus" size={22} color="#FFFFFF" /></View>
             <Text style={styles.sheetText}>Thêm chi tiêu</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigation.navigate('AddIncome', {}); }} activeOpacity={0.85}>
-            <View style={styles.sheetIcon}><Icon name="plus" size={20} color="#000000" /></View>
+            <View style={styles.sheetIcon}><Icon name="cash-plus" size={22} color="#FFFFFF" /></View>
             <Text style={styles.sheetText}>Thêm thu nhập</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); setCameraOptionsVisible(true); }} activeOpacity={0.85}>
-            <View style={styles.sheetIcon}><Icon name="qrcode-scan" size={20} color="#000000" /></View>
+            <View style={styles.sheetIcon}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
             <Text style={styles.sheetText}>Quét hóa đơn</Text>
           </TouchableOpacity>
         </View>
@@ -676,14 +667,14 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
       {/* Top Header with Close and Camera Flip buttons */}
       <View style={cameraStyles.cameraHeader}>
         <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={onClose}>
-          <Icon name="close" size={18} color="#374151" />
+          <Icon name="close-outline" size={18} color="#6B7280" />
         </TouchableOpacity>
         <View style={cameraStyles.cameraHeaderTitleWrap}>
           <Icon name="qrcode-scan" size={16} color="#6B7280" style={cameraStyles.cameraHeaderIconSpacing} />
           <Text style={cameraStyles.cameraHeaderTitle}>Quét hóa đơn</Text>
         </View>
         <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={toggleCameraPosition}>
-          <Icon name="camera-flip" size={18} color="#374151" />
+          <Icon name="camera-flip-outline" size={18} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
@@ -711,7 +702,7 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
           style={cameraStyles.galleryButton}
           onPress={handlePickFromGallery}
         >
-          <Icon name="image" size={28} color="#6B7280" />
+          <Icon name="image-outline" size={28} color="#6B7280" />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -726,7 +717,7 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
             style={cameraStyles.flashButton}
             onPress={toggleFlash}
           >
-            <Icon name={torchEnabled ? 'flash' : 'flash-off'} size={28} color="#6B7280" />
+            <Icon name={torchEnabled ? 'flash' : 'flash-off-outline'} size={28} color="#6B7280" />
           </TouchableOpacity>
         )}
         {cameraPosition === 'front' && (
@@ -1059,8 +1050,8 @@ const styles = StyleSheet.create({
   cardTitle: { color: "#00796B", fontSize: 13, marginBottom: 8 },
   cardAmount: { color: "#333333", fontSize: 20, fontWeight: "800" },
   cardSub: { color: "#999999", fontSize: 12, marginTop: 8 },
-  viewAllBtn: { marginTop: 12, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, backgroundColor: "rgba(99,102,241,0.15)" },
-  viewAllText: { color: "#6366F1", fontWeight: "700" },
+  viewAllBtn: { marginTop: 12, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, backgroundColor: "rgba(6,182,212,0.15)" },
+  viewAllText: { color: "#FFFFFF", fontWeight: "700" },
   goalCount: { color: "#333333", fontSize: 22, fontWeight: "800" },
 
   section: { marginBottom: 20 },
@@ -1100,7 +1091,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-  spendingChartTitle: { color: '#7C3AED', fontSize: 14, fontWeight: '800', marginTop: 8, textAlign: 'center', fontStyle: 'italic' },
+  spendingChartTitle: { color: '#06B6D4', fontSize: 14, fontWeight: '800', marginTop: 8, textAlign: 'center', fontStyle: 'italic' },
   spendingChartInner: { flexDirection: 'row', alignItems: 'flex-end', height: 160, paddingHorizontal: 6, paddingTop: 12 },
 
   habits: {},
@@ -1109,7 +1100,7 @@ const styles = StyleSheet.create({
   habitName: { color: "#000000", fontWeight: "700" },
   habitMeta: { color: "#999999" },
   habitProgress: { height: 8, backgroundColor: "rgba(0, 137, 123, 0.15)", borderRadius: 8, overflow: "hidden" },
-  progressFill: { height: "100%", backgroundColor: "#6366F1", width: "40%" },
+  progressFill: { height: "100%", backgroundColor: "#06B6D4", width: "40%" },
 
   goals: {},
   goalItem: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(0, 137, 123, 0.06)", padding: 14, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: "rgba(0, 137, 123, 0.12)" },
@@ -1131,7 +1122,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#7C3AED",
+    shadowColor: "#06B6D4",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -1144,14 +1135,14 @@ const styles = StyleSheet.create({
   loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
 
   insightButton: {
-    backgroundColor: "rgba(99,102,241,0.15)",
+    backgroundColor: "rgba(6,182,212,0.15)",
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     alignItems: "center",
   },
   insightButtonText: {
-    color: "#6366F1",
+    color: "#6B7280",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1173,14 +1164,14 @@ const styles = StyleSheet.create({
   bannerArrow: { fontSize: 20, color: "#EC4899", fontWeight: "700" },
 
   budgetButton: {
-    backgroundColor: "rgba(139,92,246,0.15)",
+    backgroundColor: "rgba(6,182,212,0.15)",
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     alignItems: "center",
   },
   budgetButtonText: {
-    color: "#8B5CF6",
+    color: "#06B6D4",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1221,14 +1212,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   aiCoachButton: {
-    backgroundColor: "rgba(139,92,246,0.15)",
+    backgroundColor: "rgba(6,182,212,0.15)",
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     alignItems: "center",
   },
   aiCoachButtonText: {
-    color: "#8B5CF6",
+    color: "#06B6D4",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1260,7 +1251,7 @@ const styles = StyleSheet.create({
   bottomSheetHandleWrap: { alignItems: 'center', marginTop: 0 },
   bottomSheetContent: { marginTop: 8 },
   sheetItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
-  sheetIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  sheetIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#06B6D4', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   sheetText: { color: '#000000', fontSize: 16, fontWeight: '700' },
   /* Bottom Tab Bar styles */
   bottomTabBarWrap: {
@@ -1297,7 +1288,7 @@ const styles = StyleSheet.create({
   },
   tabIconBold: {
     fontSize: 26,
-    color: '#7C3AED',
+    color: '#6B7280',
     fontWeight: 'bold',
   },
   tabLabelBold: {
@@ -1313,10 +1304,10 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#06B6D4',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#8B5CF6',
+    shadowColor: '#06B6D4',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -1392,7 +1383,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   adOverlayText: {
-    color: '#7C3AED',
+    color: '#06B6D4',
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.4,
@@ -1420,7 +1411,7 @@ const styles = StyleSheet.create({
   notebookContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   notebookLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   notebookTextCol: { flex: 1 },
-  notebookIconCircle: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(124,58,237,0.08)', alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  notebookIconCircle: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(6,182,212,0.08)', alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   notebookIconCircleColored: { backgroundColor: 'rgba(255,255,255,0.16)' },
   notebookTitle: { color: '#00796B', fontSize: 14, fontWeight: '800' },
   notebookTitleWhite: { color: '#FFFFFF' },
@@ -1453,7 +1444,7 @@ const styles = StyleSheet.create({
     transform: [{ translateY: 6 }],
   },
   accountIcon: { alignItems: 'center', width: '20%' },
-  accountIconCircle: { width: 60, height: 60, borderRadius: 14, backgroundColor: 'rgba(124,58,237,0.06)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  accountIconCircle: { width: 60, height: 60, borderRadius: 14, backgroundColor: 'rgba(6,182,212,0.06)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   accountIconLabel: { color: '#999999', fontSize: 13, textAlign: 'center' },
   /* Goal card compact styles */
   goalCard: {
@@ -1522,7 +1513,7 @@ const styles = StyleSheet.create({
   personalSuggestIcon: { marginRight: 10 },
   personalSuggestTitle: { color: '#000000', fontWeight: '800', fontSize: 14 },
   personalSuggestSubtitle: { color: '#999999', fontSize: 12 },
-  iconViewBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(99,102,241,0.08)' },
+  iconViewBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(6,182,212,0.08)' },
   iconViewBtnColored: { backgroundColor: 'rgba(255,255,255,0.16)' },
   personalGoalButtonMarginTop: { marginTop: 8 },
   notebookIconCircleAlt: { backgroundColor: 'rgba(255,255,255,0.16)' },

@@ -17,7 +17,7 @@ buildscript {
         // Dependencies mặc định của React Native và Android Gradle Plugin
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         
         // CẤU HÌNH FIREBASE: Thêm plugin Google Services vào CLASSPATH
         // Điều này khắc phục lỗi "Plugin was not found"
@@ -31,5 +31,14 @@ buildscript {
 plugins {
     // Plugin React Native
     id "com.facebook.react.rootproject" 
+}
+
+// Force Kotlin JVM target compatibility for all subprojects
+subprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinCompile ->
+        kotlinCompile.kotlinOptions {
+            jvmTarget = '17'
+        }
+    }
 }
 

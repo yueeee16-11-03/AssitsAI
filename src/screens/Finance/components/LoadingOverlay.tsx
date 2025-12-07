@@ -54,7 +54,7 @@ export default function LoadingOverlay({ imageUri }: LoadingOverlayProps) {
               { transform: [{ scale: pulseAnim }] },
             ]}
           >
-            <ActivityIndicator size={48} color="#00897B" />
+            <ActivityIndicator size={48} color="#6B7280" />
           </Animated.View>
 
           <Text style={styles.loadingTitle}>Đang xử lý...</Text>
@@ -96,10 +96,10 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   loadingCard: {
-    backgroundColor: "#E0F2F1",
+    backgroundColor: "#F3F4F6",
     borderRadius: 20,
     padding: 32,
     width: width * 0.75,
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(0, 137, 123, 0.1)",
+    backgroundColor: "rgba(107, 114, 128, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
@@ -122,31 +122,31 @@ const styles = StyleSheet.create({
   loadingTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#00796B",
+    color: "#374151",
     marginBottom: 8,
   },
   loadingSubtitle: {
     fontSize: 14,
-    color: "#00897B",
+    color: "#6B7280",
     marginBottom: 20,
     textAlign: "center",
   },
   progressBar: {
     width: "100%",
     height: 4,
-    backgroundColor: "rgba(0, 137, 123, 0.1)",
+    backgroundColor: "rgba(107, 114, 128, 0.1)",
     borderRadius: 2,
     overflow: "hidden",
     marginBottom: 16,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#00897B",
+    backgroundColor: "#6B7280",
     borderRadius: 2,
   },
   processingText: {
     fontSize: 12,
-    color: "#00796B",
+    color: "#4B5563",
     fontStyle: "italic",
   },
 });

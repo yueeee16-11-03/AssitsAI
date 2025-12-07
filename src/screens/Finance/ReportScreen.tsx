@@ -709,7 +709,7 @@ export default function ReportScreen({ navigation }: Props) {
                 onPress={() => setShowExportModal(false)}
                 disabled={isExporting}
               >
-                <Text style={styles.modalClose}>✕</Text>
+                <Icon name="close" size={22} color="rgba(255, 255, 255, 0.4)" />
               </TouchableOpacity>
             </View>
 
