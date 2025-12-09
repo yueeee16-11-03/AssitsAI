@@ -371,7 +371,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
         <View style={styles.headerInner}>
           <Icon name="chevron-left" size={20} color="#111827" />
@@ -383,7 +383,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
         </View>
       </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Progress Overview */}
           <View style={styles.progressCard}>
@@ -528,7 +528,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
           </View>
         </Animated.View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

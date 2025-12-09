@@ -10,6 +10,7 @@ import {
   Animated,
   Alert,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 
@@ -18,6 +19,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 export default function ProfileScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isEditing, setIsEditing] = useState(false);
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
 
@@ -55,7 +58,7 @@ export default function ProfileScreen({ navigation }: Props) {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
@@ -69,7 +72,7 @@ export default function ProfileScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Avatar Section */}
           <View style={styles.avatarSection}>

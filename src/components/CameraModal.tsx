@@ -17,9 +17,11 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
-import { X, Zap, ZapOff } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import CameraService from '../services/CameraService';
 
 interface CameraModalProps {
@@ -34,6 +36,11 @@ export const CameraModal: React.FC<CameraModalProps> = ({ visible, onCapture, on
   const [isLoading, setIsLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const device = useCameraDevice('back');
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+  const FRAME_WIDTH = 280;
+  const FRAME_HEIGHT = 340;
+  const FRAME_TOP = Math.round((SCREEN_HEIGHT - FRAME_HEIGHT) / 2);
+  const LEFT_GAP = Math.round((SCREEN_WIDTH - FRAME_WIDTH) / 2);
 
   // Request camera permission on component mount
   useEffect(() => {
@@ -145,8 +152,11 @@ export const CameraModal: React.FC<CameraModalProps> = ({ visible, onCapture, on
           audio={false}
         />
 
-        {/* Dark overlay */}
-        <View style={styles.overlay} />
+        {/* White mask overlays (outside frame) */}
+        <View style={[styles.topOverlay, { height: FRAME_TOP }]} pointerEvents="none" />
+        <View style={[styles.leftOverlay, { top: FRAME_TOP, height: FRAME_HEIGHT, width: LEFT_GAP }]} pointerEvents="none" />
+        <View style={[styles.rightOverlay, { top: FRAME_TOP, left: LEFT_GAP + FRAME_WIDTH, height: FRAME_HEIGHT }]} pointerEvents="none" />
+        <View style={[styles.bottomOverlay, { top: FRAME_TOP + FRAME_HEIGHT }]} pointerEvents="none" />
 
         {/* Header */}
         <View style={styles.header}>
@@ -155,21 +165,21 @@ export const CameraModal: React.FC<CameraModalProps> = ({ visible, onCapture, on
             onPress={onClose}
             activeOpacity={0.7}
           >
-            <X size={28} color="#fff" strokeWidth={2.5} />
+            <X size={28} color="#3B82F6" strokeWidth={2.5} />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>📸 Chụp ảnh</Text>
 
           <TouchableOpacity
-            style={styles.headerButton}
+            style={[styles.headerButton, isFlashOn && styles.headerButtonActive]}
             onPress={handleToggleFlash}
             activeOpacity={0.7}
           >
-            {isFlashOn ? (
-              <Zap size={28} color="#FFD700" strokeWidth={2.5} />
-            ) : (
-              <ZapOff size={28} color="#fff" strokeWidth={2.5} />
-            )}
+            <MaterialCommunityIcons
+              name={isFlashOn ? 'flash' : 'flash-off'}
+              size={22}
+              color={isFlashOn ? '#FFD700' : '#3B82F6'}
+            />
           </TouchableOpacity>
         </View>
 
@@ -240,8 +250,37 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0,0,0,0.0)',
     pointerEvents: 'none',
+  },
+
+  topOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    backgroundColor: '#FFFFFF',
+    zIndex: 5,
+  },
+  bottomOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    zIndex: 5,
+  },
+  leftOverlay: {
+    position: 'absolute',
+    left: 0,
+    backgroundColor: '#FFFFFF',
+    zIndex: 5,
+  },
+  rightOverlay: {
+    position: 'absolute',
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    zIndex: 5,
   },
   
   // Header Styles
@@ -269,6 +308,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
+  headerButtonActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.22)',
+    borderColor: 'rgba(255, 215, 0, 0.5)',
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -285,15 +328,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    paddingTop: 62,
     pointerEvents: 'none',
   },
   scanFrame: {
     width: 280,
     height: 340,
-    borderRadius: 16,
-    borderWidth: 2,
+    borderRadius: 44,
+    borderWidth: 4,
     borderColor: '#3B82F6',
     backgroundColor: 'rgba(59, 130, 246, 0.08)',
     justifyContent: 'center',
@@ -304,11 +348,12 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
     position: 'relative',
+    overflow: 'hidden',
   },
   corner: {
     position: 'absolute',
-    width: 24,
-    height: 24,
+    width: 40,
+    height: 40,
     borderColor: '#3B82F6',
   },
   topLeft: {
@@ -316,24 +361,28 @@ const styles = StyleSheet.create({
     left: -2,
     borderTopWidth: 3,
     borderLeftWidth: 3,
+    borderTopLeftRadius: 44,
   },
   topRight: {
     top: -2,
     right: -2,
     borderTopWidth: 3,
     borderRightWidth: 3,
+    borderTopRightRadius: 44,
   },
   bottomLeft: {
     bottom: -2,
     left: -2,
     borderBottomWidth: 3,
     borderLeftWidth: 3,
+    borderBottomLeftRadius: 44,
   },
   bottomRight: {
     bottom: -2,
     right: -2,
     borderBottomWidth: 3,
     borderRightWidth: 3,
+    borderBottomRightRadius: 44,
   },
   crosshair: {
     width: 2,

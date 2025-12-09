@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -30,6 +31,8 @@ interface Notification {
 export default function NotificationScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [selectedTab, setSelectedTab] = useState<"all" | "unread">("all");
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -78,7 +81,7 @@ export default function NotificationScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="chevron-left" size={20} color="#111827" />
@@ -119,7 +122,7 @@ export default function NotificationScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {filteredNotifications.length === 0 ? (
             <View style={styles.emptyState}>

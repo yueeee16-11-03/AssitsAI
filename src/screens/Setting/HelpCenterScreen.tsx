@@ -151,7 +151,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
     : faqs.filter(faq => faq.category === selectedCategory);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
@@ -221,7 +221,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
         </View>
       ) : (
         // FAQ Interface
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
           <Animated.View style={{ opacity: fadeAnim }}>
             {/* Quick Actions */}
             <View style={styles.quickActionsGrid}>

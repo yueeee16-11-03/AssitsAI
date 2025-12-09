@@ -196,7 +196,7 @@ function buildPrompt(goal: string, spending: { [key: string]: number }, habits: 
 
   const habitsSummary = habits.length > 0 ? habits.join("\n") : "No active habits";
 
-  return `Bạn là một tư vấn tài chính và phát triển cá nhân có kinh nghiệm, chuyên đưa ra lời khuyên THỰC TỊ, HÀNH ĐỘNG rõ ràng.
+  return `Bạn là một tư vấn tài chính và phát triển cá nhân, phong cách thân thiện, tinh tế và súc tích.
 
 **MỤC TIÊU NGƯỜI DÙNG:** ${goal}
 
@@ -209,14 +209,14 @@ ${habitsSummary}
 
 ---
 
-**YÊU CẦU:** Tạo 5 gợi ý CỤ THỂ, NGẮN GỌN, KHÔNG CHUNG CHUNG cho HÔM NAY.
+**YÊU CẦU:** Tạo 3 gợi ý CỤ THỂ (ngắn, tinh tế) cho HÔM NAY. Mỗi gợi ý phải súc tích.
 
 **TIÊU CHUAN CHO MỖI GỢI Ý:**
-1. **Tiêu đề (Title)**: Một câu hành động cụ thể, không mơ hồ
+1. **Tiêu đề (Title)**: 1 câu hành động, tối đa 60 ký tự
    - ❌ SAIS: "Tiết kiệm tiền"
    - ✅ ĐÚNG: "Cắt chi phí ăn uống: Dùng thực phẩm có sẵn thay cà phê ngoài"
 
-2. **Mô tả (Description)**: Ngắn gọn 1-2 dòng, chỉ ghi:
+2. **Mô tả (Description)**: Ngắn gọn, tối đa 140 ký tự — nêu con số, hành động, lợi ích cụ thể
    - TÍNH CÁCH (dữ liệu cụ thể từ 7 ngày)
    - CÁCH LÀM (hành động cụ thể, dễ thực hiện hôm nay)
    - LỢI ỊCH (con số, kết quả cụ thể)
@@ -246,7 +246,7 @@ ${habitsSummary}
 
 ---
 
-**ĐỊNH DẠNG TRUYỀN VỀ**: CHỈ JSON array, hợp lệ 100%, không markdown, không giải thích:
+**ĐỊNH DẠNG TRUYỀN VỀ**: CHỈ JSON array, hợp lệ 100%, không markdown, không giải thích. Trả về 3 gợi ý nếu có thể:
 [
   {
     "id": "rec-1",
@@ -289,17 +289,38 @@ function parseGeminiResponse(text: string): DailyRecommendation[] {
       throw new Error("Response is not an array");
     }
 
-    // Add today's date to each recommendation
+    // Add today's date to each recommendation and enforce concise formatting
     const today = getTodayDate();
-    const recs: DailyRecommendation[] = parsed.map((rec: any, idx: number) => ({
-      id: rec.id || `rec-${idx}`,
-      title: rec.title || "Untitled",
-      description: rec.description || "",
-      priority: rec.priority || "medium",
-      category: rec.category || "finance",
-      icon: rec.icon || "💡",
-      date: today,
-    }));
+    const MAX_TITLE_LEN = 60;
+    const MAX_DESC_LEN = 140;
+    const ALLOWED_PRIORITIES = ["high", "medium", "low"];
+    const ALLOWED_CATEGORIES = ["finance", "habit", "lifestyle", "health", "productivity"];
+
+    function sanitizeString(input: any, maxLen: number, fallback = ""): string {
+      if (!input) return fallback;
+      const s = String(input).trim();
+      if (s.length <= maxLen) return s;
+      return s.slice(0, maxLen - 1).trim() + "…";
+    }
+
+    function sanitizeIcon(icon: any): string {
+      if (!icon) return "💡";
+      const s = String(icon).trim();
+      // simple emoji heuristic: contains non-ASCII characters or is very short
+      const containsNonAscii = [...s].some((ch) => ch.charCodeAt(0) > 127);
+      if (s.length <= 2 || containsNonAscii) return s;
+      return "💡";
+    }
+
+    const recs: DailyRecommendation[] = parsed.map((rec: any, idx: number) => {
+      const id = rec.id || `rec-${idx + 1}`;
+      const title = sanitizeString(rec.title || "Untitled", MAX_TITLE_LEN, "Untitled");
+      const description = sanitizeString(rec.description || "", MAX_DESC_LEN, "");
+      const priority = ALLOWED_PRIORITIES.includes(rec.priority) ? rec.priority : "medium";
+      const category = ALLOWED_CATEGORIES.includes(rec.category) ? rec.category : "finance";
+      const icon = sanitizeIcon(rec.icon || rec.emoji || "💡");
+      return { id, title, description, priority, category, icon, date: today } as DailyRecommendation;
+    });
 
     console.log("✅ [RECOMMENDATION] Parsed", recs.length, "recommendations");
     return recs;

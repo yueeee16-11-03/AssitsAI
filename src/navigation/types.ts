@@ -5,7 +5,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   SetupProfile: undefined;
-  Home: undefined;
+  Home: { openCamera?: boolean } | undefined;
   AIChat: undefined;
   AIInsight: undefined;
   AIRecommendation: undefined;

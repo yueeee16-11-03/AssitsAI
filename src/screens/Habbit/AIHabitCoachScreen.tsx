@@ -144,7 +144,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerTile} onPress={() => navigation.goBack()}>
           <Icon name="chevron-left" size={20} color="#111827" />
@@ -155,7 +155,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Coach Score */}
           <View style={styles.scoreCard}>
@@ -321,7 +321,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
           </View>
         </Animated.View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

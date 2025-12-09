@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -16,6 +17,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "MemberDetail">;
 
 export default function MemberDetailScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [selectedTab, setSelectedTab] = useState<"finance" | "habits" | "goals">("finance");
 
   React.useEffect(() => {
@@ -64,7 +67,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
@@ -75,7 +78,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Member Profile */}
           <View style={[styles.profileCard, { borderTopColor: member.color }]}>
@@ -239,7 +242,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
           )}
         </Animated.View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

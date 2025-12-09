@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, View, Text, ActivityIndicator } from "react-native";
+import { Alert } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useAIProcessing } from "../../hooks/useAIProcessing";
@@ -25,40 +25,40 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
     setError: setImageError,
   } = useAIProcessing({ imageUri, enableGeminiProcessing: true, transactionType });
 
+  // ===== CALLBACK: Text processing (extract into callback so retry can call it) =====
+  const processTextData = React.useCallback(async () => {
+    if (!textNote) return;
+    setIsTextProcessing(true);
+    setTextError(null);
+
+    try {
+      console.log('🤖 [OVERLAY] Processing text note:', textNote);
+      const result = await TextAIProcessingService.processTextNote(textNote, transactionType);
+
+      console.log('✅ [OVERLAY] Text processing result:', result);
+
+      setTextEditedData({
+        processedText: result.processedText,
+        rawText: textNote,
+        items: result.items || [],
+        totalAmount: result.totalAmount,
+        category: result.category,
+        description: result.description,
+        processingTime: result.processingTime,
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Lỗi xử lý";
+      console.error('❌ [OVERLAY] Error:', errorMsg);
+      setTextError(errorMsg);
+    } finally {
+      setIsTextProcessing(false);
+    }
+  }, [textNote, transactionType]);
+
   // ===== EFFECT: Trigger text processing once =====
   useEffect(() => {
-    if (!textNote) return;
-    
-    const processTextData = async () => {
-      setIsTextProcessing(true);
-      setTextError(null);
-      
-      try {
-        console.log('🤖 [OVERLAY] Processing text note:', textNote);
-        const result = await TextAIProcessingService.processTextNote(textNote, transactionType);
-        
-        console.log('✅ [OVERLAY] Text processing result:', result);
-        
-        setTextEditedData({
-          processedText: result.processedText,
-          rawText: textNote,
-          items: result.items || [],
-          totalAmount: result.totalAmount,
-          category: result.category,
-          description: result.description,
-          processingTime: result.processingTime,
-        });
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Lỗi xử lý";
-        console.error('❌ [OVERLAY] Error:', errorMsg);
-        setTextError(errorMsg);
-      } finally {
-        setIsTextProcessing(false);
-      }
-    };
-    
     processTextData();
-  }, [textNote, transactionType]);
+  }, [processTextData]);
 
   // ===== EFFECT: Trigger image processing =====
   useEffect(() => {
@@ -77,9 +77,8 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
 
   const handleRetryText = () => {
     setTextError(null);
-    setIsTextProcessing(true);
-    // Re-trigger effect by setting state - will naturally re-run
     setTextEditedData(null);
+    processTextData();
   };
 
   const handleRetryImage = () => {
@@ -109,7 +108,7 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
           params: {
             editedData: textEditedData,
             transactionType,
-            isTextProcessing: true, // 🟢 Mark as text processing
+            isTextProcessing: isTextProcessing,
           },
         } as any}
         navigation={navigation as any}
@@ -146,16 +145,5 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
   );
 }
 
-const styles = {
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#E0F2F1',
-  },
-  loadingText: {
-    marginTop: 12,
-    color: '#00796B',
-    fontWeight: '700' as const,
-  },
-};
+// This screen uses shared overlay components (LoadingOverlay / ErrorOverlay)
+// so local styles aren't required here.

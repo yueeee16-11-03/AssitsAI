@@ -12,6 +12,7 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useHabitStore } from "../../store/habitStore";
@@ -42,6 +43,8 @@ interface ScheduleItem {
 
 export default function AddHabitScreen({ navigation }: Props) {
   const addHabit = useHabitStore((state) => state.addHabit);
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const updateHabit = useHabitStore((state) => state.updateHabit);
   const isLoading = useHabitStore((state) => state.isLoading);
 
@@ -242,10 +245,11 @@ export default function AddHabitScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerTile} onPress={() => navigation.goBack()}>
           <Icon name="chevron-left" size={20} color="#111827" />
@@ -254,7 +258,7 @@ export default function AddHabitScreen({ navigation }: Props) {
         <View style={styles.headerTile} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
 
 
@@ -731,6 +735,7 @@ export default function AddHabitScreen({ navigation }: Props) {
         />
       )}
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

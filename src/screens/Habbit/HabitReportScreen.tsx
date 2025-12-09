@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -26,6 +27,8 @@ interface HeatmapDay {
 
 export default function HabitReportScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month">("month");
   const fetchHabits = useHabitStore((s) => s.fetchHabits);
   const getCheckInHistory = useCheckInStore((s) => s.getCheckInHistory);
@@ -228,7 +231,7 @@ export default function HabitReportScreen({ navigation }: Props) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#6366F1" />
@@ -244,7 +247,7 @@ export default function HabitReportScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Period Selector */}
           <View style={styles.periodSelector}>
@@ -393,7 +396,7 @@ export default function HabitReportScreen({ navigation }: Props) {
           </View>
         </Animated.View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

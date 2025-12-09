@@ -12,6 +12,7 @@ import {
   Dimensions,
   Alert,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
 import { launchImageLibrary } from 'react-native-image-picker';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -23,37 +24,24 @@ import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCou
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
-export default function HomeScreen({ navigation }: Props) {
+export default function HomeScreen({ navigation, route }: Props) {
   const [loading] = useState(false);
+  const insets = useSafeAreaInsets();
   const user = useUserStore((s: any) => s.user);
   const { unreadCount } = useUnreadNotificationCount();
   const displayName = (user && (user.displayName || user.email || user.phoneNumber)) || 'Người dùng';
   const [cameraOptionsVisible, setCameraOptionsVisible] = useState(false);
-  const [chatPulse] = useState(new Animated.Value(0));
   const SCREEN_WIDTH = Dimensions.get('window').width;
-  const [sheetVisible, setSheetVisible] = React.useState(false);
-  const sheetAnim = React.useRef(new Animated.Value(0)).current;
-  const SHEET_HEIGHT = 260;
-
-  const openBottomSheet = () => {
-    setSheetVisible(true);
-    Animated.timing(sheetAnim, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-  };
-
-  const closeBottomSheet = () => {
-    Animated.timing(sheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
-      setSheetVisible(false);
-    });
-  };
-
+  const TAB_BAR_HEIGHT = 70; // adjust as needed for the app's bottom tab bar height
+  // Open camera when navigated with params from global bottom sheet
   React.useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(chatPulse, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(chatPulse, { toValue: 0, duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [chatPulse]);
+    if (route?.params && (route as any).params.openCamera) {
+      setCameraOptionsVisible(true);
+      // clear param to avoid re-trigger on back navigation
+      navigation.setParams({ openCamera: false } as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.params]);
 
   const sampleBars = [50, 75, 40, 90, 60, 80, 70]; // 7-day values
   const CHART_HEIGHT = 100; // px height used for bar animations (reduced so 100% bars don't overflow)
@@ -75,7 +63,7 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <TouchableOpacity
         style={styles.headerButtonFull}
         activeOpacity={0.92}
@@ -120,7 +108,7 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
       </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(styles.content.paddingBottom || 24, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         {/* Full-width ad carousel button with indicator dots */}
         <TouchableOpacity
           style={styles.adCarouselButton}
@@ -383,94 +371,8 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* Old AI Recommendations Banner removed per request */}
 
-        <View style={styles.bottomSpacer} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-      {/* Bottom Tab Bar (fixed) */}
-
-      <View style={styles.bottomTabBarWrap} pointerEvents="box-none">
-        {/* Background fill below tab bar */}
-        <View style={styles.tabBarBg} />
-        <View style={styles.bottomTabBar}>
-          <TouchableOpacity 
-            style={styles.tabButton} 
-            onPress={() => {
-              navigation.navigate('Home');
-            }}
-          >
-            <Icon name="home-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
-            <Text style={styles.tabLabelBold}>Trang chủ</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.tabButton} 
-            onPress={() => {
-              navigation.navigate('HabitDashboard');
-            }}
-          >
-            <Icon name="check-circle-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
-            <Text style={styles.tabLabelBold}>Thói quen</Text>
-          </TouchableOpacity>
-
-          <View style={styles.tabCenterPlaceholder} />
-
-          <TouchableOpacity 
-            style={styles.tabButton} 
-            onPress={() => {
-              navigation.navigate('FinanceDashboard');
-            }}
-          >
-            <Icon name="wallet-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
-            <Text style={styles.tabLabelBold}>Tài chính</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.tabButton} 
-            onPress={() => {
-              navigation.navigate('AIRecommendation');
-            }}
-          >
-            <Icon name="lightbulb-outline" size={26} color="#6B7280" style={styles.tabIconBold} />
-            <Text style={styles.tabLabelBold}>Gợi ý</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Central action button for Habits (floating) */}
-        <View style={styles.centerActionWrap} pointerEvents="box-none">
-          <TouchableOpacity
-            style={styles.centerActionButton}
-            onPress={() => openBottomSheet()}
-            activeOpacity={0.9}
-          >
-            <Icon name="plus" size={32} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-
-      {/* Move Chat FAB above tab bar, right side */}
-      <Animated.View
-        style={[
-          styles.fab,
-          {
-            transform: [
-              {
-                scale: chatPulse.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 1.08],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.fabButton}
-          onPress={() => navigation.navigate("AIChat")}
-          activeOpacity={0.85}
-        >
-          <Icon name="chat-outline" size={24} color="#6B7280" />
-        </TouchableOpacity>
-      </Animated.View>
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -478,40 +380,7 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* Bottom sheet overlay + sheet (animated) */}
-      {sheetVisible && (
-        <TouchableOpacity activeOpacity={1} style={styles.bottomSheetOverlay} onPress={closeBottomSheet} />
-      )}
-
-      <Animated.View
-        pointerEvents={sheetVisible ? 'auto' : 'none'}
-        style={[
-          styles.bottomSheet,
-          {
-            transform: [{ translateY: sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [SHEET_HEIGHT + 20, 0] }) }],
-            opacity: sheetAnim,
-          },
-        ]}
-      >
-        <View style={styles.bottomSheetHandleWrap} />
-
-        <View style={styles.bottomSheetContent}>
-          <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigation.navigate('AddTransaction', {}); }} activeOpacity={0.85}>
-            <View style={styles.sheetIcon}><Icon name="cash-minus" size={22} color="#FFFFFF" /></View>
-            <Text style={styles.sheetText}>Thêm chi tiêu</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigation.navigate('AddIncome', {}); }} activeOpacity={0.85}>
-            <View style={styles.sheetIcon}><Icon name="cash-plus" size={22} color="#FFFFFF" /></View>
-            <Text style={styles.sheetText}>Thêm thu nhập</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); setCameraOptionsVisible(true); }} activeOpacity={0.85}>
-            <View style={styles.sheetIcon}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
-            <Text style={styles.sheetText}>Quét hóa đơn</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      {/* Bottom tabs, FAB, and bottom sheet moved to top-level navigation component */}
 
       {/* Camera Screen Modal with live preview */}
       {cameraOptionsVisible && (
@@ -523,7 +392,7 @@ export default function HomeScreen({ navigation }: Props) {
           onClose={() => setCameraOptionsVisible(false)}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

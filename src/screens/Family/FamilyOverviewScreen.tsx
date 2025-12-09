@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -35,6 +36,8 @@ interface FamilyMember {
 
 export default function FamilyOverviewScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -92,7 +95,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
   const totalSaving = familyMembers.reduce((sum, m) => sum + m.finance.saving, 0);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
@@ -106,7 +109,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Family Summary */}
           <View style={styles.summaryCard}>

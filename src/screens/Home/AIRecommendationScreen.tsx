@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Animated,
 } from "react-native";
 import NotificationService from '../../services/NotificationService';
 import { useFocusEffect } from "@react-navigation/native";
@@ -28,6 +29,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ctaPulse] = useState(new Animated.Value(1));
 
   useFocusEffect(
     React.useCallback(() => {
@@ -36,6 +38,15 @@ export default function AIRecommendationScreen({ navigation }: Props) {
       NotificationService.scheduleDailyRecommendationReminder({ hour: 7, minute: 0 }).catch(err => console.warn('AIRecommendation: schedule failed', err));
     }, [])
   );
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(ctaPulse, { toValue: 1.05, duration: 900, useNativeDriver: true }),
+        Animated.timing(ctaPulse, { toValue: 1.0, duration: 900, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [ctaPulse]);
 
   const loadAndGenerateRecommendations = async () => {
     try {
@@ -100,7 +111,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
     }
   };
 
-  const getPriorityBadgeStyle = (priority: string) => {
+  const getPriorityBadgeStyle = (_priority: string) => {
     const baseStyle = {
       borderRadius: 8,
       paddingHorizontal: 10,
@@ -110,32 +121,18 @@ export default function AIRecommendationScreen({ navigation }: Props) {
       alignItems: "center" as const,
     };
     
-    switch (priority) {
-      case "high":
-        return { ...baseStyle, backgroundColor: "#FEE2E2" };
-      case "medium":
-        return { ...baseStyle, backgroundColor: "#FEF3C7" };
-      case "low":
-      default:
-        return { ...baseStyle, backgroundColor: "#DBEAFE" };
-    }
+    // Use cyan background for all priority badges
+    return { ...baseStyle, backgroundColor: "#06B6D4" };
   };
 
-  const getPriorityBadgeTextStyle = (priority: string) => {
+  const getPriorityBadgeTextStyle = (_priority: string) => {
     const baseStyle = {
       fontSize: 12 as const,
       fontWeight: "700" as const,
     };
 
-    switch (priority) {
-      case "high":
-        return { ...baseStyle, color: "#DC2626" };
-      case "medium":
-        return { ...baseStyle, color: "#D97706" };
-      case "low":
-      default:
-        return { ...baseStyle, color: "#2563EB" };
-    }
+    // White text on cyan badge
+    return { ...baseStyle, color: "#FFFFFF" };
   };
 
   const getPriorityIcon = (priority: string): string => {
@@ -150,16 +147,9 @@ export default function AIRecommendationScreen({ navigation }: Props) {
     }
   };
 
-  const getPriorityColor = (priority: string): string => {
-    switch (priority) {
-      case "high":
-        return "#DC2626";
-      case "medium":
-        return "#D97706";
-      case "low":
-      default:
-        return "#2563EB";
-    }
+  const getPriorityColor = (_priority: string): string => {
+    // Priority icon color => white to contrast with cyan background
+    return "#FFFFFF";
   };
 
   return (
@@ -169,14 +159,14 @@ export default function AIRecommendationScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="chevron-left" size={24} color="#111827" />
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Gợi ý thông minh</Text>
           <Text style={styles.headerSubtitle}>{recommendations.length} gợi ý hôm nay</Text>
         </View>
         <TouchableOpacity style={styles.filterButton}>
-          <MaterialCommunityIcons name="refresh" size={22} color="#111827" />
+          <MaterialCommunityIcons name="refresh" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -186,7 +176,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
       >
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#10B981" />
+            <ActivityIndicator size="large" color="#06B6D4" />
             <Text style={styles.loadingText}>Đang tải gợi ý...</Text>
           </View>
         ) : error ? (
@@ -213,14 +203,11 @@ export default function AIRecommendationScreen({ navigation }: Props) {
                   >
                     {/* Header: Icon + Title + Priority */}
                     <View style={styles.recCardHeader}>
-                      <View style={[
-                        styles.recIconLarge,
-                        { backgroundColor: `${getCategoryColor(rec.category)}15` }
-                      ]}>
+                      <View style={[styles.recIconLarge, styles.recIconLargeCyan]}>
                         <MaterialCommunityIcons 
                           name={getIconForCategory(rec.category)} 
                           size={36} 
-                          color={getCategoryColor(rec.category)}
+                          color="#FFFFFF"
                         />
                       </View>
                       
@@ -275,15 +262,17 @@ export default function AIRecommendationScreen({ navigation }: Props) {
             )}
 
             {/* Ask AI CTA */}
+            <Animated.View style={[styles.askAIContainer, { transform: [{ scale: ctaPulse }] }]}>
             <TouchableOpacity
               style={styles.askAIButton}
               onPress={() => navigation.navigate("AIChat")}
               activeOpacity={0.85}
             >
-              <MaterialCommunityIcons name="chat-multiple" size={22} color="#FFFFFF" />
-              <Text style={styles.askAIText}>Hỏi AI chi tiết hơn</Text>
+              <MaterialCommunityIcons name="chart-line" size={22} color="#FFFFFF" />
+              <Text style={styles.askAIText}>Xem phân tích AI</Text>
               <MaterialCommunityIcons name="chevron-right" size={20} color="#FFFFFF" style={styles.askAIChevron} />
             </TouchableOpacity>
+          </Animated.View>
           </>
         )}
       </ScrollView>
@@ -319,7 +308,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   retryButton: {
-    backgroundColor: "#10B981",
+    backgroundColor: "#06B6D4",
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 12,
@@ -344,7 +333,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "transparent",
+    backgroundColor: "#06B6D4",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -356,7 +345,7 @@ const styles = StyleSheet.create({
     height: 40, 
     alignItems: "center", 
     justifyContent: "center",
-    backgroundColor: "transparent",
+    backgroundColor: "#06B6D4",
     borderRadius: 12,
   },
   content: { padding: 16, paddingBottom: 32 },
@@ -378,7 +367,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#6B7280",
+    color: "#06B6D4",
     marginLeft: 12,
   },
   heroSubtitle: {
@@ -403,7 +392,7 @@ const styles = StyleSheet.create({
   heroStatValue: {
     fontSize: 24,
     fontWeight: "900",
-    color: "#059669",
+    color: "#06B6D4",
     lineHeight: 28,
   },
   heroStatLabel: {
@@ -460,6 +449,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+  },
+  recIconLargeCyan: {
+    backgroundColor: '#06B6D4',
   },
   recTitleSection: {
     flex: 1,
@@ -524,13 +516,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#10B981",
+    backgroundColor: "#06B6D4",
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
     marginBottom: 0,
     gap: 10,
-    shadowColor: "#10B981",
+    shadowColor: "#06B6D4",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -543,5 +535,10 @@ const styles = StyleSheet.create({
   },
   askAIChevron: {
     marginLeft: 4,
+  },
+  askAIContainer: {
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
   },
 });

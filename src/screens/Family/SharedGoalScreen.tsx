@@ -98,7 +98,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
   const totalCurrent = sharedGoals.reduce((sum, g) => sum + g.current, 0);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
@@ -109,7 +109,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Summary Card */}
           <View style={styles.summaryCard}>
@@ -231,7 +231,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
           </View>
         </Animated.View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

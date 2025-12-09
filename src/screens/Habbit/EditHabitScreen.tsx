@@ -244,7 +244,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         {/* Thông tin cơ bản */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>

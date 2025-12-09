@@ -1,5 +1,5 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "./types";
 
@@ -48,12 +48,20 @@ import EditTransactionScreen from "../screens/Finance/EditTransactionScreen";
 import TransactionHistoryScreen from "../screens/Finance/TransactionHistoryScreen";
 import AIProcessingOverlay from "../screens/Finance/AIProcessingOverlay";
 import GeminiTestScreen from "../screens/Core/GeminiTestScreen";
+import BottomTabs from "./BottomTabs";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export default function AppNavigation() {
+  const [currentRouteName, setCurrentRouteName] = React.useState<string | undefined>(undefined);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => setCurrentRouteName(navigationRef.getCurrentRoute()?.name)}
+      onStateChange={(state) => setCurrentRouteName(state?.routes[state.index]?.name)}
+    >
       <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -101,6 +109,8 @@ export default function AppNavigation() {
         <Stack.Screen name="AIProcessingOverlay" component={AIProcessingOverlay} />
         <Stack.Screen name="GeminiTest" component={GeminiTestScreen} />
       </Stack.Navigator>
+      {/* Global bottom tabs - visible across all stack screens */}
+      <BottomTabs navigationRef={navigationRef} currentRouteName={currentRouteName} />
     </NavigationContainer>
   );
 }

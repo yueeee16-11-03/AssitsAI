@@ -34,6 +34,8 @@ export default function ResultsOverlay({
   onConfirm,
   onCancel,
 }: ResultsOverlayProps) {
+  const currencySymbol = ((editedData as any)?.currency) || '₫';
+  const items = editedData?.items ?? [];
   return (
     <Modal
       visible={true}
@@ -54,7 +56,14 @@ export default function ResultsOverlay({
               <Text style={styles.headerTitle}>✓ Xử lý thành công</Text>
               <Text style={styles.headerSubtitle}>
                 Độ chính xác:{" "}
-                {((processedData?.confidence || 0.94) * 100).toFixed(0)}%
+                {(() => {
+                  const c = processedData?.confidence;
+                  if (typeof c === 'number') return `${(c * 100).toFixed(0)}%`;
+                  if (c === 'high') return '95%';
+                  if (c === 'medium') return '70%';
+                  if (c === 'low') return '40%';
+                  return '—';
+                })()}
               </Text>
             </View>
 
@@ -74,9 +83,9 @@ export default function ResultsOverlay({
             >
               {/* Items List */}
               <Text style={styles.sectionTitle}>Chi tiết giao dịch</Text>
-              {editedData?.items && editedData.items.length > 0 ? (
+              {items.length > 0 ? (
                 <View style={styles.itemsContainer}>
-                  {editedData.items.map((item, index) => (
+                  {items.map((item: any, index: number) => (
                     <TouchableOpacity
                       key={index}
                       style={[
@@ -87,7 +96,7 @@ export default function ResultsOverlay({
                       onPress={() => onToggleItem(index)}
                     >
                       <View style={styles.itemLeftContent}>
-                        <Text style={styles.itemName}>{item.name}</Text>
+                        <Text style={styles.itemName}>{item.item || item.name || item.description || 'Mục'}</Text>
                         {item.category && (
                           <Text style={styles.itemCategory}>
                             {item.category}
@@ -95,8 +104,7 @@ export default function ResultsOverlay({
                         )}
                       </View>
                       <Text style={styles.itemAmount}>
-                        {item.amount.toLocaleString("vi-VN")}{" "}
-                        {editedData.currency}
+                        {((typeof item.amount === 'number') ? item.amount : parseFloat(item.amount) || 0).toLocaleString("vi-VN")} {currencySymbol}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -106,14 +114,14 @@ export default function ResultsOverlay({
               )}
 
               {/* Total */}
-              {editedData?.items && editedData.items.length > 0 && (
+              {items.length > 0 && (
                 <View style={styles.totalContainer}>
                   <Text style={styles.totalLabel}>Tổng cộng</Text>
                   <Text style={styles.totalAmount}>
-                    {editedData.items
-                      .reduce((sum, item) => sum + item.amount, 0)
+                    {items
+                      .reduce((sum: number, item: any) => sum + (typeof item.amount === 'number' ? item.amount : parseFloat(item.amount) || 0), 0)
                       .toLocaleString("vi-VN")}{" "}
-                    {editedData.currency}
+                    {currencySymbol}
                   </Text>
                 </View>
               )}

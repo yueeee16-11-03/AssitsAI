@@ -9,6 +9,7 @@ import {
   Linking,
   Alert,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 
@@ -16,6 +17,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "About">;
 
 export default function AboutScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -67,7 +70,7 @@ export default function AboutScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
@@ -76,7 +79,7 @@ export default function AboutScreen({ navigation }: Props) {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* App Logo & Info */}
           <View style={styles.logoSection}>
