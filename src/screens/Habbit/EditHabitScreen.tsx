@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHabitStore } from "../../store/habitStore";
 import NotificationService from '../../services/NotificationService';
 import { useFocusEffect } from "@react-navigation/native";
@@ -31,6 +32,8 @@ interface ScheduleItem {
 const daysOfWeekName = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 export default function EditHabitScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const { habitId } = route.params as { habitId: string };
 
   const habits = useHabitStore((state) => state.habits);
@@ -244,7 +247,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         {/* Thông tin cơ bản */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
@@ -566,6 +569,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
             </View>
           </TouchableOpacity>
         </View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
       {/* Native TimePicker */}
       {showTimePicker && (

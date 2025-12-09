@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerAndCreateProfile, onGoogleButtonPress } from "../../services/AuthService";
 import GoogleLoginButton from "../../components/GoogleLoginButton";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -21,6 +22,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 type Props = NativeStackScreenProps<RootStackParamList, "Register">;
 
 export default function RegisterScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -120,6 +123,7 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   return (
+    <SafeAreaView style={styles.container}>
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
@@ -130,7 +134,7 @@ export default function RegisterScreen({ navigation }: Props) {
       </View>
 
       <ScrollView 
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(styles.scrollContent?.padding || 24, insets.bottom + TAB_BAR_HEIGHT) }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -274,8 +278,10 @@ export default function RegisterScreen({ navigation }: Props) {
             </Text>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

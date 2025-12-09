@@ -18,6 +18,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 type Props = NativeStackScreenProps<RootStackParamList, "HabitDashboard">;
 
 export default function HabitDashboardScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const habits = useHabitStore((state) => state.habits);
   const fetchHabits = useHabitStore((state) => state.fetchHabits);
   const getCheckInHistory = useCheckInStore((state) => state.getCheckInHistory);
@@ -165,7 +167,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Discipline Score */}
           <View style={styles.scoreCard}>
@@ -329,6 +331,7 @@ export default function HabitDashboardScreen({ navigation }: Props) {
             </View>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -12,8 +12,12 @@ import {
   Animated,
   Image,
   Modal,
+  Dimensions,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import BottomTabs from '../../navigation/BottomTabs';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
@@ -29,6 +33,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "AddTransaction">;
 type TransactionType = "expense" | "income";
 
 export default function AddTransactionScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   // Note state
   const [note, setNote] = useState("");
   const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
@@ -48,6 +54,21 @@ export default function AddTransactionScreen({ navigation }: Props) {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [_recordingDuration, _setRecordingDuration] = useState(0);
   // (header color now fixed to green header + white icons)
+
+  // Hide parent tab bar while on this screen
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation.getParent?.();
+      if (parent?.setOptions) {
+        parent.setOptions({ tabBarStyle: { display: 'none' } });
+      }
+      return () => {
+        if (parent?.setOptions) {
+          parent.setOptions({ tabBarStyle: undefined });
+        }
+      };
+    }, [navigation]),
+  );
   
   // Manual form state
   const [showManualForm, setShowManualForm] = useState(false);
@@ -187,7 +208,8 @@ export default function AddTransactionScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       enabled={true}
@@ -224,7 +246,7 @@ export default function AddTransactionScreen({ navigation }: Props) {
         )}
         <ScrollView
           style={styles.scrollViewContainer}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -296,6 +318,7 @@ export default function AddTransactionScreen({ navigation }: Props) {
               </View>
             )}
           </Animated.View>
+          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </ScrollView>
 
         {/* Floating Form Toggle Button - Bottom Right */}
@@ -333,7 +356,7 @@ export default function AddTransactionScreen({ navigation }: Props) {
               <MaterialCommunityIcons 
                 name={isRecording ? "stop-circle" : "microphone-outline"} 
                 size={28} 
-                color={isRecording ? "#EF4444" : "#6B7280"} 
+                color={isRecording ? "#EF4444" : "#000000"} 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
@@ -342,7 +365,7 @@ export default function AddTransactionScreen({ navigation }: Props) {
               <MaterialCommunityIcons 
                 name="camera-outline" 
                 size={28} 
-                color="#6B7280" 
+                color="#000000" 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
@@ -407,7 +430,7 @@ export default function AddTransactionScreen({ navigation }: Props) {
           <ScrollView
             style={styles.modalContent}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.modalScrollContent}
+            contentContainerStyle={[styles.modalScrollContent, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}
           >
             {/* Template (Mẫu giao dịch) Toggle */}
             <TouchableOpacity
@@ -584,6 +607,7 @@ export default function AddTransactionScreen({ navigation }: Props) {
             </View>
 
 
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
 
           {/* Modal Footer */}
@@ -664,6 +688,7 @@ export default function AddTransactionScreen({ navigation }: Props) {
 
 
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -677,6 +702,9 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
   const camera = React.useRef<Camera>(null);
   const [permissionRequested, setPermissionRequested] = React.useState(false);
   const [torchEnabled, setTorchEnabled] = React.useState(false);
+  const nav = useNavigation<any>();
+  const navRef = React.useRef<any>(null);
+  navRef.current = nav;
 
   const format = useCameraFormat(device, [
     { videoStabilizationMode: "cinematic" },
@@ -749,6 +777,11 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
     }
   };
 
+  const SCREEN_HEIGHT = Dimensions.get('window').height;
+  const CAMERA_CONTROLS_BOTTOM_BOTTOM = 160; // must match cameraControlsBottom bottom
+  const CAMERA_CONTROLS_BOTTOM_HEIGHT = 140; // must match cameraControlsBottom height
+  const cameraControlsBgTop = SCREEN_HEIGHT - CAMERA_CONTROLS_BOTTOM_BOTTOM - CAMERA_CONTROLS_BOTTOM_HEIGHT;
+
   if (!hasPermission) {
     return (
       <View style={styles.cameraContainer}>
@@ -810,14 +843,14 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
       {/* Top Header with Close and Camera Flip buttons */}
       <View style={styles.cameraHeader}>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={onClose}>
-          <MaterialCommunityIcons name="close" size={18} color="#374151" />
+          <MaterialCommunityIcons name="close-outline" size={16} color="#6B7280" />
         </TouchableOpacity>
         <View style={styles.cameraHeaderTitleWrap}>
-          <MaterialCommunityIcons name="qrcode-scan" size={16} color="#6B7280" style={styles.cameraHeaderIconSpacing} />
+          <MaterialCommunityIcons name="qrcode-scan" size={14} color="#6B7280" style={styles.cameraHeaderIconSpacing} />
           <Text style={styles.cameraHeaderTitle}>Quét hóa đơn chi tiêu</Text>
         </View>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={toggleCameraPosition}>
-          <MaterialCommunityIcons name="camera-flip" size={18} color="#374151" />
+          <MaterialCommunityIcons name="camera-flip-outline" size={16} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
@@ -839,20 +872,26 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
         </View>
       </View>
 
+      {/* Background that fills the area from the controls downwards */}
+      <View pointerEvents="none" style={[styles.cameraControlsBottomBg, { top: cameraControlsBgTop }]} />
+
       {/* Bottom Controls */}
       <View style={styles.cameraControlsBottom}>
         <TouchableOpacity
           style={styles.galleryButton}
           onPress={handlePickFromGallery}
         >
-          <MaterialCommunityIcons name="image" size={28} color="#6B7280" />
+          <View style={styles.cameraControlInner}>
+            <MaterialCommunityIcons name="image-outline" size={22} color="#000000" style={styles.cameraControlIcon} />
+            <Text style={styles.cameraControlLabel}>Thư viện</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.cameraShootButton}
           onPress={handleTakePhoto}
         >
-          <MaterialCommunityIcons name="qrcode-scan" size={36} color="#6B7280" />
+          <MaterialCommunityIcons name="qrcode-scan" size={36} color="#FFFFFF" />
         </TouchableOpacity>
 
         {cameraPosition === 'back' && (
@@ -860,13 +899,19 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
             style={styles.flashButton}
             onPress={toggleFlash}
           >
-            <MaterialCommunityIcons name={torchEnabled ? 'flash' : 'flash-off'} size={28} color="#6B7280" />
+            <View style={styles.cameraControlInner}>
+              <MaterialCommunityIcons name={torchEnabled ? 'flash' : 'flash-off'} size={22} color="#000000" style={styles.cameraControlIcon} />
+              <Text style={styles.cameraControlLabel}>Flash</Text>
+            </View>
           </TouchableOpacity>
         )}
         {cameraPosition === 'front' && (
           <View style={styles.flashButton} />
         )}
       </View>
+
+      {/* Camera Bottom Overlay Tab bar (mirrors Home) */}
+      <BottomTabs navigationRef={navRef} currentRouteName={'Home'} showFab={false} showSheet={false} overlay={true} />
     </View>
   );
 }
@@ -874,6 +919,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
 // ... (Toàn bộ styles giữ nguyên)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   
   header: {
     flexDirection: "row",
@@ -989,7 +1035,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   voiceButtonActive: { backgroundColor: "#EF4444" },
-  voiceIcon: { fontSize: 20, color: '#FFFFFF' },
+  voiceIcon: { fontSize: 20, color: '#000000' },
   typeSelector: {
     flexDirection: "row",
     gap: 12,
@@ -1603,7 +1649,13 @@ const styles = StyleSheet.create({
   // Camera Screen Styles
   cameraContainer: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#FBF7F3",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 999,
   },
   camera: {
     flex: 1,
@@ -1616,41 +1668,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   permissionIcon: {
-    fontSize: 80,
-    marginBottom: 24,
+    fontSize: 64,
+    marginBottom: 20,
   },
   permissionText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
-    color: "#fff",
+    color: "#00796B",
     marginBottom: 12,
     textAlign: "center",
   },
   permissionDescription: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    marginBottom: 28,
+    color: "rgba(0,0,0,0.6)",
+    marginBottom: 24,
     textAlign: "center",
     lineHeight: 20,
   },
   permissionButton: {
-    backgroundColor: "#3B82F6",
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
     width: "100%",
+    paddingVertical: 14,
+    backgroundColor: "#00897B",
+    borderRadius: 12,
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   permissionButtonText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   permissionButtonCancel: {
     borderRadius: 16,
@@ -1711,8 +1757,8 @@ const styles = StyleSheet.create({
     top: "20%",
     height: 350,
     borderRadius: 0,
-    borderWidth: 2,
-    borderColor: "#4CAF50",
+    borderWidth: 0,
+    borderColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 5,
@@ -1730,20 +1776,19 @@ const styles = StyleSheet.create({
     display: "none",
   },
   billFrameText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#3B82F6",
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 14,
+    fontWeight: "600",
     textAlign: "center",
-    marginTop: 8,
   },
 
   cameraStatusBar: {
     position: "absolute",
-    bottom: 180,
+    bottom: 320,
     left: 0,
     right: 0,
     alignItems: "center",
-    paddingVertical: 12,
+    zIndex: 5,
   },
   statusIndicator: {
     backgroundColor: "rgba(59,130,246,0.2)",
@@ -1757,6 +1802,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#3B82F6",
+  },
+  cameraControlsBottomBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    zIndex: 9,
   },
 
   cameraOverlay: {
@@ -1784,28 +1837,19 @@ const styles = StyleSheet.create({
   },
   cameraControlsBottom: {
     position: "absolute",
-    bottom: 0,
+    bottom: 160,
     left: 0,
     right: 0,
     height: 140,
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.95)",
-    paddingBottom: 20,
+    backgroundColor: "transparent",
+    paddingBottom: 6,
+    paddingTop: 8,
     zIndex: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.04)',
-  },
-  galleryButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(0,0,0,0.04)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderTopColor: 'rgba(0,0,0,0.04)'
   },
   cameraCancelButton: {
     width: 50,
@@ -1822,36 +1866,55 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
   },
-  cameraShootButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  cameraShootInner: {
+  galleryButton: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  flashButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(0,0,0,0.04)",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderWidth: 0,
+    borderColor: "transparent",
+    transform: [{ translateY: -10 }],
+  },
+  cameraShootButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 50,
+    backgroundColor: '#06B6D4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#06B6D4',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+    transform: [{ translateY: -16 }],
+  },
+  flashButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 0,
+    borderColor: "transparent",
+    transform: [{ translateY: -10 }],
+  },
+  cameraControlIcon: {
+    transform: [{ translateY: -6 }],
+  },
+  cameraControlInner: {
+    alignItems: 'center',
+  },
+  cameraControlLabel: {
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 4,
+    fontWeight: '600',
   },
   cameraHint: {
     position: "absolute",

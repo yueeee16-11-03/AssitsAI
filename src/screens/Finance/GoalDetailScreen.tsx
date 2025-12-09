@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -7,6 +8,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 type Props = NativeStackScreenProps<RootStackParamList, 'GoalDetail'>;
 
 export default function GoalDetailScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const initial = route.params?.goal ?? null;
   const onSave = route.params?.onSave as ((g: any) => void) | undefined;
 
@@ -54,7 +57,7 @@ export default function GoalDetailScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Icon name="arrow-left" size={20} color="#111827" />
@@ -63,7 +66,7 @@ export default function GoalDetailScreen({ navigation, route }: Props) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
           <View style={styles.rowCenter}>
             <View style={[styles.iconWrap, { backgroundColor: `${goal.color}22` }]}>
@@ -128,8 +131,9 @@ export default function GoalDetailScreen({ navigation, route }: Props) {
             </View>
           </View>
         </View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

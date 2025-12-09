@@ -258,7 +258,7 @@ export default function AddHabitScreen({ navigation }: Props) {
         <View style={styles.headerTile} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
 
 
@@ -696,6 +696,7 @@ export default function AddHabitScreen({ navigation }: Props) {
             <Icon name="check" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* Native TimePicker */}

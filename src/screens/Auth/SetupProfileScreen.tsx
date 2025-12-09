@@ -14,11 +14,14 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "SetupProfile">;
 
 export default function SetupProfileScreen({ navigation: _navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -122,6 +125,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
   };
 
   return (
+    <SafeAreaView style={styles.container}>
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
@@ -132,7 +136,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
       </View>
 
       <ScrollView 
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(styles.scrollContent?.padding || 24, insets.bottom + TAB_BAR_HEIGHT) }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -267,8 +271,10 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReportExportService from '../../services/ReportExportService';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -31,6 +32,8 @@ interface ReportData {
 }
 
 export default function ReportScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [period, setPeriod] = useState<PeriodType>('month');
   const [_showDatePicker, _setShowDatePicker] = useState(false);
   const [startDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
@@ -531,7 +534,7 @@ export default function ReportScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -547,7 +550,7 @@ export default function ReportScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -691,6 +694,7 @@ export default function ReportScreen({ navigation }: Props) {
           {renderTransactionList()}
 
           <View style={styles.spacer} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </Animated.View>
       </ScrollView>
 
@@ -805,7 +809,7 @@ export default function ReportScreen({ navigation }: Props) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 

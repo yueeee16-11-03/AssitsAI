@@ -11,7 +11,8 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -31,6 +32,8 @@ interface Message {
 }
 
 export default function FamilyChatScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -121,6 +124,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
   ];
 
   return (
+    <SafeAreaView style={styles.container}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -142,7 +146,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
+        contentContainerStyle={[styles.messagesContent, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -195,6 +199,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
             </View>
           ))}
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* AI Suggestions Bar */}
@@ -236,6 +241,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

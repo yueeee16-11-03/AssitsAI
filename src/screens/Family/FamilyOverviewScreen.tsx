@@ -109,7 +109,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Family Summary */}
           <View style={styles.summaryCard}>
@@ -289,8 +289,9 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

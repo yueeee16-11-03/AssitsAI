@@ -122,7 +122,7 @@ export default function NotificationScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {filteredNotifications.length === 0 ? (
             <View style={styles.emptyState}>
@@ -188,8 +188,9 @@ export default function NotificationScreen({ navigation }: Props) {
             })
           )}
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -7,7 +7,7 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 

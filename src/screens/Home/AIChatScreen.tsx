@@ -13,6 +13,7 @@ import {
   Modal,
   FlatList,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -22,6 +23,8 @@ import ChatApi from '../../api/chatApi';
 type Props = NativeStackScreenProps<RootStackParamList, "AIChat">;
 
 export default function AIChatScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   // Store state
   const {
     messages,
@@ -215,6 +218,7 @@ export default function AIChatScreen({ navigation }: Props) {
   };
 
   return (
+    <SafeAreaView style={styles.container}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -242,7 +246,7 @@ export default function AIChatScreen({ navigation }: Props) {
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
+        contentContainerStyle={[styles.messagesContent, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         {messages.map((message) => {
@@ -291,6 +295,7 @@ export default function AIChatScreen({ navigation }: Props) {
             </View>
           </View>
         )}
+        <View style={[styles.footerSpacer, { height: insets.bottom + TAB_BAR_HEIGHT }]} />
       </ScrollView>
 
       <View style={styles.inputContainer}>
@@ -383,7 +388,7 @@ export default function AIChatScreen({ navigation }: Props) {
         animationType="slide"
         onRequestClose={() => setShowHistory(false)}
       >
-        <View style={styles.historyContainer}>
+        <SafeAreaView style={styles.historyContainer}>
           <View style={styles.historyHeader}>
             <TouchableOpacity
               style={styles.historyBackButton}
@@ -422,12 +427,13 @@ export default function AIChatScreen({ navigation }: Props) {
                   </TouchableOpacity>
                 </TouchableOpacity>
               )}
-              contentContainerStyle={styles.historyList}
+              contentContainerStyle={[styles.historyList, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
             />
           )}
-        </View>
+        </SafeAreaView>
       </Modal>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -767,4 +773,8 @@ const styles = StyleSheet.create({
   },
   historyPlaceholder: {
     width: 40,
-  },});
+  },
+  footerSpacer: {
+    height: 70,
+  },
+});

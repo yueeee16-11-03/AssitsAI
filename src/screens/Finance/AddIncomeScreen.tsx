@@ -12,8 +12,12 @@ import {
   Animated,
   Image,
   Modal,
+  Dimensions,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import BottomTabs from '../../navigation/BottomTabs';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
@@ -29,6 +33,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "AddIncome">;
 type TransactionType = "expense" | "income";
 
 export default function AddIncomeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   // Note state
   const [note, setNote] = useState("");
   const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
@@ -48,6 +54,20 @@ export default function AddIncomeScreen({ navigation }: Props) {
   const [type] = useState<TransactionType>("income"); // ✅ KHÁC: income thay vì expense
   const [isInputFocused, setIsInputFocused] = useState(false);
   // (header color now fixed to green header + white icons)
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation.getParent?.();
+      if (parent?.setOptions) {
+        parent.setOptions({ tabBarStyle: { display: 'none' } });
+      }
+      return () => {
+        if (parent?.setOptions) {
+          parent.setOptions({ tabBarStyle: undefined });
+        }
+      };
+    }, [navigation]),
+  );
   
   // Manual form state
   const [showManualForm, setShowManualForm] = useState(false);
@@ -182,7 +202,8 @@ export default function AddIncomeScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       enabled={true}
@@ -220,7 +241,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
         {/* ScrollView for content that scrolls */}
         <ScrollView
           style={styles.scrollViewContainer}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -293,6 +314,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
               </View>
             )}
           </Animated.View>
+          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </ScrollView>
 
         {/* Floating Form Toggle Button - Bottom Right */}
@@ -330,7 +352,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
               <MaterialCommunityIcons 
                 name={isRecording ? 'stop-circle' : 'microphone-outline'} 
                 size={28} 
-                color={isRecording ? '#EF4444' : '#6B7280'} 
+                color={isRecording ? '#EF4444' : '#000000'} 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
@@ -339,7 +361,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
               <MaterialCommunityIcons 
                 name="camera-outline" 
                 size={28} 
-                color="#6B7280" 
+                color="#000000" 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
@@ -404,7 +426,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
           <ScrollView
             style={styles.modalContent}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.modalScrollContent}
+            contentContainerStyle={[styles.modalScrollContent, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}
           >
             {/* Template Toggle */}
             <TouchableOpacity
@@ -540,6 +562,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
                 </Text>
               </TouchableOpacity>
             </View>
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -606,6 +629,7 @@ export default function AddIncomeScreen({ navigation }: Props) {
         </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -621,6 +645,10 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
   const format = useCameraFormat(device, [
     { videoStabilizationMode: "cinematic" },
   ]);
+
+  const nav = useNavigation<any>();
+  const navRef = React.useRef<any>(null);
+  navRef.current = nav;
 
   React.useEffect(() => {
     const requestCameraPermission = async () => {
@@ -735,6 +763,11 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
     );
   }
 
+  const SCREEN_HEIGHT = Dimensions.get('window').height;
+  const CAMERA_CONTROLS_BOTTOM_BOTTOM = 160; // must match cameraControlsBottom bottom
+  const CAMERA_CONTROLS_BOTTOM_HEIGHT = 140; // must match cameraControlsBottom height
+  const cameraControlsBgTop = SCREEN_HEIGHT - CAMERA_CONTROLS_BOTTOM_BOTTOM - CAMERA_CONTROLS_BOTTOM_HEIGHT;
+
   return (
     <View style={styles.cameraContainer}>
       <Camera
@@ -750,19 +783,23 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
       {/* Top Header with Close and Camera Flip buttons */}
       <View style={styles.cameraHeader}>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={onClose}>
-          <MaterialCommunityIcons name="close" size={18} color="#374151" />
+          <MaterialCommunityIcons name="close-outline" size={16} color="#6B7280" />
         </TouchableOpacity>
         <View style={styles.cameraHeaderTitleWrap}>
-          <MaterialCommunityIcons name="qrcode-scan" size={16} color="#6B7280" style={styles.cameraHeaderIconSpacing} />
+          <MaterialCommunityIcons name="qrcode-scan" size={14} color="#6B7280" style={styles.cameraHeaderIconSpacing} />
           <Text style={styles.cameraHeaderTitle}>Quét hóa đơn thu nhập</Text>
         </View>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={toggleCameraPosition}>
-          <MaterialCommunityIcons name="camera-flip" size={18} color="#374151" />
+          <MaterialCommunityIcons name="camera-flip-outline" size={16} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
       {/* Bill Scanning Frame */}
       <View style={styles.billScanFrame}>
+        <View style={styles.billFrameCorner} />
+        <View style={[styles.billFrameCorner, styles.billFrameCornerTopRight]} />
+        <View style={[styles.billFrameCorner, styles.billFrameCornerBottomLeft]} />
+        <View style={[styles.billFrameCorner, styles.billFrameCornerBottomRight]} />
         <Text style={styles.billFrameText}>Căn chỉnh ảnh vào khung</Text>
       </View>
 
@@ -775,20 +812,26 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
         </View>
       </View>
 
+      {/* Background that fills the area from the controls downwards */}
+      <View pointerEvents="none" style={[styles.cameraControlsBottomBg, { top: cameraControlsBgTop }]} />
+
       {/* Bottom Controls */}
       <View style={styles.cameraControlsBottom}>
         <TouchableOpacity
           style={styles.galleryButton}
           onPress={handlePickFromGallery}
         >
-          <MaterialCommunityIcons name="image" size={28} color="#6B7280" />
+          <View style={styles.cameraControlInner}>
+            <MaterialCommunityIcons name="image-outline" size={22} color="#000000" style={styles.cameraControlIcon} />
+            <Text style={styles.cameraControlLabel}>Thư viện</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.cameraShootButton}
           onPress={handleTakePhoto}
         >
-          <MaterialCommunityIcons name="qrcode-scan" size={36} color="#6B7280" />
+          <MaterialCommunityIcons name="qrcode-scan" size={36} color="#FFFFFF" />
         </TouchableOpacity>
 
         {cameraPosition === 'back' && (
@@ -796,19 +839,25 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
             style={styles.flashButton}
             onPress={toggleFlash}
           >
-            <MaterialCommunityIcons name={torchEnabled ? 'flash' : 'flash-off'} size={28} color="#6B7280" />
+            <View style={styles.cameraControlInner}>
+              <MaterialCommunityIcons name={torchEnabled ? 'flash' : 'flash-off'} size={22} color="#000000" style={styles.cameraControlIcon} />
+              <Text style={styles.cameraControlLabel}>Flash</Text>
+            </View>
           </TouchableOpacity>
         )}
         {cameraPosition === 'front' && (
           <View style={styles.flashButton} />
         )}
       </View>
+      {/* BottomTabs overlay inside camera viewfinder to mimic Home's bottom bar */}
+      <BottomTabs navigationRef={navRef} currentRouteName={'Home'} showFab={false} showSheet={false} overlay={true} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   
   header: {
     flexDirection: "row",
@@ -856,7 +905,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   voiceButtonActive: { backgroundColor: "#EF4444" },
-  voiceIcon: { fontSize: 20, color: '#FFFFFF' },
+  voiceIcon: { fontSize: 20, color: '#000000' },
   
   section: { marginBottom: 24 },
 
@@ -928,7 +977,13 @@ const styles = StyleSheet.create({
   // Camera Screen Styles
   cameraContainer: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#FBF7F3",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 999,
   },
   camera: {
     flex: 1,
@@ -937,45 +992,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E0F2F1",
     paddingHorizontal: 20,
+    backgroundColor: "#E0F2F1",
   },
   permissionIcon: {
-    fontSize: 80,
-    marginBottom: 24,
+    fontSize: 64,
+    marginBottom: 20,
   },
   permissionText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
-    color: "#fff",
+    color: "#00796B",
     marginBottom: 12,
     textAlign: "center",
   },
   permissionDescription: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    marginBottom: 28,
+    color: "rgba(0,0,0,0.6)",
+    marginBottom: 24,
     textAlign: "center",
     lineHeight: 20,
   },
   permissionButton: {
-    backgroundColor: "#3B82F6",
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
     width: "100%",
+    paddingVertical: 14,
+    backgroundColor: "#00897B",
+    borderRadius: 12,
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   permissionButtonText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   // Recording Indicator Styles
   recordingIndicator: {
@@ -1000,6 +1049,170 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#065F46",
+  },
+  // Camera header + controls (match Home screen look)
+  cameraHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingTop: 12,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    zIndex: 10,
+  },
+  cameraHeaderButton: {
+    width: 36,
+    height: 18,
+    borderRadius: 18,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cameraHeaderTitle: {
+    color: "#6B7280",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  cameraHeaderTitleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  cameraHeaderSide: { width: 40 },
+  cameraHeaderIconSpacing: { marginRight: 8 },
+  billScanFrame: {
+    position: "absolute",
+    left: "8%",
+    right: "8%",
+    top: "20%",
+    height: 350,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 5,
+  },
+  billFrameCorner: {
+    display: "none",
+  },
+  billFrameCornerTopRight: {
+    display: "none",
+  },
+  billFrameCornerBottomLeft: {
+    display: "none",
+  },
+  billFrameCornerBottomRight: {
+    display: "none",
+  },
+  billFrameText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  cameraStatusBar: {
+    position: "absolute",
+    bottom: 320,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 5,
+  },
+  statusIndicator: {
+    backgroundColor: "rgba(0,0,0,0.06)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  statusText: {
+    color: "#374151",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  cameraControlsBottomBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    zIndex: 9,
+  },
+  cameraControlsBottom: {
+    position: "absolute",
+    bottom: 160,
+    left: 0,
+    right: 0,
+    height: 140,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    paddingBottom: 6,
+    paddingTop: 8,
+    zIndex: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.04)'
+  },
+  galleryButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 0,
+    borderColor: "transparent",
+    transform: [{ translateY: -10 }],
+  },
+  galleryButtonText: {
+    fontSize: 28,
+  },
+  cameraShootButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 50,
+    backgroundColor: '#06B6D4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#06B6D4',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+    transform: [{ translateY: -16 }],
+  },
+  flashButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 0,
+    borderColor: "transparent",
+    transform: [{ translateY: -10 }],
+  },
+  flashButtonText: {
+    fontSize: 28,
+  },
+  cameraControlIcon: {
+    transform: [{ translateY: -6 }],
+  },
+  cameraControlInner: {
+    alignItems: 'center',
+  },
+  cameraControlLabel: {
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  cameraShootIcon: {
+    transform: [{ translateY: 0 }],
   },
   // Transcript Preview Styles
   transcriptPreview: {
@@ -1058,124 +1271,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     fontSize: 16,
     fontWeight: "700",
-  },
-
-  cameraHeader: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 20,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    zIndex: 10,
-  },
-  cameraHeaderButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cameraHeaderTitle: {
-    color: "#6B7280",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  cameraHeaderTitleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  cameraHeaderIconSpacing: { marginRight: 8 },
-
-  billScanFrame: {
-    position: "absolute",
-    left: "8%",
-    right: "8%",
-    top: "20%",
-    height: 350,
-    borderRadius: 0,
-    borderWidth: 2,
-    borderColor: "#4CAF50",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 5,
-  },
-  billFrameText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#4CAF50",
-    textAlign: "center",
-  },
-
-  cameraStatusBar: {
-    position: "absolute",
-    bottom: 180,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  statusIndicator: {
-    backgroundColor: "rgba(59,130,246,0.2)",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "rgba(59,130,246,0.4)",
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#3B82F6",
-  },
-
-  cameraControlsBottom: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 140,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.95)",
-    paddingBottom: 20,
-    zIndex: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.04)',
-  },
-  galleryButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(0,0,0,0.04)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
-  },
-  cameraShootButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  flashButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(0,0,0,0.04)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
   },
 
   // 🤖 AI Processed Data Styles

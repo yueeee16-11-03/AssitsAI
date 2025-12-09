@@ -12,6 +12,7 @@ import {
   Switch,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 // @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -58,6 +59,8 @@ const REMINDER_OPTIONS = [
 
 export default function RecurringTransactionsScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   
   // Store hooks
   const recurringTransactions = useRecurringTransactionStore((state: any) => state.recurringTransactions);
@@ -538,7 +541,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           <View style={styles.headerPlaceholder} />
         </View>
 
-        <ScrollView style={styles.modalFullBody}>
+        <ScrollView style={styles.modalFullBody} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Tên giao dịch *</Text>
             <TextInput
@@ -670,7 +673,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
               textAlignVertical="top"
             />
           </View>
-          <View style={styles.bottomSpace} />
+          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </ScrollView>
 
         <View style={styles.modalFullFooter}>
@@ -699,7 +702,8 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
   const filteredTransactions = getFilteredTransactions();
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+    <SafeAreaView style={styles.container}>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}> 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -776,7 +780,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       </View>
 
       {/* Transactions List */}
-      <ScrollView style={styles.transactionsList} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.transactionsList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }}>
         {filteredTransactions.length > 0 ? (
           filteredTransactions.map(renderTransactionCard)
         ) : (
@@ -794,7 +798,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         )}
-        <View style={styles.bottomSpace} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* Add Modal */}
@@ -808,6 +812,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           setShowAddModal(true);
         }}
       >
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         <Icon name="plus" size={28} color="#FFFFFF" />
       </TouchableOpacity>
 
@@ -815,6 +820,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       <View style={[styles.decorativeCircle, styles.decorativeCircle1]} />
       <View style={[styles.decorativeCircle, styles.decorativeCircle2]} />
     </Animated.View>
+    </SafeAreaView>
   );
 }
 

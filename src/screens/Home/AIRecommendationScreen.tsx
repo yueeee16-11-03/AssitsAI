@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Animated,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import NotificationService from '../../services/NotificationService';
 import { useFocusEffect } from "@react-navigation/native";
 import auth from "@react-native-firebase/auth";
@@ -26,6 +27,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "AIRecommendation">;
 type Recommendation = DailyRecommendation;
 
 export default function AIRecommendationScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +156,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -171,7 +174,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
@@ -275,8 +278,9 @@ export default function AIRecommendationScreen({ navigation }: Props) {
           </Animated.View>
           </>
         )}
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

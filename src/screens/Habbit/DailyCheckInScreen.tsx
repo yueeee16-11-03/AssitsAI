@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHabitStore } from "../../store/habitStore";
 import { useCheckInStore } from "../../store/checkInStore";
 import { useFocusEffect } from "@react-navigation/native";
@@ -19,6 +20,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 type Props = NativeStackScreenProps<RootStackParamList, "DailyCheckIn">;
 
 export default function DailyCheckInScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   // Habit Store
   const habits = useHabitStore((state) => state.habits);
   const habitsLoading = useHabitStore((state) => state.isLoading);
@@ -383,7 +386,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
         </View>
       </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Progress Overview */}
           <View style={styles.progressCard}>
@@ -527,6 +530,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
     </SafeAreaView>
   );

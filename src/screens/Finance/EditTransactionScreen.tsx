@@ -14,6 +14,7 @@ import {
   Image,
   Modal,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -24,6 +25,8 @@ import { launchImageLibrary } from "react-native-image-picker";
 type Props = NativeStackScreenProps<RootStackParamList, "EditTransaction">;
 
 export default function EditTransactionScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const { transaction } = route.params;
   const [billImage, setBillImage] = useState<string | null>(transaction.billImageUri || null);
   const [isLoading, setIsLoading] = useState(false);
@@ -154,7 +157,8 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
@@ -170,7 +174,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -360,6 +364,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* Camera Modal */}
@@ -377,7 +382,8 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
           onClose={() => setIsCameraOpen(false)}
         />
       </Modal>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

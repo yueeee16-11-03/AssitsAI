@@ -10,10 +10,13 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AISetting">;
 
 export default function AISettingScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
   
   // Personality Settings
@@ -87,7 +90,7 @@ export default function AISettingScreen({ navigation }: Props) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -102,7 +105,7 @@ export default function AISettingScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -311,8 +314,9 @@ export default function AISettingScreen({ navigation }: Props) {
             <Text style={styles.resetText}>Đặt lại cài đặt mặc định</Text>
           </TouchableOpacity>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

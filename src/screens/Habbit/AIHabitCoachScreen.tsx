@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHabitStore } from "../../store/habitStore";
 import AIHabitSuggestionService from "../../services/AIHabitSuggestionService";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -37,6 +38,8 @@ interface SmartReminder {
 }
 
 export default function AIHabitCoachScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const habits = useHabitStore((state) => state.habits);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [insightsLoading, setInsightsLoading] = useState(false);
@@ -155,7 +158,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Coach Score */}
           <View style={styles.scoreCard}>
@@ -320,6 +323,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
     </SafeAreaView>
   );

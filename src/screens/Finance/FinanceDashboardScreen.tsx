@@ -12,6 +12,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTransactionStore } from "../../store/transactionStore";
 import { useRecurringFinancialData } from "../../hooks/useRecurringFinancialData";
 import useIncomeChartData from "../../hooks/useIncomeChartData";
@@ -35,6 +36,8 @@ const ChartCenterLabel: React.FC<{ activeItem: any; totalExpense: number }> = ({
 };
 
 export default function FinanceDashboardScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
   const [activeExpenseIndex, setActiveExpenseIndex] = useState<number | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -224,7 +227,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.headerButton}>
         <TouchableOpacity
           style={styles.iconLeft}
@@ -242,7 +245,7 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -591,8 +594,9 @@ export default function FinanceDashboardScreen({ navigation }: Props) {
             )}
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

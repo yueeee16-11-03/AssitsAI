@@ -10,7 +10,9 @@ import {
   TextInput,
   Animated,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
@@ -58,6 +60,8 @@ const DEFAULT_CATEGORIES: Category[] = [
 
 export default function CategoryManagementScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -285,7 +289,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={[styles.modalBody, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}>
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Tên danh mục *</Text>
               <TextInput
@@ -375,6 +379,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
                 </View>
               </View>
             </View>
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
 
           <View style={styles.modalFooter}>
@@ -405,7 +410,8 @@ export default function CategoryManagementScreen({ navigation }: Props) {
   const stats = getCategoryStats();
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+    <SafeAreaView style={styles.container}>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}> 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -474,9 +480,9 @@ export default function CategoryManagementScreen({ navigation }: Props) {
       </View>
 
       {/* Categories List */}
-      <ScrollView style={styles.categoriesList} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.categoriesList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }}>
         {filteredCategories.map(renderCategoryCard)}
-        <View style={styles.bottomSpace} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* Add Modal */}
@@ -486,6 +492,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
       <View style={[styles.decorativeCircle, styles.decorativeCircle1]} />
       <View style={[styles.decorativeCircle, styles.decorativeCircle2]} />
     </Animated.View>
+    </SafeAreaView>
   );
 }
 

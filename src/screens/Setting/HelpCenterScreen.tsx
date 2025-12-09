@@ -9,7 +9,8 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { RootStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "HelpCenter">;
 
@@ -29,6 +30,8 @@ interface ChatMessage {
 
 export default function HelpCenterScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -168,7 +171,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
           <ScrollView
             ref={scrollViewRef}
             style={styles.chatMessages}
-            contentContainerStyle={styles.chatMessagesContent}
+            contentContainerStyle={[styles.chatMessagesContent, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
             showsVerticalScrollIndicator={false}
           >
             <Animated.View style={{ opacity: fadeAnim }}>
@@ -221,7 +224,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
         </View>
       ) : (
         // FAQ Interface
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
           <Animated.View style={{ opacity: fadeAnim }}>
             {/* Quick Actions */}
             <View style={styles.quickActionsGrid}>
@@ -238,7 +241,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesScroll}
+              contentContainerStyle={[styles.categoriesScroll, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
             >
               {categories.map((category) => (
                 <TouchableOpacity
@@ -279,9 +282,10 @@ export default function HelpCenterScreen({ navigation }: Props) {
               <Text style={styles.supportText}>Chat với chatbot hướng dẫn</Text>
             </TouchableOpacity>
           </Animated.View>
+          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

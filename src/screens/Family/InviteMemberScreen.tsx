@@ -10,6 +10,7 @@ import {
   Clipboard,
   Animated,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -38,6 +39,8 @@ const SHARE_METHODS = [
 
 export default function InviteMemberScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [qrCodeVisible, setQrCodeVisible] = useState(false);
   const [currentInviteCode] = useState('FAMILY123456'); // Mock invite code
   const [familyInfo] = useState({
@@ -317,7 +320,8 @@ export default function InviteMemberScreen({ navigation }: Props) {
   );
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+    <SafeAreaView style={styles.container}>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}> 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -335,7 +339,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         {/* Family Info */}
         <View style={styles.familyCard}>
           <Icon name="account-group" size={48} color="#00796B" style={{ marginBottom: 12 }} />
@@ -408,7 +412,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
           )}
         </View>
 
-        <View style={styles.bottomSpace} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* Tips */}
@@ -425,7 +429,8 @@ export default function InviteMemberScreen({ navigation }: Props) {
       {/* Decorative Elements */}
       <View style={[styles.decorativeCircle, styles.decorativeCircle1]} />
       <View style={[styles.decorativeCircle, styles.decorativeCircle2]} />
-    </Animated.View>
+      </Animated.View>
+    </SafeAreaView>
   );
 }
 

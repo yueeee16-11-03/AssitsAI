@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import type { ProcessedData } from "../../hooks/useAIProcessing";
@@ -52,6 +53,8 @@ export default function AIProcessingResultsScreen({
   route,
   navigation,
 }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const {
     imageUri,
     editedData,
@@ -160,7 +163,8 @@ export default function AIProcessingResultsScreen({
   };
 
   return (
-    <KeyboardAvoidingView
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
@@ -190,7 +194,7 @@ export default function AIProcessingResultsScreen({
           </View>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
           {/* Image Preview */}
           {imageUri && (
             <View style={styles.imageContainer}>
@@ -334,6 +338,7 @@ export default function AIProcessingResultsScreen({
               </Text>
             </View>
           )}
+          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </ScrollView>
 
         {/* Action Buttons */}
@@ -380,7 +385,8 @@ export default function AIProcessingResultsScreen({
 
       {/* Fullscreen Raw Text Modal */}
       {/* Modal này được giữ lại nhưng không hiển thị vì không cần OCR text */}
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

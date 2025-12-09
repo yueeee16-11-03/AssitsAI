@@ -8,6 +8,7 @@ import {
   Animated,
   Alert,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -21,6 +22,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "AIInsight">;
 const PALETTE = ["#10B981", "#34D399", "#6EE7B7", "#059669", "#047857", "#065F46", "#064E3B"];
 
 export default function AIInsightScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -238,7 +241,7 @@ export default function AIInsightScreen({ navigation }: Props) {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -253,7 +256,7 @@ export default function AIInsightScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -410,8 +413,9 @@ export default function AIInsightScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

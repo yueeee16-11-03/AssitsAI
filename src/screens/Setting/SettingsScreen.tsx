@@ -9,6 +9,7 @@ import {
   Animated,
   Alert,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 
@@ -16,6 +17,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
 
 export default function SettingsScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
@@ -68,7 +71,7 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
@@ -77,7 +80,7 @@ export default function SettingsScreen({ navigation }: Props) {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Appearance */}
           <View style={styles.section}>
@@ -352,8 +355,9 @@ export default function SettingsScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

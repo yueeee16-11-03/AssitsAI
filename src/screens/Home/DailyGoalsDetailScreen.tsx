@@ -11,6 +11,7 @@ import {
   Animated,
   Alert,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -32,6 +33,8 @@ interface DailyGoal {
 }
 
 export default function DailyGoalsDetailScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [goals, setGoals] = useState<DailyGoal[]>([
     {
       id: '1',
@@ -93,7 +96,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
   }, [fadeAnim]);
 
   const completedCount = goals.filter(g => g.isCompleted).length;
-  const completionRate = Math.round((completedCount / goals.length) * 100);
+  const completionRate = goals.length ? Math.round((completedCount / goals.length) * 100) : 0;
 
   const getCategoryIcon = (category: DailyGoal['category']) => {
     const icons: Record<DailyGoal['category'], string> = {
@@ -240,8 +243,8 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
 
           <View style={styles.goalInfo}>
             <View style={styles.goalTitleRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Icon name={getCategoryIcon(goal.category)} size={14} color="#6366F1" style={{ marginRight: 8 }} />
+                <View style={styles.rowCenter}>
+                  <Icon name={getCategoryIcon(goal.category)} size={14} color="#6366F1" style={styles.iconMarginRight} />
                   <Text style={styles.goalCategory}>{getCategoryLabel(goal.category)}</Text>
                 </View>
               <View
@@ -289,9 +292,9 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
             )}
 
             {goal.dueTime && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+              <View style={styles.rowCenterMarginTop6}>
                 <Icon name="clock-outline" size={14} color="#F59E0B" />
-                <Text style={[styles.dueTime, { marginLeft: 8 }]}>Hạn chót: {goal.dueTime}</Text>
+                <Text style={[styles.dueTime, styles.dueTimeMarginLeft]}>Hạn chót: {goal.dueTime}</Text>
               </View>
             )}
           </View>
@@ -316,14 +319,14 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={styles.rowCenter}>
             <Icon name="chevron-left" size={18} color="#111827" />
             <Text style={styles.backIconText}>Quay lại</Text>
           </View>
@@ -333,7 +336,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
           style={styles.addButtonContainer}
           onPress={() => setShowAddModal(true)}
         >
-          <View style={[styles.addButtonBubble, { backgroundColor: 'transparent' }]}>
+          <View style={[styles.addButtonBubble, styles.addButtonBubbleTransparent]}>
             <Icon name="plus" size={20} color="#111827" />
           </View>
         </TouchableOpacity>
@@ -370,7 +373,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
         data={goals}
         keyExtractor={item => item.id}
         renderItem={renderGoalCard}
-        contentContainerStyle={styles.goalsList}
+        contentContainerStyle={[styles.goalsList, { paddingBottom: Math.max(24, insets.bottom + TAB_BAR_HEIGHT) }]}
         scrollEnabled={true}
         showsVerticalScrollIndicator={false}
       />
@@ -381,7 +384,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
         animationType="slide"
         onRequestClose={() => setShowAddModal(false)}
       >
-        <View style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowAddModal(false)}>
               <Icon name="close" size={20} color="#111827" />
@@ -392,13 +395,13 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Tên mục tiêu</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="Nhập tên mục tiêu..."
-                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                placeholderTextColor="rgba(0, 0, 0, 0.4)"
                 value={newGoalTitle}
                 onChangeText={setNewGoalTitle}
               />
@@ -409,7 +412,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
               <TextInput
                 style={[styles.formInput, styles.textArea]}
                 placeholder="Mô tả chi tiết (tùy chọn)..."
-                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                placeholderTextColor="rgba(0, 0, 0, 0.4)"
                 value={newGoalDesc}
                 onChangeText={setNewGoalDesc}
                 multiline
@@ -429,7 +432,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setNewGoalCategory(cat)}
                   >
-                    <Icon name={getCategoryIcon(cat)} size={20} color={newGoalCategory === cat ? '#FFFFFF' : '#10B981'} style={{ marginBottom: 6 }} />
+                    <Icon name={getCategoryIcon(cat)} size={20} color={newGoalCategory === cat ? '#FFFFFF' : '#10B981'} style={styles.categoryIconMarginBottom} />
                     <Text style={[styles.categoryButtonLabel, newGoalCategory === cat && styles.categoryButtonLabelActive]}>
                       {getCategoryLabel(cat)}
                     </Text>
@@ -458,8 +461,9 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                 ))}
               </View>
             </View>
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {/* Edit Goal Modal */}
@@ -468,7 +472,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
         animationType="slide"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <View style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowEditModal(false)}>
               <Icon name="close" size={20} color="#111827" />
@@ -479,13 +483,13 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Tên mục tiêu</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="Nhập tên mục tiêu..."
-                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                placeholderTextColor="rgba(0, 0, 0, 0.4)"
                 value={newGoalTitle}
                 onChangeText={setNewGoalTitle}
               />
@@ -496,7 +500,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
               <TextInput
                 style={[styles.formInput, styles.textArea]}
                 placeholder="Mô tả chi tiết (tùy chọn)..."
-                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                placeholderTextColor="rgba(0, 0, 0, 0.4)"
                 value={newGoalDesc}
                 onChangeText={setNewGoalDesc}
                 multiline
@@ -516,7 +520,7 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setNewGoalCategory(cat)}
                   >
-                    <Icon name={getCategoryIcon(cat)} size={20} color={newGoalCategory === cat ? '#FFFFFF' : '#10B981'} style={{ marginBottom: 6 }} />
+                    <Icon name={getCategoryIcon(cat)} size={20} color={newGoalCategory === cat ? '#FFFFFF' : '#10B981'} style={styles.categoryIconMarginBottom} />
                     <Text style={[styles.categoryButtonLabel, newGoalCategory === cat && styles.categoryButtonLabelActive]}>
                       {getCategoryLabel(cat)}
                     </Text>
@@ -545,10 +549,11 @@ export default function DailyGoalsDetailScreen({ navigation }: Props) {
                 ))}
               </View>
             </View>
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -807,7 +812,7 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
   },
   formGroup: {
     marginBottom: 24,
@@ -890,6 +895,27 @@ const styles = StyleSheet.create({
   },
   progressFillColorCompleted: {
     backgroundColor: '#10B981',
+  },
+  rowCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowCenterMarginTop6: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  iconMarginRight: {
+    marginRight: 8,
+  },
+  dueTimeMarginLeft: {
+    marginLeft: 8,
+  },
+  addButtonBubbleTransparent: {
+    backgroundColor: 'transparent',
+  },
+  categoryIconMarginBottom: {
+    marginBottom: 6,
   },
   statValueColor: {
     color: '#6366F1',

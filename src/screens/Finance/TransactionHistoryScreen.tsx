@@ -24,6 +24,7 @@ import {
   Image,
   // Dimensions đã được xóa khỏi đây vì không còn dùng
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -53,6 +54,8 @@ interface TransactionWithTitle extends Transaction {
 }
 
 export default function TransactionHistoryScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -511,6 +514,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
   };
 
   return (
+    <SafeAreaView style={styles.container}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -560,7 +564,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
             scrollEnabled={true}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -578,6 +582,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
 
 
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

@@ -498,6 +498,7 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
           </TouchableOpacity>
         </View>
       </View>
+      
     );
   }
 
@@ -521,6 +522,11 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
     );
   }
 
+  const SCREEN_HEIGHT = Dimensions.get('window').height;
+  const CAMERA_CONTROLS_BOTTOM_BOTTOM = 160; // must match cameraControlsBottom bottom
+  const CAMERA_CONTROLS_BOTTOM_HEIGHT = 140; // must match cameraControlsBottom height
+  const cameraControlsBgTop = SCREEN_HEIGHT - CAMERA_CONTROLS_BOTTOM_BOTTOM - CAMERA_CONTROLS_BOTTOM_HEIGHT;
+
   return (
     <View style={cameraStyles.cameraContainer}>
       <Camera
@@ -536,14 +542,14 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
       {/* Top Header with Close and Camera Flip buttons */}
       <View style={cameraStyles.cameraHeader}>
         <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={onClose}>
-          <Icon name="close-outline" size={18} color="#6B7280" />
+          <Icon name="close-outline" size={16} color="#6B7280" />
         </TouchableOpacity>
         <View style={cameraStyles.cameraHeaderTitleWrap}>
-          <Icon name="qrcode-scan" size={16} color="#6B7280" style={cameraStyles.cameraHeaderIconSpacing} />
+          <Icon name="qrcode-scan" size={14} color="#6B7280" style={cameraStyles.cameraHeaderIconSpacing} />
           <Text style={cameraStyles.cameraHeaderTitle}>Quét hóa đơn</Text>
         </View>
         <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={toggleCameraPosition}>
-          <Icon name="camera-flip-outline" size={18} color="#6B7280" />
+          <Icon name="camera-flip-outline" size={16} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
@@ -565,20 +571,26 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
         </View>
       </View>
 
+      {/* Background that fills the area from the controls downwards */}
+      <View pointerEvents="none" style={[cameraStyles.cameraControlsBottomBg, { top: cameraControlsBgTop }]} />
+
       {/* Bottom Controls */}
       <View style={cameraStyles.cameraControlsBottom}>
         <TouchableOpacity
           style={cameraStyles.galleryButton}
           onPress={handlePickFromGallery}
         >
-          <Icon name="image-outline" size={28} color="#6B7280" />
+          <View style={cameraStyles.cameraControlInner}>
+            <Icon name="image-outline" size={22} color="#000000" style={cameraStyles.cameraControlIcon} />
+            <Text style={cameraStyles.cameraControlLabel}>Thư viện</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={cameraStyles.cameraShootButton}
           onPress={handleTakePhoto}
         >
-          <Icon name="qrcode-scan" size={36} color="#6B7280" />
+          <Icon name="qrcode-scan" size={36} color="#FFFFFF" />
         </TouchableOpacity>
 
         {cameraPosition === 'back' && (
@@ -586,7 +598,10 @@ function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => 
             style={cameraStyles.flashButton}
             onPress={toggleFlash}
           >
-            <Icon name={torchEnabled ? 'flash' : 'flash-off-outline'} size={28} color="#6B7280" />
+            <View style={cameraStyles.cameraControlInner}>
+              <Icon name={torchEnabled ? 'flash' : 'flash-off'} size={22} color="#000000" style={cameraStyles.cameraControlIcon} />
+              <Text style={cameraStyles.cameraControlLabel}>Flash</Text>
+            </View>
           </TouchableOpacity>
         )}
         {cameraPosition === 'front' && (
@@ -619,16 +634,16 @@ const cameraStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 20,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingTop: 12,
+    backgroundColor: "rgba(255,255,255,0.95)",
     zIndex: 10,
   },
   cameraHeaderButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 18,
+    borderRadius: 18,
     backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
@@ -639,7 +654,7 @@ const cameraStyles = StyleSheet.create({
   },
   cameraHeaderTitle: {
     color: "#6B7280",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
   },
   cameraHeaderTitleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
@@ -652,8 +667,8 @@ const cameraStyles = StyleSheet.create({
     top: "20%",
     height: 350,
     borderRadius: 0,
-    borderWidth: 2,
-    borderColor: "#4CAF50",
+    borderWidth: 0,
+    borderColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 5,
@@ -678,7 +693,7 @@ const cameraStyles = StyleSheet.create({
   },
   cameraStatusBar: {
     position: "absolute",
-    bottom: 180,
+    bottom: 320,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -695,56 +710,89 @@ const cameraStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  cameraControlsBottomBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    zIndex: 9,
+  },
   cameraControlsBottom: {
     position: "absolute",
-    bottom: 0,
+    bottom: 160,
     left: 0,
     right: 0,
     height: 140,
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.95)",
-    paddingBottom: 20,
+    backgroundColor: "transparent",
+    paddingBottom: 6,
+    paddingTop: 8,
     zIndex: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.04)'
   },
   galleryButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(0,0,0,0.04)",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderWidth: 0,
+    borderColor: "transparent",
+    transform: [{ translateY: -10 }],
   },
   galleryButtonText: {
     fontSize: 28,
   },
   cameraShootButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  flashButton: {
     width: 60,
     height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(0,0,0,0.04)",
+    borderRadius: 50,
+    backgroundColor: '#06B6D4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#06B6D4',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+    transform: [{ translateY: -16 }],
+  },
+  flashButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderWidth: 0,
+    borderColor: "transparent",
+    transform: [{ translateY: -10 }],
   },
   flashButtonText: {
     fontSize: 28,
+  },
+  cameraControlIcon: {
+    transform: [{ translateY: -6 }],
+  },
+
+  cameraControlInner: {
+    alignItems: 'center',
+  },
+  cameraControlLabel: {
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  cameraShootIcon: {
+    transform: [{ translateY: 0 }],
   },
   permissionContainer: {
     flex: 1,

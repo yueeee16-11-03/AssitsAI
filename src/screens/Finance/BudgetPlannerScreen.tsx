@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from "@react-navigation/native";
@@ -40,6 +41,8 @@ const monthNames = [
 ];
 
 export default function BudgetPlannerScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
   // use store-backed month selection so it persists across unmounts and navigation
   const selectedMonth = useBudgetStore(state => state.currentMonth);
@@ -341,7 +344,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
   }, [addModalVisible, budgets, showModalSuggestionButtons, selectedMonth, selectedYear]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -383,7 +386,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
           showsVerticalScrollIndicator={false}
         >
           {isLoading && (
@@ -396,7 +399,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.monthSelector}
+              contentContainerStyle={[styles.monthSelector, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
             >
               {monthNames.map((month, index) => (
                 <TouchableOpacity
@@ -576,6 +579,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                 </View>
             </View>
           </Animated.View>
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </ScrollView>
       )}
 
@@ -617,7 +621,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
               </View>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.modalBody, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}>
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Tên danh mục *</Text>
                 <TextInput
@@ -742,6 +746,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                   )}
                 </View>
               </View>
+              <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -808,7 +813,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
       </Modal>
 
       {/* Smart Budget feature removed */}
-    </View>
+    </SafeAreaView>
   );
 }
 

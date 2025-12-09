@@ -11,6 +11,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useFocusEffect } from '@react-navigation/native';
@@ -40,6 +41,8 @@ interface Goal {
 }
 
 export default function GoalTrackingScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
   
 
@@ -343,7 +346,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
   const ensureWalletsLoaded = async () => { try { await fetchWallets(); } catch { } };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -358,7 +361,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -538,6 +541,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                 </View>
               </View>
           </TouchableOpacity>
+          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </Animated.View>
       </ScrollView>
 
@@ -554,7 +558,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
             <View style={styles.formGroupRowBetween}>
               <Text style={styles.formLabel}>Gợi ý</Text>
               <TouchableOpacity
@@ -583,7 +587,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
             {showAISuggestions && (
               <View style={styles.formGroup}>
                 {aiSuggestions.length > 0 ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionRowScroll}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.suggestionRowScroll, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }] }>
                     {aiSuggestions.map(s => (
                       <TouchableOpacity key={s.title} style={styles.suggestionButton} onPress={() => applySuggestion(s)}>
                         <Text style={styles.suggestionText}>{s.title}</Text>
@@ -649,6 +653,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
               </View>
             </View>
 
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
         </View>
       </Modal>
@@ -666,7 +671,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
             {activeGoalId ? (() => {
               const g = goals.find((x: Goal) => x.id === activeGoalId);
               if (!g) return <Text style={styles.notFoundText}>Mục tiêu không tìm thấy.</Text>;
@@ -778,12 +783,13 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                 </View>
               );
             })() : null}
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
         </View>
       </Modal>
 
       {/* details moved to screen — inline detail modal removed */}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -1025,7 +1031,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
   modalSaveText: { fontSize: 16, fontWeight: '600', color: '#10B981' },
-  modalBody: { flex: 1, padding: 20, paddingBottom: 36 },
+  modalBody: { flex: 1, paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 36 },
   formGroup: { marginBottom: 18 },
   formGroupHalf: { flex: 1 },
   formGroupLeft: { marginRight: 8 },

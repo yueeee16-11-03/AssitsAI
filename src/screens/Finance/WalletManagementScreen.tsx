@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 // @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -42,6 +43,8 @@ const WALLET_ICONS = ['cash', 'bank', 'cellphone', 'credit-card', 'target', 'dia
 const WALLET_COLORS = ['#6366F1', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#F97316'];
 
 export default function WalletManagementScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
   // Use wallet store for data & actions
   const {
@@ -295,7 +298,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
         resetForm();
       }}
     >
-      <View style={styles.fullscreenModalContent}>
+      <SafeAreaView style={styles.fullscreenModalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {editingWallet ? 'Chỉnh sửa ví' : 'Thêm ví mới'}
@@ -310,7 +313,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-            <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={[styles.modalBodyContent, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}>
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Tên ví *</Text>
               <TextInput
@@ -413,7 +416,8 @@ export default function WalletManagementScreen({ navigation }: Props) {
                 ))}
               </View>
             </View>
-          </ScrollView>
+              <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
+            </ScrollView>
 
           <View style={[styles.modalFooter, styles.modalFooterFixed]}>
             <TouchableOpacity
@@ -434,7 +438,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
               </Text>
             </TouchableOpacity>
           </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 
@@ -445,6 +449,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
       transparent={false}
       onRequestClose={() => setShowTransferModal(false)}
     >
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <KeyboardAvoidingView
         style={styles.fullscreenModalContent}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -459,7 +464,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
 
           <ScrollView
             style={styles.modalBody}
-            contentContainerStyle={styles.modalBodyScroll}
+            contentContainerStyle={[styles.modalBodyScroll, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.formGroup}>
@@ -525,6 +530,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                 placeholderTextColor="#6B7280"
               />
             </View>
+            <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
           </ScrollView>
 
           <View style={[styles.modalFooter, styles.modalFooterFixed, styles.modalFooterSticky]}>
@@ -542,6 +548,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
       </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 
@@ -594,9 +601,9 @@ export default function WalletManagementScreen({ navigation }: Props) {
       </View>
 
       {/* Wallets List */}
-      <ScrollView style={styles.walletsList} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.walletsList} showsVerticalScrollIndicator={false} contentContainerStyle={[{ paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}>
         {wallets.map(renderWalletCard)}
-        <View style={styles.bottomSpace} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* Modals */}

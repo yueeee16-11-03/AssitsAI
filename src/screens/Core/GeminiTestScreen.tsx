@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { generateGeminiText } from "../../services/GeminiAIService";
@@ -20,6 +21,8 @@ export default function GeminiTestScreen({ navigation }: Props) {
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
 
   const handleTest = async () => {
     if (!prompt.trim()) {
@@ -55,7 +58,8 @@ export default function GeminiTestScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -68,7 +72,7 @@ export default function GeminiTestScreen({ navigation }: Props) {
         <Text style={styles.headerSubtitle}>Model: gemini-1.5-flash</Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         {/* API Status */}
         <View style={styles.statusSection}>
           <View style={[styles.statusBadge, styles.statusActive]}>
@@ -149,9 +153,10 @@ export default function GeminiTestScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        <View style={styles.spacer} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 

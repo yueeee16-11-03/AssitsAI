@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 
@@ -43,6 +44,8 @@ const LOCK_METHOD_OPTIONS = [
 
 export default function SecuritySettingsScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const insets = useSafeAreaInsets();
+  const TAB_BAR_HEIGHT = 70;
   const [settings, setSettings] = useState<SecuritySettings>({
     appLockEnabled: false,
     lockMethod: 'pin',
@@ -291,7 +294,8 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
   );
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+    <SafeAreaView style={styles.container}>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}> 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -335,7 +339,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         {/* App Lock Section */}
         {renderSettingSection('Khóa ứng dụng', (
           <>
@@ -443,7 +447,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
           </>
         ))}
 
-        <View style={styles.bottomSpace} />
+        <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       {/* Security Tips */}
@@ -457,7 +461,8 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
       {/* Decorative Elements */}
       <View style={[styles.decorativeCircle, styles.decorativeCircle1]} />
       <View style={[styles.decorativeCircle, styles.decorativeCircle2]} />
-    </Animated.View>
+      </Animated.View>
+    </SafeAreaView>
   );
 }
 
