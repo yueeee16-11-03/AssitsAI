@@ -5,7 +5,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   SetupProfile: undefined;
-  Home: { openCamera?: boolean } | undefined;
+  Home: undefined;
   AIChat: undefined;
   AIInsight: undefined;
   AIRecommendation: undefined;
@@ -13,6 +13,7 @@ export type RootStackParamList = {
   FinanceDashboard: undefined;
   AddTransaction: { 
     defaultType?: 'income' | 'expense';
+    openCamera?: boolean;
     processedData?: {
       rawOCRText?: string;
       processedText?: string;
@@ -26,6 +27,7 @@ export type RootStackParamList = {
     };
   };
   AddIncome: { 
+    openCamera?: boolean;
     processedData?: {
       rawOCRText?: string;
       processedText?: string;

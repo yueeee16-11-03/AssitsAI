@@ -10,11 +10,10 @@ import {
   Easing,
   Image,
   Dimensions,
-  Alert,
+ 
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
-import { launchImageLibrary } from 'react-native-image-picker';
+// image picker not used on Home
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -24,24 +23,49 @@ import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCou
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
-export default function HomeScreen({ navigation, route }: Props) {
+export default function HomeScreen({ navigation }: Props) {
   const [loading] = useState(false);
+  const [scanOptionsVisible, setScanOptionsVisible] = useState(false);
+  const scanIconRef = React.useRef<any>(null);
+  const [measuredTextWidth, setMeasuredTextWidth] = useState(0);
+  const [anchorLayout, setAnchorLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [popoverLeft, setPopoverLeft] = useState<number | undefined>(undefined);
+  const [popoverTop, setPopoverTop] = useState<number | undefined>(undefined);
+  const [popoverComputedWidth, setPopoverComputedWidth] = useState<number | undefined>(undefined);
+
+  const handleScanIconPress = () => {
+    if (scanIconRef.current && scanIconRef.current.measureInWindow) {
+      scanIconRef.current.measureInWindow((x:number, y:number, width:number, height:number) => {
+        setAnchorLayout({ x,y,width,height });
+        const contentPadding = 14; const iconTotal = 32 + 12; // icon container width + margin
+        const measured = Math.max(measuredTextWidth + iconTotal + contentPadding * 2, Math.round(popoverWidth * 0.8));
+        const targetWidth = Math.min(measured, POPOVER_MAX_WIDTH);
+        const left = Math.max(8, Math.min(SCREEN_WIDTH - targetWidth - 8, Math.round(x + width / 2 - (targetWidth / 2))));
+        const estTop = Math.max(insets.top + 8, y - 8 - 64);
+                    setPopoverComputedWidth(targetWidth);
+                    setPopoverLeft(left);
+                    setPopoverTop(estTop);
+        setScanOptionsVisible(true);
+      });
+    } else {
+      // fallback
+      const targetWidth = Math.round(popoverWidth * 0.8);
+      setPopoverComputedWidth(targetWidth);
+      setPopoverLeft(Math.round((SCREEN_WIDTH - targetWidth) / 2));
+      setPopoverTop(insets.top + 140);
+      setScanOptionsVisible(true);
+    }
+  };
   const insets = useSafeAreaInsets();
   const user = useUserStore((s: any) => s.user);
   const { unreadCount } = useUnreadNotificationCount();
   const displayName = (user && (user.displayName || user.email || user.phoneNumber)) || 'Người dùng';
-  const [cameraOptionsVisible, setCameraOptionsVisible] = useState(false);
+  
   const SCREEN_WIDTH = Dimensions.get('window').width;
+  const POPOVER_MAX_WIDTH = 320;
+  const popoverWidth = Math.min(POPOVER_MAX_WIDTH, SCREEN_WIDTH - 48);
   const TAB_BAR_HEIGHT = 70; // adjust as needed for the app's bottom tab bar height
-  // Open camera when navigated with params from global bottom sheet
-  React.useEffect(() => {
-    if (route?.params && (route as any).params.openCamera) {
-      setCameraOptionsVisible(true);
-      // clear param to avoid re-trigger on back navigation
-      navigation.setParams({ openCamera: false } as any);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route?.params]);
+  // No camera modal on Home - open camera on dedicated finance screens instead
 
   const sampleBars = [50, 75, 40, 90, 60, 80, 70]; // 7-day values
   const CHART_HEIGHT = 100; // px height used for bar animations (reduced so 100% bars don't overflow)
@@ -143,7 +167,7 @@ export default function HomeScreen({ navigation, route }: Props) {
             <Text style={styles.accountAmount}>0 vnd</Text>
 
             <View style={styles.accountIconsRow}>
-              <TouchableOpacity style={styles.accountIcon} onPress={() => { setCameraOptionsVisible(true); }}>
+              <TouchableOpacity ref={scanIconRef} style={styles.accountIcon} onPress={handleScanIconPress}>
                 <View style={styles.accountIconCircle}>
                   <Icon name="barcode-scan" size={24} color="#6B7280" />
                 </View>
@@ -173,6 +197,8 @@ export default function HomeScreen({ navigation, route }: Props) {
 
               
             </View>
+
+            
           </View>
         </TouchableOpacity>
         <View style={styles.row}>
@@ -380,239 +406,58 @@ export default function HomeScreen({ navigation, route }: Props) {
         </View>
       )}
 
+      {scanOptionsVisible && (
+        <>
+          <TouchableOpacity style={styles.scanOptionsOverlay} onPress={() => {
+            setScanOptionsVisible(false);
+            setMeasuredTextWidth(0);
+            setPopoverComputedWidth(undefined);
+            setPopoverLeft(undefined);
+            setPopoverTop(undefined);
+            setAnchorLayout(null);
+          }} activeOpacity={1} />
+          <View
+            style={[
+              styles.scanOptionsWrap,
+              {
+                top: popoverTop ?? (insets.top + 140),
+                left: typeof popoverLeft !== 'undefined' ? popoverLeft : Math.round((SCREEN_WIDTH - (popoverComputedWidth ?? Math.round(popoverWidth * 0.8))) / 2),
+                width: popoverComputedWidth ?? Math.round(popoverWidth * 0.8),
+              },
+            ]}
+            onLayout={(e) => {
+              const h = e.nativeEvent.layout.height;
+              if (anchorLayout) {
+                const newTop = anchorLayout.y - h - 8;
+                setPopoverTop(Math.max(insets.top + 8, newTop));
+              }
+            }}
+          > 
+            <TouchableOpacity style={styles.popoverSheetItem} onPress={() => { setScanOptionsVisible(false); setMeasuredTextWidth(0); setPopoverComputedWidth(undefined); setPopoverLeft(undefined); setPopoverTop(undefined); navigation.navigate('AddTransaction', { openCamera: true }); }} activeOpacity={0.85}>
+              <View style={styles.popoverSheetIcon}><Icon name="qrcode-scan" size={20} color="#FFFFFF" /></View>
+              <Text style={styles.popoverSheetText} numberOfLines={1} ellipsizeMode="tail" onLayout={(e) => { const w = e.nativeEvent?.layout?.width || 0; setMeasuredTextWidth((prev) => Math.max(prev, w)); }}>Quét hóa đơn chi tiêu</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.popoverSheetItem} onPress={() => { setScanOptionsVisible(false); setMeasuredTextWidth(0); setPopoverComputedWidth(undefined); setPopoverLeft(undefined); setPopoverTop(undefined); navigation.navigate('AddIncome', { openCamera: true }); }} activeOpacity={0.85}>
+              <View style={styles.popoverSheetIcon}><Icon name="qrcode-scan" size={20} color="#FFFFFF" /></View>
+              <Text style={styles.popoverSheetText} numberOfLines={1} ellipsizeMode="tail" onLayout={(e) => { const w = e.nativeEvent?.layout?.width || 0; setMeasuredTextWidth((prev) => Math.max(prev, w)); }}>Quét hóa đơn thu nhập</Text>
+            </TouchableOpacity>
+            {/* Removed 'Quay lại' button; overlay tap closes popover */}
+          </View>
+        </>
+      )}
+
       {/* Bottom tabs, FAB, and bottom sheet moved to top-level navigation component */}
 
       {/* Camera Screen Modal with live preview */}
-      {cameraOptionsVisible && (
-        <CameraScreenHome
-          onCapture={(uri) => {
-            setCameraOptionsVisible(false);
-            navigation.navigate('AIProcessingOverlay', { imageUri: uri, transactionType: 'expense' });
-          }}
-          onClose={() => setCameraOptionsVisible(false)}
-        />
-      )}
+      {/* Camera handled in AddTransaction/AddIncome screens — no Home camera modal */}
     </SafeAreaView>
   );
 }
 
-// Camera Screen Component with live preview and controls
-function CameraScreenHome({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const [cameraPosition, setCameraPosition] = React.useState<"back" | "front">("back");
-  const device = useCameraDevice(cameraPosition);
-  const camera = React.useRef<Camera>(null);
-  const [permissionRequested, setPermissionRequested] = React.useState(false);
-  const [torchEnabled, setTorchEnabled] = React.useState(false);
+// Camera Screen Component removed — camera handled in AddTransaction/AddIncome
+// CameraScreenHome removed — camera is handled in AddTransaction/AddIncome
 
-  const format = useCameraFormat(device, [
-    { videoStabilizationMode: "cinematic" },
-  ]);
-
-  React.useEffect(() => {
-    const requestCameraPermission = async () => {
-      if (!hasPermission && !permissionRequested) {
-        setPermissionRequested(true);
-        try {
-          const result = await requestPermission();
-          console.log("Camera permission result:", result);
-        } catch (error) {
-          console.error("Error requesting camera permission:", error);
-        }
-      }
-    };
-    requestCameraPermission();
-  }, [hasPermission, requestPermission, permissionRequested]);
-
-  const handleTakePhoto = async () => {
-    if (camera.current) {
-      try {
-        const photo = await camera.current.takePhoto({
-          flash: cameraPosition === "back" && torchEnabled ? "on" : "off",
-        });
-        if (photo.path) {
-          onCapture("file://" + photo.path);
-        }
-      } catch (error) {
-        console.error("Error taking photo:", error);
-        Alert.alert("Lỗi", "Không thể chụp ảnh");
-      }
-    }
-  };
-
-  const handlePickFromGallery = async () => {
-    launchImageLibrary(
-      {
-        mediaType: "photo",
-        maxWidth: 1000,
-        maxHeight: 1000,
-        quality: 0.8,
-      },
-      (response) => {
-        if (response.didCancel) {
-          console.log("User cancelled image picker");
-        } else if (response.errorMessage) {
-          Alert.alert("Lỗi", "Không thể lấy hình ảnh: " + response.errorMessage);
-        } else if (response.assets && response.assets[0]) {
-          const asset = response.assets[0];
-          if (asset.uri) {
-            onCapture(asset.uri);
-          }
-        }
-      }
-    );
-  };
-
-  const toggleFlash = () => {
-    setTorchEnabled(!torchEnabled);
-  };
-
-  const toggleCameraPosition = () => {
-    setCameraPosition(cameraPosition === "back" ? "front" : "back");
-    // Disable torch when switching to front camera
-    if (cameraPosition === "back") {
-      setTorchEnabled(false);
-    }
-  };
-
-  if (!hasPermission) {
-    return (
-      <View style={cameraStyles.cameraContainer}>
-        <View style={cameraStyles.permissionContainer}>
-          <Text style={cameraStyles.permissionIcon}>📷</Text>
-          <Text style={cameraStyles.permissionText}>Cần quyền truy cập camera</Text>
-          <Text style={cameraStyles.permissionDescription}>
-            Để chụp ảnh hóa đơn, vui lòng cấp quyền camera cho ứng dụng
-          </Text>
-          <TouchableOpacity
-            style={cameraStyles.permissionButton}
-            onPress={() => requestPermission()}
-          >
-            <Text style={cameraStyles.permissionButtonText}>🔒 Cấp quyền camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={cameraStyles.permissionButtonCancel}
-            onPress={onClose}
-          >
-            <Text style={cameraStyles.permissionButtonCancelText}>✕ Hủy</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-    );
-  }
-
-  if (device == null) {
-    return (
-      <View style={cameraStyles.cameraContainer}>
-        <View style={cameraStyles.permissionContainer}>
-          <Text style={cameraStyles.permissionIcon}>⚠️</Text>
-          <Text style={cameraStyles.permissionText}>Không tìm thấy camera</Text>
-          <Text style={cameraStyles.permissionDescription}>
-            Thiết bị của bạn không có camera hoặc camera không khả dụng
-          </Text>
-          <TouchableOpacity
-            style={cameraStyles.permissionButtonCancel}
-            onPress={onClose}
-          >
-            <Text style={cameraStyles.permissionButtonCancelText}>✕ Đóng</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  const SCREEN_HEIGHT = Dimensions.get('window').height;
-  const CAMERA_CONTROLS_BOTTOM_BOTTOM = 160; // must match cameraControlsBottom bottom
-  const CAMERA_CONTROLS_BOTTOM_HEIGHT = 140; // must match cameraControlsBottom height
-  const cameraControlsBgTop = SCREEN_HEIGHT - CAMERA_CONTROLS_BOTTOM_BOTTOM - CAMERA_CONTROLS_BOTTOM_HEIGHT;
-
-  return (
-    <View style={cameraStyles.cameraContainer}>
-      <Camera
-        ref={camera}
-        style={cameraStyles.camera}
-        device={device}
-        isActive={true}
-        photo={true}
-        format={format}
-        torch={cameraPosition === "back" && torchEnabled ? "on" : "off"}
-      />
-
-      {/* Top Header with Close and Camera Flip buttons */}
-      <View style={cameraStyles.cameraHeader}>
-        <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={onClose}>
-          <Icon name="close-outline" size={16} color="#6B7280" />
-        </TouchableOpacity>
-        <View style={cameraStyles.cameraHeaderTitleWrap}>
-          <Icon name="qrcode-scan" size={14} color="#6B7280" style={cameraStyles.cameraHeaderIconSpacing} />
-          <Text style={cameraStyles.cameraHeaderTitle}>Quét hóa đơn</Text>
-        </View>
-        <TouchableOpacity style={cameraStyles.cameraHeaderButton} onPress={toggleCameraPosition}>
-          <Icon name="camera-flip-outline" size={16} color="#6B7280" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Bill Scanning Frame */}
-      <View style={cameraStyles.billScanFrame}>
-        <View style={cameraStyles.billFrameCorner} />
-        <View style={[cameraStyles.billFrameCorner, cameraStyles.billFrameCornerTopRight]} />
-        <View style={[cameraStyles.billFrameCorner, cameraStyles.billFrameCornerBottomLeft]} />
-        <View style={[cameraStyles.billFrameCorner, cameraStyles.billFrameCornerBottomRight]} />
-        <Text style={cameraStyles.billFrameText}>Căn chỉnh hóa đơn vào khung</Text>
-      </View>
-
-      {/* Status Bar */}
-      <View style={cameraStyles.cameraStatusBar}>
-        <View style={cameraStyles.statusIndicator}>
-          <Text style={cameraStyles.statusText}>
-            {torchEnabled ? 'Đèn: Bật' : 'Đèn: Tắt'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Background that fills the area from the controls downwards */}
-      <View pointerEvents="none" style={[cameraStyles.cameraControlsBottomBg, { top: cameraControlsBgTop }]} />
-
-      {/* Bottom Controls */}
-      <View style={cameraStyles.cameraControlsBottom}>
-        <TouchableOpacity
-          style={cameraStyles.galleryButton}
-          onPress={handlePickFromGallery}
-        >
-          <View style={cameraStyles.cameraControlInner}>
-            <Icon name="image-outline" size={22} color="#000000" style={cameraStyles.cameraControlIcon} />
-            <Text style={cameraStyles.cameraControlLabel}>Thư viện</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={cameraStyles.cameraShootButton}
-          onPress={handleTakePhoto}
-        >
-          <Icon name="qrcode-scan" size={36} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        {cameraPosition === 'back' && (
-          <TouchableOpacity
-            style={cameraStyles.flashButton}
-            onPress={toggleFlash}
-          >
-            <View style={cameraStyles.cameraControlInner}>
-              <Icon name={torchEnabled ? 'flash' : 'flash-off'} size={22} color="#000000" style={cameraStyles.cameraControlIcon} />
-              <Text style={cameraStyles.cameraControlLabel}>Flash</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        {cameraPosition === 'front' && (
-          <View style={cameraStyles.flashButton} />
-        )}
-      </View>
-    </View>
-  );
-}
-
-const cameraStyles = StyleSheet.create({
+/* cameraStyles removed */ /*
   cameraContainer: {
     flex: 1,
     backgroundColor: "#FBF7F3",
@@ -846,7 +691,7 @@ const cameraStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-});
+*/
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
@@ -1167,6 +1012,12 @@ const styles = StyleSheet.create({
   },
   bottomSheetHandleWrap: { alignItems: 'center', marginTop: 0 },
   bottomSheetContent: { marginTop: 8 },
+  scanOptionsWrap: { position: 'absolute', borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)', paddingVertical: 4, paddingHorizontal: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 20, zIndex: 101 },
+  popoverSheetItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
+  popoverSheetIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#06B6D4', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  popoverSheetText: { color: '#000000', fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  scanOptionsOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.28)' },
+  /* removed sheetIconMuted/sheetTextMuted - not used (overlay dismisses) */
   sheetItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
   sheetIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#06B6D4', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   sheetText: { color: '#000000', fontSize: 16, fontWeight: '700' },

@@ -5,6 +5,7 @@ import { NavigationContainerRef } from '@react-navigation/native';
 
 export default function BottomTabs({ navigationRef, currentRouteName, showFab = true, showSheet = true, overlay = false }: { navigationRef?: React.RefObject<NavigationContainerRef<any>>; currentRouteName?: string; showFab?: boolean; showSheet?: boolean; overlay?: boolean; }) {
   const [sheetVisible, setSheetVisible] = React.useState(false);
+  const [scanOptionsVisible, setScanOptionsVisible] = React.useState(false);
   const sheetAnim = React.useRef(new Animated.Value(0)).current;
   const SHEET_HEIGHT = 260;
 
@@ -14,6 +15,7 @@ export default function BottomTabs({ navigationRef, currentRouteName, showFab = 
     Animated.timing(sheetAnim, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
   };
   const closeBottomSheet = () => {
+    setScanOptionsVisible(false);
     Animated.timing(sheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => setSheetVisible(false));
   };
 
@@ -86,18 +88,38 @@ export default function BottomTabs({ navigationRef, currentRouteName, showFab = 
           ]}>
             <View style={styles.bottomSheetHandleWrap} />
             <View style={styles.bottomSheetContent}>
-              <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddTransaction'); }} activeOpacity={0.85}>
-                <View style={styles.sheetIcon}><Icon name="cash-minus" size={22} color="#FFFFFF" /></View>
-                <Text style={styles.sheetText}>Thêm chi tiêu</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddIncome'); }} activeOpacity={0.85}>
-                <View style={styles.sheetIcon}><Icon name="cash-plus" size={22} color="#FFFFFF" /></View>
-                <Text style={styles.sheetText}>Thêm thu nhập</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('Home', { openCamera: true }); }} activeOpacity={0.85}>
-                <View style={styles.sheetIcon}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
-                <Text style={styles.sheetText}>Quét hóa đơn</Text>
-              </TouchableOpacity>
+              {!scanOptionsVisible && (
+                <>
+                  <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddTransaction'); }} activeOpacity={0.85}>
+                    <View style={styles.sheetIcon}><Icon name="cash-minus" size={22} color="#FFFFFF" /></View>
+                    <Text style={styles.sheetText}>Thêm chi tiêu</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddIncome'); }} activeOpacity={0.85}>
+                    <View style={styles.sheetIcon}><Icon name="cash-plus" size={22} color="#FFFFFF" /></View>
+                    <Text style={styles.sheetText}>Thêm thu nhập</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.sheetItem} onPress={() => { setScanOptionsVisible(true); }} activeOpacity={0.85}>
+                    <View style={styles.sheetIcon}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
+                    <Text style={styles.sheetText}>Quét hóa đơn</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              {scanOptionsVisible && (
+                <>
+                  <TouchableOpacity style={styles.sheetItem} onPress={() => { setScanOptionsVisible(false); }} activeOpacity={0.85}>
+                    <View style={styles.sheetIconMuted}><Icon name="chevron-left" size={22} color="#06B6D4" /></View>
+                    <Text style={styles.sheetText}>Quay lại</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddTransaction', { openCamera: true }); }} activeOpacity={0.85}>
+                    <View style={styles.sheetIcon}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
+                    <Text style={styles.sheetText}>Quét hóa đơn chi tiêu</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.sheetItem} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddIncome', { openCamera: true }); }} activeOpacity={0.85}>
+                    <View style={styles.sheetIcon}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
+                    <Text style={styles.sheetText}>Quét hóa đơn thu nhập</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </Animated.View>
         </>
@@ -130,5 +152,6 @@ const styles = StyleSheet.create({
   bottomSheetContent: { marginTop: 8 },
   sheetItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
   sheetIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#06B6D4', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  sheetIconMuted: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   sheetText: { color: '#000000', fontSize: 16, fontWeight: '700' },
 });

@@ -32,7 +32,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "AddIncome">;
 
 type TransactionType = "expense" | "income";
 
-export default function AddIncomeScreen({ navigation }: Props) {
+export default function AddIncomeScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   // Note state
@@ -115,6 +115,16 @@ export default function AddIncomeScreen({ navigation }: Props) {
       useNativeDriver: true,
     }).start();
   }, [fadeAnim]);
+
+  // Open camera if navigated here with openCamera param
+  React.useEffect(() => {
+    if (route?.params && (route as any).params.openCamera) {
+      setIsCameraOpen(true);
+      // clear param to avoid re-trigger when returning
+      navigation.setParams({ openCamera: false } as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.params]);
 
   React.useEffect(() => {
     if (isRecording) {
