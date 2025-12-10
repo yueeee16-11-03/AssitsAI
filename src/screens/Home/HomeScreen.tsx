@@ -10,7 +10,7 @@ import {
   Easing,
   Image,
   Dimensions,
- 
+  Modal,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 // image picker not used on Home
@@ -20,6 +20,7 @@ import type { RootStackParamList } from "../../navigation/types";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useUserStore } from '../../store/userStore';
 import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
+import { useTransactionData } from '../../hooks/useTransactionData';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
@@ -67,13 +68,87 @@ export default function HomeScreen({ navigation }: Props) {
   const TAB_BAR_HEIGHT = 70; // adjust as needed for the app's bottom tab bar height
   // No camera modal on Home - open camera on dedicated finance screens instead
 
-  const sampleBars = [50, 75, 40, 90, 60, 80, 70]; // 7-day values
+  // Placeholder sample; replaced by real transaction data below
   const CHART_HEIGHT = 100; // px height used for bar animations (reduced so 100% bars don't overflow)
 
-  const barAnimsRef = React.useRef(sampleBars.map(() => new Animated.Value(0))).current;
+  const barAnimsRef = React.useRef(Array(7).fill(0).map(() => new Animated.Value(0))).current;
+
+  // We'll animate based on computed percentages below; initialize with zeros
+  React.useEffect(() => {
+    // noop: animations are triggered when dailyPercents change
+  }, []);
+
+  // --- Real transaction data integration ---
+  const { transactions } = useTransactionData() as any;
+
+  const safeAmount = (a: any) => {
+    const n = Number(a);
+    if (!isFinite(n) || isNaN(n)) return 0;
+    return Math.round(n);
+  };
+
+  const toDate = (t: any): Date | null => {
+    if (!t) return null;
+    if (t.toDate && typeof t.toDate === 'function') return t.toDate();
+    if (typeof t === 'string') return new Date(t);
+    if (typeof t === 'number') return new Date(t);
+    if (t.seconds && typeof t.seconds === 'number') return new Date(t.seconds * 1000);
+    return null;
+  };
+
+  // Compute last 7 days (oldest to newest)
+  const now = new Date();
+  const last7Dates = Array.from({ length: 7 }).map((_, idx) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (6 - idx));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const last7Keys = last7Dates.map(d => d.toISOString().slice(0, 10));
+
+  const last7Amounts = last7Keys.map((key) => {
+    return (transactions || []).filter((t: any) => {
+      if (!t) return false;
+      const dt = toDate(t.date || t.createdAt);
+      if (!dt) return false;
+      return dt.toISOString().slice(0, 10) === key && t.type === 'expense';
+    }).reduce((s: number, t: any) => s + safeAmount(t.amount), 0);
+  });
+
+  const maxAmount = Math.max(...last7Amounts, 0);
+  const dailyPercents = last7Amounts.map(a => (maxAmount > 0 ? Math.round((a / maxAmount) * 100) : 0));
+  const weekdayMap = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const last7Labels = last7Dates.map(d => weekdayMap[d.getDay()]);
+  
+  // Tooltip / modal state
+  const [tooltipVisible, setTooltipVisible] = React.useState(false);
+  const [tooltipDay, setTooltipDay] = React.useState('');
+  const [tooltipAmount, setTooltipAmount] = React.useState(0);
+
+  function formatVNDShort(amount: number) {
+    if (!amount || amount === 0) return '0';
+    const abs = Math.abs(amount);
+    if (abs >= 1000000) {
+      const m = Math.round((amount / 1000000) * 10) / 10;
+      return `${m % 1 === 0 ? Math.round(m) : m}tr`;
+    }
+    if (abs >= 1000) {
+      const k = Math.round(amount / 1000);
+      return `${k}k`;
+    }
+    return `${amount}`;
+  }
+
+  function formatVNDFull(amount: number) {
+    try {
+      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
+    } catch {
+      return `${amount} VND`;
+    }
+  }
 
   React.useEffect(() => {
-    const animations = sampleBars.map((v, i) =>
+    const animations = dailyPercents.map((v, i) =>
       Animated.timing(barAnimsRef[i], {
         toValue: (v / 100) * CHART_HEIGHT,
         duration: 700,
@@ -81,10 +156,9 @@ export default function HomeScreen({ navigation }: Props) {
         useNativeDriver: false,
       })
     );
-
     Animated.stagger(90, animations).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [JSON.stringify(dailyPercents)]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -201,29 +275,7 @@ export default function HomeScreen({ navigation }: Props) {
             
           </View>
         </TouchableOpacity>
-        <View style={styles.row}>
-          <TouchableOpacity
-            style={[styles.card, styles.goalCard]}
-            onPress={() => navigation.navigate('DailyGoalsDetail')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.goalRowInner}>
-              <View style={styles.goalLeft}>
-                <Icon name="bullseye" size={18} color="#FFFFFF" />
-                <Text style={[styles.cardTitle, styles.goalCardTitle]}>Mục tiêu hôm nay</Text>
-                <View style={styles.goalBadge}>
-                  <Text style={styles.goalBadgeText}>3</Text>
-                </View>
-              </View>
-
-              <TouchableOpacity style={[styles.iconViewBtn, styles.iconViewBtnColored]} onPress={() => navigation.navigate('DailyGoalsDetail')}>
-                <Icon name="chevron-right" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Notebook-style card (vector icon, compact) */}
+{/* Notebook-style card (vector icon, compact) */}
         <TouchableOpacity style={[styles.notebookCard, styles.notebookCompact]} activeOpacity={0.9} onPress={() => {}}>
           <View style={styles.notebookContent}>
             <View style={styles.notebookLeft}>
@@ -273,16 +325,22 @@ export default function HomeScreen({ navigation }: Props) {
             onPress={() => { /* TODO: open spending details */ }}
           >
             <View style={styles.spendingChartInner}>
-              {sampleBars.map((v, i) => {
+              {dailyPercents.map((v, i) => {
                 const barColors = ['#F97316', '#FB923C', '#FB7185', '#F472B6', '#06B6D4', '#06B6D4', '#06B6D4'];
                 const color = barColors[i % barColors.length];
                 const animatedHeight = barAnimsRef[i];
+                const amount = last7Amounts[i] || 0;
                 return (
-                  <View key={i} style={styles.barColumn}>
-                    <Text style={styles.barValue}>{v}%</Text>
+                  <TouchableOpacity
+                    key={i}
+                    style={styles.barColumn}
+                    activeOpacity={0.9}
+                    onPress={() => { setTooltipDay(last7Labels[i]); setTooltipAmount(amount); setTooltipVisible(true); }}
+                  >
+                    {amount > 0 && <Text style={styles.barAmount}>{formatVNDShort(amount)}</Text>}
                     <Animated.View style={[styles.bar, { height: animatedHeight, backgroundColor: color }]} />
-                      <Text style={styles.barLabel}>{['T2','T3','T4','T5','T6','T7','CN'][i]}</Text>
-                  </View>
+                      <Text style={styles.barLabel}>{last7Labels[i]}</Text>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -445,6 +503,17 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </>
       )}
+
+      {/* Tooltip modal for bar details */}
+      <Modal visible={tooltipVisible} transparent animationType="fade" onRequestClose={() => setTooltipVisible(false)}>
+        <TouchableOpacity style={styles.tooltipOverlay} activeOpacity={1} onPress={() => setTooltipVisible(false)}>
+          <View style={styles.tooltipBox}>
+            <Text style={styles.tooltipDay}>{tooltipDay}</Text>
+            <Text style={styles.tooltipShort}>{formatVNDShort(tooltipAmount)}</Text>
+            <Text style={styles.tooltipFull}>{formatVNDFull(tooltipAmount)}</Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Bottom tabs, FAB, and bottom sheet moved to top-level navigation component */}
 
@@ -838,7 +907,13 @@ const styles = StyleSheet.create({
   barColumn: { flex: 1, alignItems: "center", justifyContent: 'flex-end' },
   bar: { width: 22, borderRadius: 10, elevation: 3 },
   barLabel: { color: "#6B7280", fontSize: 12, marginTop: 8 },
-  barValue: { color: '#374151', fontSize: 12, marginBottom: 8, fontWeight: '700' },
+  barValue: { color: '#374151', fontSize: 12, marginBottom: 4, fontWeight: '700' },
+  barAmount: { color: '#6B7280', fontSize: 11, marginBottom: 6 },
+  tooltipOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.24)' },
+  tooltipBox: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 8, alignItems: 'center' },
+  tooltipDay: { color: '#6B7280', fontWeight: '700', fontSize: 14 },
+  tooltipShort: { color: '#111827', fontWeight: '800', fontSize: 16, marginTop: 6 },
+  tooltipFull: { color: '#6B7280', fontSize: 12, marginTop: 4 },
   spendingChartButton: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,

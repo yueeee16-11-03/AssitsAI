@@ -22,7 +22,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraPermission, useCameraDevice, useCameraFormat } from "react-native-vision-camera";
 import { launchImageLibrary } from "react-native-image-picker";
-import TransactionService from '../../services/TransactionService';
+// TransactionService not used here (income flows use IncomeService)
+import IncomeService from '../../services/IncomeService';
 import firestore from '@react-native-firebase/firestore';
 import { useTransactionStore } from "../../store/transactionStore";
 import { useVoiceRecognition } from '../../hooks/useVoiceRecognition';
@@ -76,6 +77,38 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
   const [description, setDescription] = useState("");
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  // Populate from processedData (navigated from AIProcessingResultsScreen)
+  React.useEffect(() => {
+    const params: any = route?.params as any;
+    if (params && params.processedData) {
+      const pd = params.processedData as any;
+      console.log('📥 [AddIncome] Prefilling form from processedData:', pd);
+      if (pd.totalAmount) setManualAmount(String(pd.totalAmount));
+      if (pd.description) setDescription(pd.description);
+      if (pd.rawOCRText) setNote(pd.rawOCRText);
+      if (pd.processedText) _setProcessedText(pd.processedText);
+      if (pd.merchant) setSuccessText(pd.merchant);
+      if (pd.processingTime) _setProcessingTime(pd.processingTime);
+      if (pd.items && Array.isArray(pd.items)) _setAiItems(pd.items);
+      if (pd.totalAmount) _setAiTotalAmount(pd.totalAmount);
+      if (pd.category) {
+        try {
+          // Resolve category id using IncomeService helper
+          const resolvedId = IncomeService._resolveCategoryId(null, pd.category, 'income');
+          setSelectedCategory(resolvedId || null);
+          _setAiCategory(pd.category || null);
+        } catch (e) {
+          console.warn('Failed to resolve category id for income:', e);
+          setSelectedCategory(null);
+        }
+      }
+      if (pd.date) setSelectedTime(pd.date);
+      if (pd.rawOCRText) _setRawOCRText(pd.rawOCRText);
+      if (pd.processingTime) _setProcessingTime(pd.processingTime);
+      if (pd.processedText) _setProcessedText(pd.processedText);
+      if (pd.billImageUri) setBillImage(pd.billImageUri);
+    }
+  }, [route?.params]);
   
   // 🤖 AI Processing state - now handled by AIProcessingOverlay
   const [_processedText, _setProcessedText] = useState<string | null>(null);
@@ -613,8 +646,16 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
                   }
 
                   try {
-                    const txObj = TransactionService.createTransactionObject(formData);
-                    await addTransaction(txObj);
+                    const incomeObj = IncomeService.createIncomeObject({
+                      ...formData,
+                      // Include AI processed fields if available
+                      processedText: _processedText || undefined,
+                      rawOCRText: _rawOCRText || undefined,
+                      hasAIProcessing: !!_processedText || !!_rawOCRText,
+                      processingTime: _processingTime || 0,
+                      items: _aiItems || [],
+                    });
+                    await addTransaction(incomeObj);
                     setDescription("");
                     setNote("");
                     setManualAmount("");

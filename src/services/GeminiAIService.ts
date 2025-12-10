@@ -187,39 +187,16 @@ export async function processOCRTextWithGemini(
 
     // Generate prompt based on transactionType
     let prompt = customPrompt;
-    
+
+    // NOTE: This service is dedicated to expense processing. For income OCR/text
+    // use processOCRTextWithGeminiIncome (IncomeGeminiAIService) which uses a
+    // separate API key and prompt optimized for income.
+    if (transactionType === 'income') {
+      throw new Error('Use IncomeGeminiAIService.processOCRTextWithGeminiIncome for income processing');
+    }
+
     if (!prompt) {
-      if (transactionType === 'income') {
-        // 🟢 INCOME PROMPT
-        prompt = `Bạn là một trợ lý xử lý hóa đơn thu nhập chuyên nghiệp.
-
-Phân tích văn bản OCR từ ảnh/hóa đơn thu nhập dưới đây và trích xuất:
-1. **Tên nguồn thu nhập/Merchant**: Tên nơi/người gửi tiền
-2. **Ngày giờ**: Thời gian nhận tiền ( ví dụ: 25/12/2023 14:30 )
-3. **Tổng tiền**: Số tiền nhận được (chỉ lấy con số cuối cùng nếu có nhiều)
-4. **Danh sách items**: Các khoản thu nhập kèm danh mục (nếu có)
-
-Danh mục thu nhập: Lương, Thưởng, Đầu tư, Thu nhập khác
-
-Định dạng kết quả:
----
-🏪 Nguồn: [Tên]
-🕐 Giờ: [Giờ] (ví dụ 23:59:00)
-📅 Ngày: [Ngày]
-💰 Tổng: [Số tiền] VND
-📦 Items:
-- [Item 1] [số tiền] (Danh mục: [Loại])
-- [Item 2] [số tiền] (Danh mục: [Loại])
-...
-
----
-
-Văn bản OCR:
-${ocrText}
-
-Trích xuất thông tin từ ảnh/hóa đơn thu nhập trên:`;
-      } else {
-        // 🔴 EXPENSE PROMPT (default)
+        //  EXPENSE PROMPT (default)
         prompt = `Bạn là một trợ lý xử lý hóa đơn chi tiêu chuyên nghiệp.
 
 Phân tích văn bản OCR từ ảnh/hóa đơn dưới đây và trích xuất:
@@ -247,7 +224,6 @@ Văn bản OCR:
 ${ocrText}
 
 Trích xuất thông tin từ ảnh/hóa đơn chi tiêu trên:`;
-      }
     }
 
     console.log(`🔄 [GEMINI_OCR] Gửi request tới Gemini...`);

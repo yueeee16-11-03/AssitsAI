@@ -132,17 +132,18 @@ export default function AIProcessingResultsScreen({
       console.log('📊 [RESULT_SCREEN] Transaction type:', transactionType);
 
       // 🟢 CHỌN SERVICE DỰA VÀO LOẠI GIAO DỊCH
+      console.log('💰 [RESULT_SCREEN] Using store.addTransaction for consistency');
+      const addTransaction = useTransactionStore.getState().addTransaction;
       if (transactionType === 'income') {
-        console.log('💰 [RESULT_SCREEN] Saving as INCOME using IncomeService...');
+        console.log('💰 [RESULT_SCREEN] Creating income object and calling store.addTransaction...');
         const incomeObj = IncomeService.createIncomeObject(formData);
-        await IncomeService.addIncome(incomeObj);
-        console.log('💾 [RESULT_SCREEN] Income auto-saved successfully');
+        await addTransaction(incomeObj);
+        console.log('💾 [RESULT_SCREEN] Income auto-saved via store');
       } else {
-        console.log('💸 [RESULT_SCREEN] Saving as EXPENSE using TransactionService...');
+        console.log('💸 [RESULT_SCREEN] Creating expense object and calling store.addTransaction...');
         const transactionObj = TransactionService.createTransactionObject(formData);
-        const addTransaction = useTransactionStore.getState().addTransaction;
         await addTransaction(transactionObj);
-        console.log('💾 [RESULT_SCREEN] Transaction auto-saved successfully');
+        console.log('💾 [RESULT_SCREEN] Transaction auto-saved via store');
       }
 
       Alert.alert("Thành công", transactionType === 'income' ? "Đã lưu thu nhập" : "Đã lưu giao dịch", [
@@ -163,7 +164,7 @@ export default function AIProcessingResultsScreen({
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
@@ -182,8 +183,8 @@ export default function AIProcessingResultsScreen({
             <View style={styles.headerCenter}>
               <MaterialCommunityIcons 
                 name={transactionType === 'income' ? 'cash-multiple' : 'shopping'} 
-                size={28} 
-                color="#111827" 
+                size={20} 
+                color="#00897B" 
               />
               <Text style={styles.headerTitle}>
                 {transactionType === 'income' ? 'THU NHẬP' : 'CHI TIÊU'}
@@ -319,6 +320,46 @@ export default function AIProcessingResultsScreen({
                     Thời gian xử lý: {editedDataState.processingTime || 0}ms
                   </Text>
                 </View>
+
+                <View style={styles.actionsContainer}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      Alert.alert("Huỷ xử lý", "Bạn có chắc muốn huỷ?", [
+                        { text: "Không", onPress: () => {} },
+                        { text: "Có", onPress: () => navigation.goBack() },
+                      ]);
+                    }}
+                    disabled={isAutoSaving}
+                  >
+                    <MaterialCommunityIcons name="close-thick" size={18} color="#00897B" />
+                    <Text style={styles.cancelButtonText}>Huỷ</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={handleConfirm}
+                    disabled={isAutoSaving}
+                  >
+                    <MaterialCommunityIcons name="square-edit-outline" size={18} color="#00897B" />
+                    <Text style={styles.editButtonText}>Chỉnh sửa</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.confirmButton, isAutoSaving && styles.confirmButtonDisabled]}
+                    onPress={handleAutoSave}
+                    disabled={isAutoSaving}
+                  >
+                    {isAutoSaving ? (
+                      <ActivityIndicator size="small" color="#00897B" />
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons name="content-save-outline" size={18} color="#00897B" />
+                        <Text style={styles.confirmButtonText}>Lưu ngay</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
               <View style={styles.noDataSection}>
@@ -338,49 +379,8 @@ export default function AIProcessingResultsScreen({
               </Text>
             </View>
           )}
-          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
+          <View style={{ height: insets.bottom + TAB_BAR_HEIGHT + 112 }} />
         </ScrollView>
-
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => {
-              Alert.alert("Huỷ xử lý", "Bạn có chắc muốn huỷ?", [
-                { text: "Không", onPress: () => {} },
-                { text: "Có", onPress: () => navigation.goBack() },
-              ]);
-            }}
-            disabled={isAutoSaving}
-          >
-            <MaterialCommunityIcons name="close" size={18} color="#1F2937" />
-            <Text style={styles.cancelButtonText}>Huỷ</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={handleConfirm}
-            disabled={isAutoSaving}
-          >
-            <MaterialCommunityIcons name="pencil" size={18} color="#FFFFFF" />
-            <Text style={styles.editButtonText}>Chỉnh sửa</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.confirmButton, isAutoSaving && styles.confirmButtonDisabled]}
-            onPress={handleAutoSave}
-            disabled={isAutoSaving}
-          >
-            {isAutoSaving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
-                <Text style={styles.confirmButtonText}>Lưu ngay</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Fullscreen Raw Text Modal */}
@@ -424,9 +424,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
-    color: "#111827",
+    color: "#00897B",
   },
   headerPlaceholder: {
     width: 44,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
 
   // Processed Text by AI
   processedTextSection: {
-    marginBottom: 20,
+    marginBottom: 8,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
@@ -502,6 +502,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    borderBottomWidth: 0,
   },
   processedTextHeader: {
     flexDirection: "row",
@@ -657,7 +658,7 @@ const styles = StyleSheet.create({
 
   // No Data Section
   noDataSection: {
-    marginBottom: 20,
+    marginBottom: 8,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 32,
@@ -688,63 +689,74 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: "row",
     gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingBottom: Platform.OS === "ios" ? 32 : 16,
-    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 0,
+    paddingVertical: 8,
+    backgroundColor: "transparent",
     borderTopWidth: 0,
+    borderTopColor: "transparent",
+    marginTop: 12,
+    justifyContent: 'space-between',
   },
   cancelButton: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#D1D5DB",
+    backgroundColor: "#E5E7EB",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 6,
-    backgroundColor: "#F9FAFB",
+    elevation: 0,
+    shadowColor: "#D1D5DB",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#00897B",
   },
   editButton: {
     flex: 1,
-    backgroundColor: "#059669",
+    backgroundColor: "#E5E7EB",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 6,
-    elevation: 2,
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    elevation: 0,
+    shadowColor: "#D1D5DB",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
   },
   editButtonText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#00897B",
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: "#059669",
+    backgroundColor: "#E5E7EB",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 6,
-    elevation: 3,
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    elevation: 0,
+    shadowColor: "#D1D5DB",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
   },
   confirmButtonDisabled: {
     opacity: 0.6,
@@ -752,10 +764,15 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#00897B",
   },
 
+  actionIcon: {
+    // reserved for icon background if needed
+  },
   spacer: {
     height: 20,
   },
+  
+  
 });

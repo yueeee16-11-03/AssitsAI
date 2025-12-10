@@ -24,6 +24,7 @@ import GoalSuggestionService from '../../services/GoalSuggestionService';
 import type { GoalSuggestion } from '../../services/GoalSuggestionService';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 
 type Props = NativeStackScreenProps<RootStackParamList, "GoalTracking">;
 
@@ -60,6 +61,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
   const addGoal = useGoalStore(state => state.addGoal);
   const updateGoal = useGoalStore(state => state.updateGoal);
   const addMoneyToGoal = useGoalStore(state => state.addMoneyToGoal);
+  const deleteGoal = useGoalStore(state => state.deleteGoal);
 
   // fetch latest goals when screen focused
   const fetchInProgressRef = React.useRef(false);
@@ -145,6 +147,15 @@ export default function GoalTrackingScreen({ navigation }: Props) {
 
   // modal form state (in-screen)
   const [showAddModal, setShowAddModal] = useState(false);
+  const [fabScale] = useState(new Animated.Value(1));
+  const handleFabPressIn = () => Animated.spring(fabScale, { toValue: 0.96, useNativeDriver: true }).start();
+  const handleFabPressOut = () => {
+    Animated.sequence([
+      Animated.spring(fabScale, { toValue: 1.08, friction: 6, useNativeDriver: true }),
+      Animated.spring(fabScale, { toValue: 1, friction: 6, useNativeDriver: true }),
+    ]).start();
+    setShowAddModal(true);
+  };
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newTarget, setNewTarget] = useState('');
@@ -329,7 +340,12 @@ export default function GoalTrackingScreen({ navigation }: Props) {
       });
 
       // 3) add money to goal (GoalService will update the goal and its transactions)
-      await addMoneyToGoal(g.id, { amount: amt, note: noteOverride ?? (addNote || 'Nạp tiền tiết kiệm'), date: dateOverride ?? new Date().toISOString() });
+      await addMoneyToGoal(g.id, { 
+        amount: amt, 
+        category: 'Tiết kiệm', 
+        description: noteOverride ?? (addNote || 'Nạp tiền tiết kiệm'),
+        date: dateOverride ?? new Date().toISOString() 
+      });
 
       setAddAmount(''); setAddNote(''); setShowAddMoneyModal(false);
       Alert.alert('Thành công', `Đã chuyển ${amt.toLocaleString('vi-VN')} VNĐ vào mục tiêu`);
@@ -355,9 +371,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mục tiêu</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
-          <Text style={styles.addIcon}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.spacer} />
       </View>
 
       <ScrollView
@@ -366,37 +380,32 @@ export default function GoalTrackingScreen({ navigation }: Props) {
       >
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Total Progress */}
-          <View style={[styles.totalCard, styles.totalCardGray]}>
-            <Text style={styles.totalLabel}>Tổng tiến độ</Text>
-            <Text style={styles.totalAmountSmall}>
+          <View style={[styles.totalCard, styles.totalCardPlus]}>
+            <Text style={[styles.totalLabel, styles.totalLabelOnPlus]}>Tổng tiến độ</Text>
+            <Text style={[styles.totalAmountSmall, styles.totalAmountSmallOnPlus]}>
               {totalCurrentAmount.toLocaleString("vi-VN")} VND / {totalTargetAmount.toLocaleString("vi-VN")} VND
             </Text>
-            <View style={styles.totalProgressBar}>
-              <View
-                  style={[
-                    styles.totalProgressFill,
-                    { width: `${progressVisibleWidth(totalProgress)}%` as any },
-                  ]}
-                />
+            <View style={[styles.totalProgressBar, styles.totalProgressBarPlus]}>
+              <LinearGradient colors={['#10B981', '#06B6D4']} start={{x:0,y:0}} end={{x:1,y:0}} style={[styles.totalProgressFill, { width: `${progressVisibleWidth(totalProgress)}%` as any }]} />
             </View>
-            <Text style={styles.totalPercentage}>{totalProgress.toFixed(2)}% hoàn thành</Text>
+            <Text style={[styles.totalPercentage, styles.totalPercentageOnPlus]}>{totalProgress.toFixed(2)}% hoàn thành</Text>
           </View>
 
           {/* AI Insight */}
-          <View style={styles.aiCard}>
+          <LinearGradient colors={["#0F1724","#0B1226"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.aiCard, styles.aiCardDark]}>
             <View style={styles.aiHeader}>
-                      <Icon name="robot" size={24} color="#6B7280" style={styles.aiIcon} />
-              <Text style={styles.aiTitle}>Phân tích AI</Text>
+              <Icon name="robot" size={24} color="#fff" style={styles.aiIcon} />
+              <Text style={[styles.aiTitle, styles.aiTitleDark]}>Phân tích AI</Text>
             </View>
-            <View style={styles.aiTextRow}>
-              <Icon name="lightbulb-on-outline" size={16} color="#6B7280" style={styles.aiTextIcon} />
-              <Text style={styles.aiText}>Với tốc độ hiện tại, bạn sẽ đạt mục tiêu <Text style={styles.aiHighlight}>"Mua xe hơi"</Text> muộn hơn 3 tháng. Hãy tăng tiết kiệm thêm <Text style={styles.aiHighlight}>₫2M/tháng</Text>.</Text>
+            <View style={styles.aiBulletRow}>
+              <Text style={styles.aiBulletIcon}>🐢</Text>
+              <Text style={[styles.aiText, styles.aiTextDark]}>Chậm: <Text style={styles.aiHighlightDark}>Mua xe hơi</Text> (Trễ 3 tháng)</Text>
             </View>
-            <View style={styles.aiTextRow}>
-              <Icon name="checkbox-marked-circle-outline" size={16} color="#6B7280" style={styles.aiTextIcon} />
-              <Text style={styles.aiText}>Mục tiêu <Text style={styles.aiHighlight}>"Du lịch châu Âu"</Text> đang đúng kế hoạch!</Text>
+            <View style={styles.aiBulletRow}>
+              <Text style={styles.aiBulletIcon}>💡</Text>
+              <Text style={[styles.aiText, styles.aiTextDark]}>Gợi ý: <Text style={styles.aiHighlightDark}>Nạp thêm 2M/tháng</Text></Text>
             </View>
-          </View>
+          </LinearGradient>
 
           {/* Goals List */}
           <View style={styles.section}>
@@ -413,20 +422,20 @@ export default function GoalTrackingScreen({ navigation }: Props) {
               return (
                 <TouchableOpacity
                   key={goal.id}
-                  style={[styles.goalCard, styles.goalButton]}
+                  style={[styles.goalCardLarge, styles.goalButton]}
                   activeOpacity={0.9}
                     onPress={() => navigation.navigate('GoalDetail', { goal, onSave: (updatedGoal: any) => updateGoal(updatedGoal.id, updatedGoal) })}
                 >
-                  <View style={styles.goalHeader}>
-                    <View style={styles.goalInfo}>
-                              <View style={[styles.iconContainer, { backgroundColor: `${goal.color}22` }]}>
-                                <Icon name={goal.icon} size={24} color="#6B7280" style={styles.goalIcon} />
+                  <View style={styles.goalHeaderLarge}>
+                    <View style={styles.goalInfoLarge}>
+                      <View style={[styles.iconContainerLarge, { backgroundColor: goal.color || '#10B981' }]}>
+                        <Icon name={goal.icon} size={48} color="#FFFFFF" style={styles.goalIconLarge} />
                       </View>
                       <View style={styles.goalTitleContainer}>
-                        <Text style={styles.goalTitle} numberOfLines={1} ellipsizeMode="tail">{goal.title}</Text>
+                        <Text style={styles.goalTitleLarge} numberOfLines={1} ellipsizeMode="tail">{goal.title}</Text>
                         <View style={styles.deadlineRow}>
                           <Icon name="calendar-month" size={14} color="#6B7280" style={styles.deadlineIcon} />
-                          <Text style={[styles.goalDeadline, styles.goalDeadlineDark]}>
+                          <Text style={[styles.goalDeadlineLarge]}>
                             {formatDeadlineLabel(goal.deadline)}
                           </Text>
                         </View>
@@ -439,17 +448,15 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                         onPress={() =>
                           Alert.alert(
                             'Cảnh báo tiến độ',
-                            `Bạn đang chậm tiến độ cho mục tiêu "${goal.title}". Cần ${formatVNDCompact(
-                              Math.round(getRequiredMonthly(goal))
-                            )}/tháng để kịp hạn.`
+                            `Bạn đang chậm tiến độ cho mục tiêu "${goal.title}". Cần ${formatVNDCompact(Math.round(getRequiredMonthly(goal)))} /tháng để kịp hạn.`
                           )
                         }
                       >
-                        <Icon name="alert-circle" size={16} color="#EF4444" />
+                        <Icon name="alert-circle" size={18} color="#EF4444" />
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.onTrackBadge}>
-                        <Icon name="check-circle" size={14} color="#10B981" />
+                        <Icon name="check-circle" size={18} color="#10B981" />
                       </View>
                     )}
                   </View>
@@ -471,23 +478,15 @@ export default function GoalTrackingScreen({ navigation }: Props) {
 
                     <View style={styles.amountCompactRight}>
                       <Text style={styles.amountLabelSmall}>Còn lại</Text>
-                      <Text style={[styles.amountValueRemaining]} numberOfLines={1} ellipsizeMode="tail">
+                      <Text style={[styles.amountValueRemainingLarge]} numberOfLines={1} ellipsizeMode="tail">
                         {formatVNDCompact(goal.targetAmount - currentOfGoal)}
                       </Text>
                     </View>
                   </View>
 
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                        <View
-                          style={[
-                            styles.progressFill,
-                            {
-                              width: `${progressVisibleWidth(progress)}%` as any,
-                              backgroundColor: goal.color,
-                            },
-                          ]}
-                        />
+                  <View style={styles.progressContainerLargeInline}>
+                    <View style={styles.progressBarLargeInline}>
+                      <LinearGradient colors={[goal.color || '#10B981', '#06B6D4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.progressFillLarge, { width: `${progressVisibleWidth(progress)}%` as any }]} />
                     </View>
                     <Text style={styles.progressText}>{progress.toFixed(1)}%</Text>
                   </View>
@@ -513,6 +512,33 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                       <Text style={styles.actionTextPrimary}>+ Thêm tiền</Text>
                     </TouchableOpacity>
                     {/* card tap opens details view; removed duplicate 'Chi tiết' button */}
+                  </View>
+
+                  <View style={styles.goalSecondaryActions}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.actionSecondary]}
+                      onPress={() => navigation.navigate('GoalDetail', { goal, onSave: (updatedGoal: any) => updateGoal(updatedGoal.id, updatedGoal) })}
+                    >
+                      <Text style={styles.actionTextSecondary}>Chỉnh sửa</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.actionDanger]}
+                      onPress={() => {
+                        Alert.alert('Xác nhận xóa', `Bạn có chắc chắn muốn xóa mục tiêu "${goal.title}"? Hành động này không thể hoàn tác.`, [
+                          { text: 'Hủy', style: 'cancel' },
+                          { text: 'Xóa', onPress: async () => {
+                              try {
+                                await deleteGoal(goal.id);
+                                Alert.alert('Thành công', 'Mục tiêu đã được xóa');
+                              } catch (err: any) {
+                                Alert.alert('Lỗi', err?.message || 'Không thể xóa mục tiêu');
+                              }
+                            }, style: 'destructive' }
+                        ]);
+                      }}
+                    >
+                      <Text style={[styles.actionTextSecondary, styles.actionTextDanger]}>Xóa</Text>
+                    </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
               );
@@ -545,6 +571,18 @@ export default function GoalTrackingScreen({ navigation }: Props) {
         </Animated.View>
       </ScrollView>
 
+      {/* Floating Action Button */}
+      <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }] }>
+        <TouchableOpacity
+          style={styles.fabButton}
+          onPressIn={handleFabPressIn}
+          onPressOut={handleFabPressOut}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.fabIcon}>+</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
       {/* Add Saving Goal Modal (inline form) */}
       <Modal visible={showAddModal} animationType="slide" onRequestClose={() => setShowAddModal(false)}>
         <View style={styles.modalContainer}>
@@ -558,7 +596,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
             <View style={styles.formGroupRowBetween}>
               <Text style={styles.formLabel}>Gợi ý</Text>
               <TouchableOpacity
@@ -671,7 +709,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
             {activeGoalId ? (() => {
               const g = goals.find((x: Goal) => x.id === activeGoalId);
               if (!g) return <Text style={styles.notFoundText}>Mục tiêu không tìm thấy.</Text>;
@@ -833,11 +871,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: "hidden",
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.18)',
+    borderWidth: 0,
   },
-  totalProgressFill: { height: "100%", backgroundColor: "#10B981", borderRadius: 6 },
+  totalProgressBarGreen: { backgroundColor: 'rgba(16,185,129,0.12)' },
+  totalProgressBarPlus: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)', padding: 2, overflow: 'hidden' },
+  totalProgressFill: { height: "100%", borderRadius: 5 },
   totalPercentage: { fontSize: 13, color: "rgba(15,23,36,0.7)", textAlign: "center" },
+  totalCardPlus: {
+    backgroundColor: '#06B6D4',
+    borderColor: 'rgba(6,182,212,0.18)'
+  },
+  totalLabelOnPlus: { color: '#FFFFFF' },
+  totalAmountSmallOnPlus: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', marginBottom: 12 },
+  totalPercentageOnPlus: { fontSize: 13, color: '#FFFFFF', textAlign: 'center' },
   aiCard: {
     backgroundColor: "rgba(16,185,129,0.06)",
     borderRadius: 16,
@@ -846,6 +892,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(16,185,129,0.14)",
   },
+  aiCardDark: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 0,
+  },
+  aiTitleDark: { color: '#FFFFFF' },
+  aiTextDark: { color: '#E6EEF6', fontSize: 14 },
+  aiHighlightDark: { color: '#FFD166', fontWeight: '900' },
+  aiBulletRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  aiBulletIcon: { fontSize: 18, marginRight: 8 },
   aiHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   aiIcon: { fontSize: 24, marginRight: 8, color: '#10B981' },
   aiTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
@@ -893,9 +950,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(239,68,68,0.2)",
     alignItems: "center",
     justifyContent: "center",
+    position: 'absolute',
+    right: 12,
+    top: 12,
   },
   warningText: { fontSize: 16 },
-  onTrackBadge: { width: 32, height: 24, borderRadius: 12, backgroundColor: 'rgba(16,185,129,0.08)', alignItems: 'center', justifyContent: 'center' },
+  onTrackBadge: { width: 32, height: 24, borderRadius: 12, backgroundColor: 'rgba(16,185,129,0.08)', alignItems: 'center', justifyContent: 'center', position: 'absolute', right: 12, top: 12 },
   goalAmounts: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -938,6 +998,9 @@ const styles = StyleSheet.create({
   goalDeadlineDark: { color: '#6B7280' },
   amountValueWarning: { color: '#F59E0B' },
   goalActions: { flexDirection: "row", gap: 8, marginTop: 8 },
+  goalSecondaryActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  actionDanger: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#EF4444' },
+  actionTextDanger: { color: '#EF4444', fontWeight: '700' },
   actionPrimary: {
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
@@ -958,6 +1021,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 40
   },
+  // Large card styles
+  goalHeaderLarge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, position: 'relative' },
+  goalInfoLarge: { flexDirection: 'row', alignItems: 'center' },
+  iconContainerLarge: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center', marginRight: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 6 },
+  goalIconLarge: { fontSize: 48 },
+  goalTitleLarge: { fontSize: 16, fontWeight: '900', color: '#111827' },
+  goalDeadlineLarge: { fontSize: 12, color: 'rgba(0,0,0,0.6)' },
+  // Progress bar large
+  progressContainerLargeInline: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  progressBarLargeInline: { flex: 1, height: 14, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 8, overflow: 'hidden' },
+  progressFillLarge: { height: '100%', borderRadius: 8 },
+  // FAB
+  fab: { position: 'absolute', right: 20, bottom: 24, width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
+  fabButton: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#10B981' },
+  fabIcon: { fontSize: 28, color: '#FFFFFF' },
+  // Card elevated style
+  goalCardLarge: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 6 },
   goalButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -1005,7 +1085,8 @@ const styles = StyleSheet.create({
   amountLabelSmall: { fontSize: 11, color: 'rgba(15,23,36,0.5)', marginBottom: 2 },
   amountValueSmall: { fontSize: 13, fontWeight: '800', color: '#0F1724' },
   amountValueMuted: { fontSize: 13, color: 'rgba(15,23,36,0.6)', fontWeight: '700' },
-  amountValueRemaining: { fontSize: 14, fontWeight: '900', color: '#EF4444' },
+  amountValueRemaining: { fontSize: 16, fontWeight: '900', color: '#EF4444' },
+  amountValueRemainingLarge: { fontSize: 18, fontWeight: '900', color: '#EF4444' },
   requiredRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   requiredText: { color: '#EF4444', fontWeight: '800', fontSize: 13 },
   onTrackRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
@@ -1094,4 +1175,5 @@ const styles = StyleSheet.create({
   walletChipTextActive: { color: '#FFFFFF' },
   walletChipSub: { fontSize: 11, color: '#6B7280', marginTop: 4 },
   noSuggestionsText: { fontSize: 13, color: 'rgba(15,23,36,0.5)', textAlign: 'center', paddingVertical: 16 },
+  spacer: { width: 40 },
 });

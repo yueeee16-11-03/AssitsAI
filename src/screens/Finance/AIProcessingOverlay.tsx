@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useAIProcessing } from "../../hooks/useAIProcessing";
 import TextAIProcessingService from "../../services/TextAIProcessingService";
+import IncomeTextAIProcessingService from "../../services/IncomeTextAIProcessingService";
 import LoadingOverlay from "./components/LoadingOverlay.tsx";
 import ErrorOverlay from "./components/ErrorOverlay.tsx";
 import AIProcessingResultsScreen from "./AIProcessingResultsScreen";
@@ -33,7 +34,8 @@ export default function AIProcessingOverlay({ route, navigation }: Props) {
 
     try {
       console.log('🤖 [OVERLAY] Processing text note:', textNote);
-      const result = await TextAIProcessingService.processTextNote(textNote, transactionType);
+      const service = transactionType === 'income' ? IncomeTextAIProcessingService : TextAIProcessingService;
+      const result = await service.processTextNote(textNote, transactionType);
 
       console.log('✅ [OVERLAY] Text processing result:', result);
 

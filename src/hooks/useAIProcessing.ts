@@ -10,6 +10,7 @@ import {
   extractMerchantFromProcessedText,
   extractDateFromProcessedText,
 } from "../services/GeminiAIService";
+import { processOCRTextWithGeminiIncome } from "../services/IncomeGeminiAIService";
 
 export interface ProcessedData {
   rawText?: string;
@@ -96,7 +97,9 @@ export const useAIProcessing = ({
       if (enableGeminiProcessing && rawOCRText.trim().length > 0) {
         console.log('\n🤖 [OCR_PROCESSOR] Step 2: Starting Gemini AI processing...');
         console.log('📊 [OCR_PROCESSOR] Transaction type:', transactionType);
-        const geminiResult = await processOCRTextWithGemini(rawOCRText, transactionType);
+        const geminiResult = transactionType === 'income'
+          ? await processOCRTextWithGeminiIncome(rawOCRText, transactionType)
+          : await processOCRTextWithGemini(rawOCRText, transactionType);
 
         if (geminiResult.success) {
           console.log('✅ [OCR_PROCESSOR] Gemini processing completed');

@@ -4,7 +4,7 @@ import ENV from '../config/env';
 // Khởi tạo Gemini client với API key riêng cho AIInsightService
 const API_KEY = ENV.GEMINI_API_KEY_SIGHT;
 if (!API_KEY) {
-  console.warn("⚠️ Thiếu GEMINI_API_KEY_IMAGE - vui lòng cấu hình trong src/config/env.ts");
+  console.warn("⚠️ Thiếu GEMINI_API_KEY_SIGHT - vui lòng cấu hình trong src/config/env.ts");
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
 
@@ -46,10 +46,6 @@ function safeAmount(a: any): number {
   return Math.round(n);
 }
 
-// Simple in-memory cache for AI results keyed by startISO|endISO
-const AI_CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
-const aiCache = new Map<string, { ts: number; result: any; raw?: string }>();
-
 const CATEGORY_MAP: Record<string, string> = {
   'ăn uống': 'Ăn uống',
   'ăn': 'Ăn uống',
@@ -83,6 +79,7 @@ function normalizeCategory(name?: string): string {
 
 export async function analyzeTransactionsWithAI(
   transactions: Transaction[],
+  habits: any[] = [],
   _opts?: { periodLabel?: string; startDate?: string | Date; endDate?: string | Date }
 ): Promise<{
   success: boolean;
@@ -91,149 +88,49 @@ export async function analyzeTransactionsWithAI(
   error?: string;
 }> {
   try {
-    if (!transactions || transactions.length === 0) {
+    // Nếu không có transactions, trả về mock data
+    const hasTransactions = transactions && transactions.length > 0;
+    
+    if (!hasTransactions) {
+      console.log('[AIInsightService] No transactions available, returning mock analysis');
       return {
         success: true,
         data: {
-          summary: 'No transactions available for analysis.',
+          summary: 'Bạn chưa có giao dịch nào. Hãy thêm giao dịch để nhận được phân tích chi tiết từ AI.',
           totalIncome: 0,
           totalExpense: 0,
           categoryBreakdown: [],
-          suggestions: [],
+          suggestions: [
+            { title: 'Bắt đầu ghi chép', description: 'Thêm giao dịch để AI phân tích' }
+          ],
           anomalies: [],
         },
-        raw: '',
+        raw: 'Mock data (no transactions)',
       };
     }
 
-    // Xác định khoảng thời gian phân tích dựa trên _opts (periodLabel hoặc start/end cụ thể)
-    let start: Date | null = null;
-    let end: Date | null = null;
-    const now = new Date();
-    if (_opts?.startDate) {
-      start = new Date(_opts.startDate);
-    }
-    if (_opts?.endDate) {
-      end = new Date(_opts.endDate);
-    }
+    // ✅ THAY ĐỔI: Sử dụng hàm tối ưu token
+    // Bước 1: Tính toán dữ liệu trước (app-side)
+    const compact = prepareCompactPayload(transactions, habits);
+    console.log('[AIInsightService] Compact payload prepared:', JSON.stringify(compact).length, 'bytes');
 
-    if (!start && _opts?.periodLabel) {
-      const p = _opts.periodLabel;
-      switch (p) {
-        case 'day':
-          start = new Date(now);
-          start.setHours(0, 0, 0, 0);
-          end = new Date(start);
-          end.setHours(23, 59, 59, 999);
-          break;
-        case 'week':
-          start = new Date(now);
-          const dayOfWeek = now.getDay();
-          start.setDate(now.getDate() - dayOfWeek);
-          start.setHours(0, 0, 0, 0);
-          end = now;
-          break;
-        case 'month':
-          start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-          end = now;
-          break;
-        case 'year':
-          start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
-          end = now;
-          break;
-        default:
-          start = null;
-          end = null;
-      }
-    }
-
-    // Lọc transactions theo khoảng thời gian (nếu có)
-    const filtered = (transactions || []).filter((t) => {
-      try {
-        const txDate = parseTransactionDate(t) || new Date();
-        if (!txDate) return false;
-        if (start && txDate < start) return false;
-        if (end && txDate > end) return false;
-        return true;
-      } catch {
-        return false;
-      }
-    });
-
-    // Chuẩn bị lines từ filtered transactions
-    const lines = filtered.slice(0, 200).map((t) => {
-      const dateObj = parseTransactionDate(t) || new Date();
-      const dateStr = dateObj.toISOString();
-      const amount = safeAmount((t as any).amount);
-      return `${dateStr} | ${t.type === 'income' ? 'THU' : 'CHI'} | ${t.category || 'Khác'} | ${amount} | ${t.description || ''}`;
-    });
-
-    const rangeText = start && end ? `${start.toISOString()} → ${end.toISOString()}` : 'Toàn bộ dữ liệu';
-
-    const prompt = `Bạn là trợ lý tài chính thông minh.\nPhân tích các giao dịch trong khoảng thời gian: ${rangeText}.\n\nChỉ phân tích và trả về kết quả cho các giao dịch trong khoảng này.` +
-      `\n\nYêu cầu (trả về JSON):` +
-      `\n1) summary: Tóm tắt (1-2 câu) bằng tiếng Việt, nêu các danh mục chi tiêu chính.` +
-      `\n2) totalIncome: tổng thu nhập (số nguyên VND).` +
-      `\n3) totalExpense: tổng chi tiêu (số nguyên VND).` +
-      `\n4) categoryBreakdown: mảng { category: string, amount: integer, percent: number } — category phải khớp tên hệ thống (Ăn uống, Di chuyển, Mua sắm, Giải trí, Khác).` +
-      `\n5) suggestions: mảng các khuyến nghị ngắn (3-6 mục).` +
-      `\n6) anomalies: mảng mô tả giao dịch bất thường.` +
-      `\n\nDữ liệu giao dịch (tối đa 200 dòng):\n${lines.join('\n')}\n\nTrả về duy nhất JSON hợp lệ.`;
-
-    const cacheKey = `${start ? start.toISOString() : 'all'}|${end ? end.toISOString() : 'all'}`;
-    const cached = aiCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < AI_CACHE_TTL_MS) {
-      console.log(`[AIInsightService] Cache hit for ${cacheKey}`);
-      return { success: true, data: cached.result, raw: cached.raw };
-    }
-
-    console.log('🚀 [AIInsightService] Gọi Gemini với prompt:', prompt.substring(0, 200));
+    // Bước 2: Gửi dữ liệu đã tính toán lên AI (thay vì raw data)
+    const result = await analyzeCompactPayload(compact, { periodLabel: _opts?.periodLabel || 'month' });
     
-    // Gọi Gemini trực tiếp với API key riêng
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text();
-    
-    console.log('✅ [AIInsightService] Kết quả trả về:', raw.substring(0, 200));
-
-    // Try to parse JSON from the raw text. Gemini should return JSON only per instruction.
-    let parsed: any = null;
-    try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/m);
-      const jsonText = jsonMatch ? jsonMatch[0] : raw;
-      parsed = JSON.parse(jsonText);
-    } catch (err) {
-      console.error('[AIInsightService] JSON parse error:', err);
+    if (result.success) {
+      return {
+        success: true,
+        data: result.data,
+        raw: result.raw,
+      };
+    } else {
       return {
         success: false,
-        raw,
-        error: 'Không thể phân tích JSON trả về từ AI. Xem raw để debug.',
+        error: result.error,
       };
     }
-
-    // Normalize categoryBreakdown if present
-    if (parsed && Array.isArray(parsed.categoryBreakdown)) {
-      parsed.categoryBreakdown = parsed.categoryBreakdown.map((c: any) => ({
-        category: normalizeCategory(c?.category),
-        amount: safeAmount(c?.amount),
-        percent: typeof c?.percent === 'number' ? Math.round(c.percent * 10) / 10 : 0,
-      }));
-    }
-
-    // Store in cache
-    try {
-      aiCache.set(cacheKey, { ts: Date.now(), result: parsed, raw });
-    } catch {
-      // ignore cache set errors
-    }
-
-    return {
-      success: true,
-      data: parsed,
-      raw,
-    };
   } catch (error: any) {
-    console.error('[AIInsightService] Error calling AI:', error?.message || error);
+    console.error('[AIInsightService] Error in analyzeTransactionsWithAI:', error?.message || error);
     return {
       success: false,
       error: error?.message || String(error),
@@ -244,3 +141,157 @@ export async function analyzeTransactionsWithAI(
 export default {
   analyzeTransactionsWithAI,
 };
+
+export function prepareCompactPayload(transactions: Transaction[], habits: any[]) {
+  const now = new Date();
+  const txs = transactions || [];
+  
+  // 1. Tính tổng thu/chi
+  const totalExpense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + safeAmount((t as any).amount), 0);
+  const totalIncome = txs.filter(t => t.type === 'income').reduce((s, t) => s + safeAmount((t as any).amount), 0);
+  const balance = totalIncome - totalExpense;
+  const savingRate = totalIncome > 0 ? Math.round(((totalIncome - totalExpense) / totalIncome) * 100) : 0;
+
+  // 2. Top 3 danh mục tốn tiền nhất
+  const categoryMap: Record<string, number> = {};
+  txs.forEach(t => {
+    if (t.type === 'expense') {
+      const cat = normalizeCategory(t.category);
+      categoryMap[cat] = (categoryMap[cat] || 0) + safeAmount((t as any).amount);
+    }
+  });
+
+  const topCategories = Object.entries(categoryMap)
+    .map(([name, amount]) => ({ 
+      name, 
+      amount,
+      percent: totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0
+    }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
+
+  // 3. Thói quen tốt nhất/tệ nhất
+  const bestHabit = (habits || []).length > 0 
+    ? (habits || []).reduce((prev: any, cur: any) => (prev?.streak > cur?.streak ? prev : cur))
+    : null;
+  const worstHabit = (habits || []).length > 0
+    ? (habits || []).reduce((prev: any, cur: any) => (prev?.streak < cur?.streak ? prev : cur))
+    : null;
+  const habitCount = (habits || []).length;
+  const avgHabitStreak = habitCount > 0 
+    ? Math.round(habits.reduce((s: number, h: any) => s + (h?.streak || 0), 0) / habitCount)
+    : 0;
+
+  // 4. Xu hướng 5 ngày gần nhất
+  const recentTrend = Array.from({ length: 5 }).map((_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const dayStr = d.toISOString().slice(0, 10);
+    const daySpend = txs
+      .filter(t => {
+        const dt = parseTransactionDate(t);
+        if (!dt) return false;
+        return dt.toISOString().slice(0, 10) === dayStr && t.type === 'expense';
+      })
+      .reduce((s, t) => s + safeAmount((t as any).amount), 0);
+
+    const dayIncome = txs
+      .filter(t => {
+        const dt = parseTransactionDate(t);
+        if (!dt) return false;
+        return dt.toISOString().slice(0, 10) === dayStr && t.type === 'income';
+      })
+      .reduce((s, t) => s + safeAmount((t as any).amount), 0);
+
+    const spend_level = daySpend >= 500000 ? 'HIGH' : daySpend >= 200000 ? 'MEDIUM' : 'LOW';
+    const habit_status = (habits || []).some(h => (h.progress || 0) >= 80) ? 'SUCCESS' : 'FAIL';
+    return { date: dayStr, daySpend, dayIncome, spend_level, habit_status };
+  });
+
+  // 5. Transaction count
+  const txCount = txs.length;
+  const expenseCount = txs.filter(t => t.type === 'expense').length;
+
+  return {
+    summary: {
+      totalExpense,
+      totalIncome,
+      balance,
+      savingRate: `${savingRate}%`,
+      transactionCount: txCount,
+      expenseCount,
+    },
+    top_spending_categories: topCategories,
+    habits_summary: {
+      best: bestHabit ? `${bestHabit.name} (${bestHabit.streak}d)` : 'Không có',
+      worst: worstHabit ? `${worstHabit.name} (${worstHabit.streak}d)` : 'Không có',
+      total_habits: habitCount,
+      avg_streak: avgHabitStreak,
+    },
+    recent_daily_trend: recentTrend,
+  };
+}
+
+export async function analyzeCompactPayload(compactPayload: any, _opts?: { periodLabel?: string }) {
+  try {
+    if (!compactPayload) {
+      return { success: false, error: 'No compact payload provided' };
+    }
+
+    const summary = compactPayload.summary || {};
+    const topCat = (compactPayload.top_spending_categories || [])[0];
+    
+    // Prompt cực ngắn (~30 tokens)
+    const prompt = `Chi ${Math.round(summary.totalExpense / 1000)}k, tiết kiệm ${summary.savingRate}%, top ${topCat?.name}. Trả về một JSON hợp lệ (không có văn bản phụ). Ví dụ: {"suggestion":"Sao lưu nhỏ: giảm đồ ăn nhanh"}. Hãy trả lời CHỈ một JSON với trường "suggestion".`;
+
+    console.log('[AIInsightService] analyzeCompactPayload - ~30 tokens');
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text();
+    
+    // Attempt to extract and parse a JSON object from the AI response.
+    // The model may return plain text or plain error message; avoid attempting JSON.parse on such strings.
+    const extractJSONFromRaw = (text: string) => {
+      if (!text || typeof text !== 'string') return null;
+      // Find first `{` and last `}` and parse the substring; this is more tolerant than the earlier regex.
+      const first = text.indexOf('{');
+      const last = text.lastIndexOf('}');
+      if (first === -1 || last === -1 || last <= first) return null;
+      const candidate = text.slice(first, last + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch (err) {
+        // Re-throw so caller can handle.
+        throw err;
+      }
+    };
+
+    let parsed: any = null;
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/m);
+      if (jsonMatch) {
+        // Use regex match if present (covers cases with extra text around JSON)
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        // Try explicit index/last-char extraction heuristic
+        const candidate = extractJSONFromRaw(raw);
+        if (candidate) {
+          parsed = candidate;
+        } else {
+          console.warn('[AIInsightService] No JSON object detected in AI response - returning raw output for inspection:', raw?.slice?.(0, 400));
+          return { success: false, raw, error: 'AI returned non-JSON response' };
+        }
+      }
+    } catch (err: any) {
+      console.error('[AIInsightService] JSON parse error - raw response (truncated 400 chars):', raw?.slice?.(0, 400));
+      console.error('[AIInsightService] JSON parse error:', err?.message || err);
+      return { success: false, raw, error: 'Lỗi phân tích' };
+    }
+
+    return { success: true, data: parsed, raw };
+  } catch (error: any) {
+    console.error('analyzeCompactPayload error:', error?.message || error);
+    return { success: false, error: error?.message || String(error) };
+  }
+}

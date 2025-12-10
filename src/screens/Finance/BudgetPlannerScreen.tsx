@@ -353,8 +353,17 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
           <Icon name="arrow-left" size={20} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Ngân sách</Text>
-        {/* spacer to keep title centered; FAB used for adding budgets */}
-        <View style={styles.headerSpacer} />
+        {/* Add icon top-right: open Add Budget modal */}
+        <TouchableOpacity
+          style={styles.headerAddButton}
+          onPress={() => {
+            setShowModalSuggestionButtons(false);
+            setAddModalVisible(true);
+          }}
+          activeOpacity={0.85}
+        >
+          <Icon name="plus" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       {isLoading && budgets.length === 0 ? (
@@ -584,19 +593,6 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
       )}
 
       {/* Add Budget Modal */}
-      {/* Floating Add FAB */}
-      <TouchableOpacity
-            style={styles.fabWrap}
-            onPress={() => {
-              setShowModalSuggestionButtons(false);
-              setAddModalVisible(true);
-            }}
-        activeOpacity={0.9}
-      >
-        <View style={styles.fabButton}>
-          <Text style={styles.fabPlus}>+</Text>
-        </View>
-      </TouchableOpacity>
 
       <Modal
         visible={addModalVisible}
@@ -701,7 +697,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                       {modalSuggestions.map((s, i) => (
                         <TouchableOpacity
                           key={`${s.categoryId}-${s.amount}-${i}`}
-                          style={[styles.modalSuggestionCard, { borderColor: s.color || '#E5E7EB' }]}
+                          style={styles.modalSuggestionCard}
                           onPress={() => {
                             setNewBudgetData({
                               category: s.category,
@@ -713,7 +709,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                             setShowModalSuggestionButtons(false);
                           }}
                         >
-                          <Icon name={s.icon} size={28} color={s.color} style={styles.modalSuggestionIcon} />
+                          <Icon name={s.icon} size={28} color="#0f1724" style={styles.modalSuggestionIcon} />
                           <Text style={styles.modalSuggestionName} numberOfLines={1}>{s.category}</Text>
                           <Text style={styles.modalSuggestionAmount}>{formatCurrency(s.amount)}</Text>
                         </TouchableOpacity>
@@ -849,6 +845,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addIcon: { fontSize: 24, color: "#FFFFFF", fontWeight: "700" },
+  headerAddButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#00897B', alignItems: 'center', justifyContent: 'center' },
+  headerAddIcon: { fontSize: 20, color: '#FFFFFF' },
   headerSpacer: { width: 40 },
   content: { padding: 16 },
   monthSelector: { paddingBottom: 16, gap: 8 },
@@ -1180,10 +1178,10 @@ const styles = StyleSheet.create({
   modalAISmall: { width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(15,23,36,0.04)', alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   modalAISmallActive: { backgroundColor: '#10B981' },
   modalSuggestionsScroll: { paddingLeft: 2 },
-  modalSuggestionCard: { width: 140, borderRadius: 12, padding: 12, backgroundColor: '#FFFFFF', marginRight: 12, borderWidth: 1, alignItems: 'center' },
+  modalSuggestionCard: { width: 140, borderRadius: 12, padding: 12, backgroundColor: '#FFFFFF', marginRight: 12, borderWidth: 1, borderColor: '#10B981', alignItems: 'center' },
   modalSuggestionIcon: { marginBottom: 8 },
   modalSuggestionName: { fontSize: 13, fontWeight: '800', color: '#0f1724', marginBottom: 4 },
-  modalSuggestionAmount: { fontSize: 13, fontWeight: '700', color: '#6366F1' },
+  modalSuggestionAmount: { fontSize: 13, fontWeight: '700', color: '#0f1724' },
 
   // small refresh spinner that sits above content
   refreshIndicatorWrap: {

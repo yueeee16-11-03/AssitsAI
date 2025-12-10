@@ -100,66 +100,13 @@ class TextAIProcessingServiceClass {
    * @private
    */
   _getTextProcessingPrompt(text, transactionType) {
-    // 🟢 Prompt cho INCOME (Thu nhập)
+    // NOTE: This service is for expense TEXT processing only.
+    // For income text processing use IncomeTextAIProcessingService instead.
     if (transactionType === 'income') {
-      return `
-Bạn là trợ lý thông minh xử lý thông tin tài chính cho ứng dụng quản lý thu nhập.
-
-TASK: Phân tích ghi chú THU NHẬP này (có thể nhiều item), trích xuất thông tin và TÍNH TỔNG TIỀN:
-
-Ghi chú: "${text}"
-
-Hãy trích xuất và trả về JSON với các trường:
-{
-  "totalAmount": <TỔNG số tiền (chỉ số, VD: 5000000, KHÔNG có chữ)>,
-  "items": [
-    {
-      "item": "<Mô tả nguồn thu nhập>",
-      "amount": <số tiền của item này>
-    }
-  ],
-  "category": "<Danh mục THU NHẬP: Lương, Thưởng, Đầu tư, Thu nhập khác>",
-  "description": "<Mô tả chi tiết tổng hợp của giao dịch>",
-  "confidence": "<high/medium/low - độ chắc chắn>"
-}
-
-LƯU Ý:
-- QUAN TRỌNG: Tính tổng ALL items vào totalAmount
-- Nếu có nhiều item, liệt kê tất cả trong "items" array
-- Nếu không tìm thấy số tiền, set totalAmount = 0
-- Danh mục phải là một trong: Lương, Thưởng, Đầu tư, Thu nhập khác
-- Description nên rõ ràng, ngắn gọn
-- Confidence = "high" nếu rõ ràng, "low" nếu mơ hồ
-- CHỈ trả về JSON, không giải thích thêm
-
-Ví dụ 1 (Single item):
-Input: "Lương tháng 5 triệu"
-Output:
-{
-  "totalAmount": 5000000,
-  "items": [{"item": "Lương tháng", "amount": 5000000}],
-  "category": "Lương",
-  "description": "Lương tháng",
-  "confidence": "high"
-}
-
-Ví dụ 2 (Multiple items):
-Input: "lương 5 triệu thưởng 500k"
-Output:
-{
-  "totalAmount": 5500000,
-  "items": [
-    {"item": "Lương", "amount": 5000000},
-    {"item": "Thưởng", "amount": 500000}
-  ],
-  "category": "Lương",
-  "description": "Lương + Thưởng",
-  "confidence": "high"
-}
-      `.trim();
+      throw new Error('Use IncomeTextAIProcessingService for income text processing');
     }
     
-    // 🔴 Prompt cho EXPENSE (Chi tiêu)
+    // 🔴 EXPENSE TEXT PROMPT (default)
     return `
 Bạn là trợ lý thông minh xử lý thông tin tài chính cho ứng dụng quản lý chi tiêu.
 
@@ -230,7 +177,7 @@ Output:
         return {
           totalAmount: 0,
           items: [],
-          category: transactionType === 'income' ? '💰 Thu nhập' : '📝 Ghi chú',
+          category: '📝 Ghi chú',
           description: responseText,
         };
       }
@@ -254,7 +201,7 @@ Output:
       return {
         totalAmount: 0,
         items: [],
-        category: transactionType === 'income' ? '💰 Thu nhập' : '📝 Ghi chú',
+        category: '📝 Ghi chú',
         description: responseText,
         confidence: 'low',
       };
@@ -267,14 +214,14 @@ Output:
    */
   _mapCategory(geminiCategory, transactionType) {
     if (!geminiCategory) {
-      return transactionType === 'income' ? '💰 Thu nhập' : '📝 Ghi chú';
+      return '📝 Ghi chú';
     }
 
     // Loại bỏ emoji từ geminiCategory nếu có
     const cleanCategory = geminiCategory.replace(/[🍔🚗🛍️🎮💊📚🏠💼🎁📈🌟✓]/g, '').trim();
     
     const categoryMap = {
-      // Expense categories
+      // Expense categories only - income routes to IncomeTextAIProcessingService
       'Ăn uống': 'Ăn uống 🍔',
       'Vận chuyển': 'Vận chuyển 🚗',
       'Giao thông': 'Vận chuyển 🚗', // Alias
@@ -287,11 +234,6 @@ Output:
       'Nhà ở': 'Nhà cửa 🏠', // Alias
       'Tiện ích': 'Nhà cửa 🏠', // Dùng chung category
       'Khác': 'Khác 📦',
-      // Income categories
-      'Lương': 'Lương 💼',
-      'Thưởng': 'Thưởng 🎁',
-      'Đầu tư': 'Đầu tư 📈',
-      'Thu nhập khác': 'Khác 💰',
     };
 
     // Try exact match trước
@@ -307,7 +249,7 @@ Output:
     }
 
     // Fallback: Return as is với emoji nếu không match
-    return transactionType === 'income' ? '💰 Thu nhập' : '📝 Ghi chú';
+    return '📝 Ghi chú';
   }
 
   /**

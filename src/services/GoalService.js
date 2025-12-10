@@ -56,12 +56,19 @@ class GoalService {
   async addMoneyToGoal(goalId, transaction) {
     try {
       console.log('💳 [GoalService] addMoneyToGoal:', goalId, transaction.amount);
+      // Ensure transaction has category and use description instead of note
+      const txWithCategory = {
+        ...transaction,
+        category: transaction.category || 'Tiết kiệm',
+        description: transaction.description || transaction.note || 'Nạp tiền',
+      };
+      
       // Read the goal before updating so we can compute progress delta
       const allBefore = await this.getAllGoals();
       const beforeGoal = (allBefore || []).find(g => g.id === goalId) || null;
       const beforeAmount = beforeGoal?.currentAmount || 0;
 
-      await GoalApi.addTransactionToGoal(goalId, transaction);
+      await GoalApi.addTransactionToGoal(goalId, txWithCategory);
       // small delay to allow server-side timestamps
       await new Promise(r => setTimeout(r, 400));
       const fresh = await this.getAllGoals();

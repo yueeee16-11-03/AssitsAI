@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Animated, Easing, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { NavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainerRef, NavigationContainerRefWithCurrent } from '@react-navigation/native';
 
-export default function BottomTabs({ navigationRef, currentRouteName, showFab = true, showSheet = true, overlay = false }: { navigationRef?: React.RefObject<NavigationContainerRef<any>>; currentRouteName?: string; showFab?: boolean; showSheet?: boolean; overlay?: boolean; }) {
+export default function BottomTabs({ navigationRef, currentRouteName, showFab = true, showSheet = true, overlay = false }: { navigationRef?: React.RefObject<NavigationContainerRef<any>> | NavigationContainerRefWithCurrent<any>; currentRouteName?: string; showFab?: boolean; showSheet?: boolean; overlay?: boolean; }) {
   const [sheetVisible, setSheetVisible] = React.useState(false);
   const [scanOptionsVisible, setScanOptionsVisible] = React.useState(false);
   const sheetAnim = React.useRef(new Animated.Value(0)).current;

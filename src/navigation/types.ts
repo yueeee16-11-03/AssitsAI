@@ -80,7 +80,6 @@ export type RootStackParamList = {
   LoginHistory: undefined;
   
   // Daily Goals
-  DailyGoalsDetail: undefined;
   GoalDetail: { goal?: any; onSave?: (updatedGoal: any) => void };
   
   // Finance Reports

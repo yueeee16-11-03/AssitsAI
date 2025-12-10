@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { RootStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
@@ -29,7 +31,7 @@ export default function ProfileScreen({ navigation }: Props) {
     email: "nguyenvana@example.com",
     phone: "0912345678",
     dateOfBirth: "01/01/1990",
-    avatar: "👤",
+    avatar: 'account-circle',
   });
 
   const [financeConfig, _setFinanceConfig] = useState({
@@ -52,9 +54,9 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   const stats = [
-    { label: "Mục tiêu", value: "5", icon: "🎯" },
-    { label: "Thói quen", value: "8", icon: "✓" },
-    { label: "Streak", value: "15", icon: "🔥" },
+    { label: "Mục tiêu", value: "5", icon: "bullseye" },
+    { label: "Thói quen", value: "8", icon: "check" },
+    { label: "Streak", value: "15", icon: "fire" },
   ];
 
   return (
@@ -77,9 +79,11 @@ export default function ProfileScreen({ navigation }: Props) {
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
-              <Text style={styles.avatar}>{profile.avatar}</Text>
+              <View style={styles.avatarVisual}>
+                <Icon name={profile.avatar as string} size={80} color="#00796B" />
+              </View>
               <TouchableOpacity style={styles.cameraButton}>
-                <Text style={styles.cameraIcon}>📷</Text>
+                <Icon name="camera" size={16} color="#111827" style={styles.cameraIcon} />
               </TouchableOpacity>
             </View>
             <Text style={styles.userName}>{profile.name}</Text>
@@ -90,7 +94,7 @@ export default function ProfileScreen({ navigation }: Props) {
           <View style={styles.statsCard}>
             {stats.map((stat, index) => (
               <View key={index} style={styles.statItem}>
-                <Text style={styles.statIcon}>{stat.icon}</Text>
+                <Icon name={stat.icon as string} size={28} color="#6366F1" style={styles.statIcon} />
                 <Text style={styles.statValue}>{stat.value}</Text>
                 <Text style={styles.statLabel}>{stat.label}</Text>
               </View>
@@ -184,7 +188,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingIcon}>🔔</Text>
+                <Icon name="bell-outline" size={20} color="#111827" style={styles.settingIcon} />
                 <View style={styles.settingText}>
                   <Text style={styles.settingLabel}>Thông báo</Text>
                   <Text style={styles.settingDescription}>Nhận nhắc nhở và cập nhật</Text>
@@ -200,7 +204,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingIcon}>🔐</Text>
+                <Icon name="lock-outline" size={20} color="#111827" style={styles.settingIcon} />
                 <View style={styles.settingText}>
                   <Text style={styles.settingLabel}>Xác thực sinh học</Text>
                   <Text style={styles.settingDescription}>Face ID / Touch ID</Text>
@@ -218,7 +222,7 @@ export default function ProfileScreen({ navigation }: Props) {
           {/* Quick Links */}
           <View style={styles.section}>
             <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate("AISetting")}>
-              <Text style={styles.linkIcon}>🤖</Text>
+              <Icon name="robot" size={28} color="#6B7280" style={styles.linkIcon} />
               <View style={styles.linkText}>
                 <Text style={styles.linkLabel}>Cài đặt AI</Text>
                 <Text style={styles.linkDescription}>Tùy chỉnh trợ lý AI</Text>
@@ -227,7 +231,7 @@ export default function ProfileScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate("GoalTracking")}>
-              <Text style={styles.linkIcon}>🎯</Text>
+              <Icon name="bullseye" size={28} color="#EC4899" style={styles.linkIcon} />
               <View style={styles.linkText}>
                 <Text style={styles.linkLabel}>Mục tiêu của tôi</Text>
                 <Text style={styles.linkDescription}>Quản lý mục tiêu cá nhân</Text>
@@ -236,7 +240,7 @@ export default function ProfileScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate("HabitDashboard")}>
-              <Text style={styles.linkIcon}>✓</Text>
+              <Icon name="check" size={28} color="#10B981" style={styles.linkIcon} />
               <View style={styles.linkText}>
                 <Text style={styles.linkLabel}>Thói quen</Text>
                 <Text style={styles.linkDescription}>Theo dõi thói quen hàng ngày</Text>
@@ -276,6 +280,7 @@ const styles = StyleSheet.create({
   avatarSection: { alignItems: "center", marginBottom: 24 },
   avatarContainer: { position: "relative", marginBottom: 16 },
   avatar: { fontSize: 80, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(99,102,241,0.2)", textAlign: "center", lineHeight: 120, borderWidth: 3, borderColor: "rgba(99,102,241,0.3)" },
+  avatarVisual: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(99,102,241,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: 'rgba(99,102,241,0.3)' },
   cameraButton: { position: "absolute", bottom: 0, right: 0, width: 36, height: 36, borderRadius: 18, backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: "#0A0E27" },
   cameraIcon: { fontSize: 16 },
   userName: { fontSize: 24, fontWeight: "900", color: "#00796B", marginBottom: 4 },

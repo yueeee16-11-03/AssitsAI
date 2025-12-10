@@ -12,6 +12,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+// @ts-ignore: react-native-vector-icons types may be missing in this project
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
 
@@ -37,9 +39,9 @@ const LOCK_TIMEOUT_OPTIONS = [
 ];
 
 const LOCK_METHOD_OPTIONS = [
-  { key: 'pin', label: 'Mã PIN', icon: '🔢', description: 'Mã PIN 4-6 chữ số' },
-  { key: 'pattern', label: 'Hình vẽ', icon: '⭕', description: 'Vẽ hình để mở khóa' },
-  { key: 'biometric', label: 'Sinh trắc học', icon: '👆', description: 'Vân tay / Face ID' },
+  { key: 'pin', label: 'Mã PIN', icon: 'lock-outline', description: 'Mã PIN 4-6 chữ số' },
+  { key: 'pattern', label: 'Hình vẽ', icon: 'gesture', description: 'Vẽ hình để mở khóa' },
+  { key: 'biometric', label: 'Sinh trắc học', icon: 'fingerprint', description: 'Vân tay / Face ID' },
 ];
 
 export default function SecuritySettingsScreen({ navigation }: Props) {
@@ -197,7 +199,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
   ) => (
     <View style={[styles.settingItem, disabled && styles.settingItemDisabled]}>
       <View style={styles.settingInfo}>
-        {icon && <Text style={styles.settingIcon}>{icon}</Text>}
+        {icon && <Icon name={icon as string} size={20} color="#00796B" style={styles.settingIcon} />}
         <View style={styles.settingText}>
           <Text style={[styles.settingTitle, disabled && styles.disabledText]}>{title}</Text>
           <Text style={[styles.settingSubtitle, disabled && styles.disabledText]}>{subtitle}</Text>
@@ -222,7 +224,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
   ) => (
     <TouchableOpacity style={styles.actionItem} onPress={onPress}>
       <View style={styles.settingInfo}>
-        <Text style={styles.settingIcon}>{icon}</Text>
+        <Icon name={icon as string} size={20} color={danger ? '#EF4444' : '#00796B'} style={styles.settingIcon} />
         <View style={styles.settingText}>
           <Text style={[styles.settingTitle, danger && styles.dangerText]}>{title}</Text>
           <Text style={[styles.settingSubtitle, danger && styles.dangerSubtext]}>{subtitle}</Text>
@@ -247,7 +249,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
             onPress={() => settings.appLockEnabled && handleChangeLockMethod(option.key as any)}
             disabled={!settings.appLockEnabled}
           >
-            <Text style={styles.lockMethodIcon}>{option.icon}</Text>
+            <Icon name={option.icon as string} size={18} color="#00796B" style={styles.lockMethodIcon} />
             <Text style={[
               styles.lockMethodLabel,
               !settings.appLockEnabled && styles.disabledText
@@ -311,7 +313,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
       {/* Security Status */}
       <View style={styles.statusCard}>
         <View style={styles.statusHeader}>
-          <Text style={styles.statusIcon}>🛡️</Text>
+          <Icon name="shield" size={32} color="#00796B" style={styles.statusIcon} />
           <View style={styles.statusInfo}>
             <Text style={styles.statusTitle}>Trạng thái bảo mật</Text>
             <Text style={[
@@ -348,7 +350,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
               'Yêu cầu xác thực khi mở ứng dụng',
               settings.appLockEnabled,
               () => handleToggleSetting('appLockEnabled'),
-              '🔐'
+              'lock-outline'
             )}
             
             {settings.appLockEnabled && (
@@ -360,7 +362,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
                   'Sử dụng vân tay hoặc Face ID',
                   settings.biometricEnabled,
                   () => handleToggleSetting('biometricEnabled'),
-                  '👆',
+                  'fingerprint',
                   !settings.appLockEnabled
                 )}
               </>
@@ -376,21 +378,21 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
               'Không hiển thị số tiền trong notification',
               settings.hideBalanceInNotifications,
               () => handleToggleSetting('hideBalanceInNotifications'),
-              '🔔'
+              'bell-outline'
             )}
             {renderSettingItem(
               'Ẩn trong App Switcher',
               'Che màn hình khi chuyển ứng dụng',
               settings.hideInAppSwitcher,
               () => handleToggleSetting('hideInAppSwitcher'),
-              '📱'
+              'cellphone'
             )}
             {renderSettingItem(
               'Yêu cầu xác thực cho ví',
               'Xác thực khi xem thông tin ví cá nhân',
               settings.requireAuthForWallet,
               () => handleToggleSetting('requireAuthForWallet'),
-              '👛'
+              'wallet-outline'
             )}
           </>
         ))}
@@ -403,19 +405,19 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
               'Bảo mật bổ sung với SMS/Email',
               settings.twoFactorEnabled,
               () => handleToggleSetting('twoFactorEnabled'),
-              '🔑'
+              'key-outline'
             )}
             {renderActionItem(
               'Lịch sử đăng nhập',
               'Xem các lần đăng nhập gần đây',
               handleViewLoginHistory,
-              '📊'
+              'chart-bar'
             )}
             {renderActionItem(
               'Đăng xuất tất cả thiết bị',
               'Đăng xuất khỏi các thiết bị khác',
               handleLogoutAllDevices,
-              '🚪',
+              'logout-variant',
               true
             )}
           </>
@@ -429,20 +431,20 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
               'Tự động sao lưu dữ liệu được mã hóa',
               settings.autoBackup,
               () => handleToggleSetting('autoBackup'),
-              '☁️'
+              'cloud-outline'
             )}
             {renderActionItem(
               'Sao lưu ngay',
               'Sao lưu dữ liệu thủ công',
               handleBackupNow,
-              '💾'
+              'content-save-outline'
             )}
             {renderSettingItem(
               'Xóa dữ liệu khi đăng xuất',
               'Xóa dữ liệu local khi logout',
               settings.clearDataOnLogout,
               () => handleToggleSetting('clearDataOnLogout'),
-              '🗑️'
+              'trash-can-outline'
             )}
           </>
         ))}
@@ -452,7 +454,10 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
 
       {/* Security Tips */}
       <View style={styles.tipsCard}>
-        <Text style={styles.tipsTitle}>💡 Mẹo bảo mật</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Icon name="lightbulb" size={18} color="#6366F1" />
+          <Text style={styles.tipsTitle}>Mẹo bảo mật</Text>
+        </View>
         <Text style={styles.tipsText}>
           Kích hoạt khóa ứng dụng và 2FA để bảo vệ tối đa tài chính của bạn
         </Text>

@@ -34,7 +34,6 @@ import SettingsScreen from "../screens/Setting/SettingsScreen";
 import NotificationScreen from "../screens/Setting/NotificationScreen";
 import HelpCenterScreen from "../screens/Setting/HelpCenterScreen";
 import AboutScreen from "../screens/Setting/AboutScreen";
-import DailyGoalsDetailScreen from "../screens/Home/DailyGoalsDetailScreen";
 import WalletManagementScreen from "../screens/Finance/WalletManagementScreen";
 import CategoryManagementScreen from "../screens/Finance/CategoryManagementScreen";
 import RecurringTransactionsScreen from "../screens/Finance/RecurringTransactionsScreen";
@@ -94,7 +93,6 @@ export default function AppNavigation() {
         <Stack.Screen name="Notification" component={NotificationScreen} />
         <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
         <Stack.Screen name="About" component={AboutScreen} />
-        <Stack.Screen name="DailyGoalsDetail" component={DailyGoalsDetailScreen} />
         <Stack.Screen name="WalletManagement" component={WalletManagementScreen} />
         <Stack.Screen name="CategoryManagement" component={CategoryManagementScreen} />
         <Stack.Screen name="RecurringTransactions" component={RecurringTransactionsScreen} />
