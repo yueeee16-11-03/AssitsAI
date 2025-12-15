@@ -5,7 +5,7 @@
 
 export type ReportType = 'summary' | 'detailed' | 'budget' | 'habits' | 'goals';
 export type ExportFormat = 'csv' | 'json' | 'pdf' | 'detailed-pdf';
-export type PeriodType = 'week' | 'month' | 'quarter' | 'year' | 'custom';
+export type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
 
 /**
  * Giao dịch tài chính

@@ -84,6 +84,7 @@ export type RootStackParamList = {
   
   // Finance Reports
   Report: undefined;
+  CategoryTransactions: { category: string; startDate?: string; endDate?: string };
   
   // Transaction Attachments
   TransactionAttachment: {

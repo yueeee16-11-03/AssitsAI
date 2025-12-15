@@ -90,14 +90,25 @@ export const useRecurringFinancialData = (
       `📅 [PERIOD-${period.toUpperCase()}] Filtered ${filteredTransactions.length} regular transactions from ${startDate.toLocaleDateString()} to ${now.toLocaleDateString()}`
     );
 
-    // 📊 ⭐ RECURRING TRANSACTIONS: DON'T FILTER BY PERIOD
-    // Recurring transactions are ACTIVE/ONGOING and should always be counted in statistics
-    // They represent money that will be added/subtracted regularly
-    // Only filter by period for transaction HISTORY, not for STATISTICS
-    const filteredRecurring = recurringTransactions || [];
-    
+    // 📊 RECURRING TRANSACTIONS: Filter by period
+    // Only include recurring transactions where the money date has been reached within the period
+    // (i.e., nextDue OR lastPaid falls between startDate and now and nextDue <= now)
+    const filteredRecurring = (recurringTransactions || []).filter((rec: RecurringTransaction) => {
+      try {
+        const nextDue = rec.nextDue ? new Date(rec.nextDue) : null;
+        const lastPaid = rec.lastPaid ? new Date(rec.lastPaid) : null;
+
+        const inNextDueRange = nextDue && nextDue >= startDate && nextDue <= now && nextDue <= now;
+        const inLastPaidRange = lastPaid && lastPaid >= startDate && lastPaid <= now;
+
+        return !!(inNextDueRange || inLastPaidRange);
+      } catch (e) {
+        return false;
+      }
+    });
+
     console.log(
-      `📅 [PERIOD-${period.toUpperCase()}] Including ALL ${filteredRecurring.length} recurring transactions (not period-filtered for statistics)`
+      `📅 [PERIOD-${period.toUpperCase()}] Including ${filteredRecurring.length} recurring transactions filtered by period (${startDate.toLocaleDateString()} → ${now.toLocaleDateString()})`
     );
 
     // 💰 Tính tổng thu nhập và chi tiêu từ regular transactions

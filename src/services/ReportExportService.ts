@@ -9,7 +9,12 @@ import {
   Goal,
   ReportType,
   ReportData,
+  PeriodType,
 } from '../types/report';
+import TransactionService from './TransactionService';
+import BudgetService from './BudgetService';
+import HabitService from './HabitService';
+import GoalService from './GoalService';
 
 class ReportExportService {
   /**
@@ -26,11 +31,13 @@ class ReportExportService {
    * Lấy nhãn khoảng thời gian
    */
   getPeriodLabel(
-    period: 'week' | 'month' | 'quarter' | 'year' | 'custom',
+    period: PeriodType,
     startDate?: Date,
     endDate?: Date
   ): string {
     switch (period) {
+      case 'day':
+        return 'Ngày này';
       case 'week':
         return 'Tuần này';
       case 'month':
@@ -589,7 +596,7 @@ class ReportExportService {
   }
 
   /**
-   * Footer HTML
+   * Lấy footer HTML
    */
   private getHTMLFooter(): string {
     return `
@@ -599,6 +606,152 @@ class ReportExportService {
         <p>Vui lòng liên hệ hỗ trợ nếu có bất kỳ câu hỏi nào</p>
       </div>
     `;
+  }
+
+  /**
+   * Fetch transactions từ API
+   */
+  async fetchTransactionsData() {
+    try {
+      console.log('🔵 [REPORT SERVICE] Fetching transactions from API...');
+      // @ts-ignore - TransactionService là JS
+      const transactions = await TransactionService.getAllTransactions();
+      console.log('✅ [REPORT SERVICE] Fetched', transactions.length, 'transactions');
+      return transactions;
+    } catch (error) {
+      console.error('❌ [REPORT SERVICE] Error fetching transactions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch budgets từ API
+   */
+  async fetchBudgetsData(year: number, month: number) {
+    try {
+      console.log('🔵 [REPORT SERVICE] Fetching budgets from API...');
+      // @ts-ignore - BudgetService là JS
+      const budgets = await BudgetService.getAllBudgetsWithSpending(year, month);
+      console.log('✅ [REPORT SERVICE] Fetched', budgets.length, 'budgets');
+      return budgets;
+    } catch (error) {
+      console.error('❌ [REPORT SERVICE] Error fetching budgets:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch habits từ API
+   */
+  async fetchHabitsData() {
+    try {
+      console.log('🔵 [REPORT SERVICE] Fetching habits from API...');
+      // @ts-ignore - HabitService là JS
+      const habits = await HabitService.getAllHabits();
+      console.log('✅ [REPORT SERVICE] Fetched', habits.length, 'habits');
+      return habits;
+    } catch (error) {
+      console.error('❌ [REPORT SERVICE] Error fetching habits:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch goals từ API
+   */
+  async fetchGoalsData() {
+    try {
+      console.log('🔵 [REPORT SERVICE] Fetching goals from API...');
+      // @ts-ignore - GoalService là JS
+      const goals = await GoalService.getAllGoals();
+      console.log('✅ [REPORT SERVICE] Fetched', goals.length, 'goals');
+      return goals;
+    } catch (error) {
+      console.error('❌ [REPORT SERVICE] Error fetching goals:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch tất cả dữ liệu cho báo cáo
+   */
+  async fetchAllReportData() {
+    try {
+      console.log('🔵 [REPORT SERVICE] Fetching all report data...');
+      const [transactions, budgets, habits, goals] = await Promise.all([
+        this.fetchTransactionsData(),
+        this.fetchBudgetsData(new Date().getFullYear(), new Date().getMonth()),
+        this.fetchHabitsData(),
+        this.fetchGoalsData(),
+      ]);
+
+      console.log('✅ [REPORT SERVICE] All data fetched successfully');
+      return {
+        transactions,
+        budgets,
+        habits,
+        goals,
+      };
+    } catch (error) {
+      console.error('❌ [REPORT SERVICE] Error fetching all report data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Tính toán report data từ transactions
+   */
+  calculateReportData(
+    transactions: any[],
+    filterCategory?: string | null,
+    filterType?: 'all' | 'income' | 'expense',
+    startDate?: Date,
+    endDate?: Date
+  ): ReportData {
+    console.log('🔵 [REPORT SERVICE] Calculating report data...');
+
+    const now = new Date();
+    const defaultStartDate = startDate || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const defaultEndDate = endDate || now;
+
+    // Filter transactions
+    const filteredTransactions = transactions.filter(t => {
+      const transDate = new Date(t.date || t.createdAt);
+      const dateInRange = transDate >= defaultStartDate && transDate <= defaultEndDate;
+      const categoryMatch = !filterCategory || t.category === filterCategory;
+      const typeMatch = filterType === 'all' || !filterType || t.type === filterType;
+      return dateInRange && categoryMatch && typeMatch;
+    });
+
+    // Calculate totals
+    const categoryBreakdown: Record<string, number> = {};
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    filteredTransactions.forEach(t => {
+      const amount = t.amount || 0;
+      if (t.type === 'income') {
+        totalIncome += amount;
+      } else {
+        totalExpense += amount;
+      }
+
+      if (!categoryBreakdown[t.category]) {
+        categoryBreakdown[t.category] = 0;
+      }
+      categoryBreakdown[t.category] += amount;
+    });
+
+    const reportData: ReportData = {
+      totalIncome,
+      totalExpense,
+      balance: totalIncome - totalExpense,
+      transactions: filteredTransactions,
+      categoryBreakdown,
+    };
+
+    console.log('✅ [REPORT SERVICE] Report data calculated');
+    return reportData;
   }
 }
 

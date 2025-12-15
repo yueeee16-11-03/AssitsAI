@@ -43,6 +43,7 @@ import UnlockAppScreen from "../screens/Core/UnlockAppScreen";
 import InviteMemberScreen from "../screens/Family/InviteMemberScreen";
 import FamilyPermissionsScreen from "../screens/Family/FamilyPermissionsScreen";
 import ReportScreen from "../screens/Finance/ReportScreen";
+import CategoryTransactionsScreen from "../screens/Finance/CategoryTransactionsScreen";
 import EditTransactionScreen from "../screens/Finance/EditTransactionScreen";
 import TransactionHistoryScreen from "../screens/Finance/TransactionHistoryScreen";
 import AIProcessingOverlay from "../screens/Finance/AIProcessingOverlay";
@@ -102,6 +103,7 @@ export default function AppNavigation() {
         <Stack.Screen name="InviteMember" component={InviteMemberScreen} />
         <Stack.Screen name="FamilyPermissions" component={FamilyPermissionsScreen} />
         <Stack.Screen name="Report" component={ReportScreen} />
+        <Stack.Screen name="CategoryTransactions" component={CategoryTransactionsScreen} />
         <Stack.Screen name="EditTransaction" component={EditTransactionScreen} />
         <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
         <Stack.Screen name="AIProcessingOverlay" component={AIProcessingOverlay} />
