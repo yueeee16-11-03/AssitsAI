@@ -8,6 +8,7 @@
 import React from "react";
 import { SafeAreaView, StatusBar, StyleSheet } from "react-native";
 import AppNavigation from "./src/navigation";
+import { ThemeProvider } from './src/context/ThemeProvider';
 import { configureGoogleSignIn } from './src/services/AuthService';
 import { useCheckInStore } from './src/store/checkInStore';
 import { useHabitStore } from './src/store/habitStore';
@@ -81,13 +82,23 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  function InnerApp() {
+    const theme = require('react-native-paper').useTheme();
+
+    return (
+      <>
+        <StatusBar barStyle={theme.dark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.surface} />
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+          <AppNavigation />
+        </SafeAreaView>
+      </>
+    );
+  }
+
   return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0E27" />
-      <SafeAreaView style={styles.container}>
-        <AppNavigation />
-      </SafeAreaView>
-    </>
+    <ThemeProvider>
+      <InnerApp />
+    </ThemeProvider>
   );
 }
 

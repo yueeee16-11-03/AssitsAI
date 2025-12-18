@@ -14,6 +14,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from 'react-native-paper';
 import { useFocusEffect } from "@react-navigation/native";
 import NotificationService from '../../services/NotificationService';
 import AIBudgetSuggestionService from '../../services/AIBudgetSuggestionService';
@@ -42,6 +43,8 @@ const monthNames = [
 
 export default function BudgetPlannerScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
   // use store-backed month selection so it persists across unmounts and navigation
@@ -193,7 +196,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
 
   const renderBudgetIcon = (iconName?: string) => {
     const name = isIconName(iconName) ? (iconName as string) : 'briefcase-outline';
-    return <Icon name={name} size={28} color="#0f1724" style={styles.budgetIcon} />;
+    return <Icon name={name} size={28} color={theme.colors.onSurface} style={styles.budgetIcon} />;
   };
 
   const totalBudget = budgets.reduce((sum: number, item: BudgetItem): number => sum + item.budget, 0);
@@ -350,7 +353,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-left" size={20} color="#111827" />
+          <Icon name="arrow-left" size={20} color={theme.colors.onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Ngân sách</Text>
         {/* Add icon top-right: open Add Budget modal */}
@@ -436,31 +439,17 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
               <Text style={styles.overviewLabel}>Tổng ngân sách tháng</Text>
               <Text style={styles.overviewAmount}>{formatCurrency(totalBudget)}</Text>
               <View style={styles.overviewStats}>
-                <View style={styles.overviewStat}>
+                <View style={styles.overviewRow}>
                   <Text style={styles.statLabel}>Đã chi</Text>
-                  <Text
-                    style={
-                      totalSpent > totalBudget
-                        ? [styles.statValue, styles.statValueDanger]
-                        : styles.statValue
-                    }
-                  >
-                    {formatCurrency(totalSpent)}
-                  </Text>
+                  <Text style={ totalSpent > totalBudget ? [styles.statValue, styles.statValueDanger] : styles.statValue }>{formatCurrency(totalSpent)}</Text>
                 </View>
-                <View style={styles.statDivider} />
-                <View style={styles.overviewStat}>
-                  <Text style={styles.statLabel}>Còn lại</Text>
-                  <Text style={[styles.statValue, styles.statValueSuccess]}>
-                    {formatCurrency(totalBudget - totalSpent)}
-                  </Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.overviewStat}>
+                <View style={styles.overviewRow}>
                   <Text style={styles.statLabel}>Dự kiến</Text>
-                  <Text style={[styles.statValue, styles.statValueWarning]}>
-                    {formatCurrency(totalPredicted)}
-                  </Text>
+                  <Text style={[styles.statValue, styles.statValueWarning]}>{formatCurrency(totalPredicted)}</Text>
+                </View>
+                <View style={styles.overviewRow}>
+                  <Text style={styles.statLabel}>Còn lại</Text>
+                  <Text style={[styles.statValue, styles.statValueSuccess]}>{formatCurrency(totalBudget - totalSpent)}</Text>
                 </View>
               </View>
               <View style={styles.totalProgress}>
@@ -474,6 +463,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                   ]}
                 />
               </View>
+              <Text style={styles.remainingUnderProgress}>Còn lại {formatCurrency(totalBudget - totalSpent)}</Text>
             </View>
 
             {/* Budget Categories */}
@@ -529,17 +519,22 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                       <>
                         <View style={styles.budgetAmounts}>
                           <View style={styles.amountItem}>
-                            <Text style={styles.amountLabel}>Ngân sách</Text>
-                            <Text style={styles.amountValue}>{formatCurrency(item.budget)}</Text>
-                            <Text style={styles.remainingText}>Còn {formatCurrency((item.budget || 0) - (spent || 0))}</Text>
+                            <View style={styles.amountRow}>
+                              <Text style={styles.amountLabel}>Ngân sách</Text>
+                              <Text style={styles.amountValue}>{formatCurrency(item.budget)}</Text>
+                            </View>
                           </View>
                           <View style={styles.amountItem}>
-                            <Text style={styles.amountLabel}>Đã chi</Text>
-                            <Text style={[styles.amountValue, { color: statusColor }]}>{formatCurrency(spent)}</Text>
+                            <View style={styles.amountRow}>
+                              <Text style={styles.amountLabel}>Đã chi</Text>
+                              <Text style={[styles.amountValue, { color: statusColor }]}>{formatCurrency(spent)}</Text>
+                            </View>
                           </View>
                           <View style={styles.amountItem}>
-                            <Text style={styles.amountLabel}>Dự kiến</Text>
-                            <Text style={[styles.amountValue, styles.statValueWarning]}>{formatCurrency(predicted)}</Text>
+                            <View style={styles.amountRow}>
+                              <Text style={styles.amountLabel}>Dự kiến</Text>
+                              <Text style={[styles.amountValue, styles.statValueWarning]}>{formatCurrency(predicted)}</Text>
+                            </View>
                           </View>
                         </View>
 
@@ -557,6 +552,8 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                           </View>
                           <Text style={styles.progressText}>{percentage.toFixed(0)}%</Text>
                         </View>
+
+                        <Text style={styles.remainingUnderProgress}>Còn {formatCurrency((item.budget || 0) - (spent || 0))}</Text>
 
                         {predicted > item.budget && (
                           <View style={styles.predictionAlert}>
@@ -813,8 +810,15 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+function getStyles(theme: any): any {
+  const surface = theme.colors.surface;
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
+  const outline = theme.colors.outline || 'rgba(0,0,0,0.06)';
+
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: surface },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -823,8 +827,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: outline,
+    backgroundColor: surface,
   },
   backButton: {
     width: 40,
@@ -834,8 +838,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#111827" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  backIcon: { fontSize: 20, color: onSurface },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: onSurface },
   addButton: {
     width: 40,
     height: 40,
@@ -845,7 +849,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addIcon: { fontSize: 24, color: "#FFFFFF", fontWeight: "700" },
-  headerAddButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#00897B', alignItems: 'center', justifyContent: 'center' },
+  headerAddButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: primary, alignItems: 'center', justifyContent: 'center' },
   headerAddIcon: { fontSize: 20, color: '#FFFFFF' },
   headerSpacer: { width: 40 },
   content: { padding: 16 },
@@ -854,40 +858,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: "rgba(15,23,36,0.06)",
+    backgroundColor: surface,
+    borderWidth: 1,
+    borderColor: outline,
   },
-  monthButtonActive: { backgroundColor: "#6366F1" },
-  monthText: { color: "rgba(15,23,36,0.6)", fontWeight: "700", fontSize: 13 },
-  monthTextActive: { color: "#0f1724" },
+  monthButtonActive: { backgroundColor: primary, borderColor: primary },
+  monthText: { color: onSurfaceVariant, fontWeight: "700", fontSize: 13 },
+  monthTextActive: { color: "#FFFFFF" },
   overviewCard: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: surface,
     borderRadius: 20,
     padding: 24,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(15,23,36,0.04)",
+    borderColor: outline,
   },
-  overviewLabel: { fontSize: 14, color: "rgba(15,23,36,0.7)", marginBottom: 8 },
-  overviewAmount: { fontSize: 16, fontWeight: "800", color: "#0f1724", marginBottom: 8 },
-  overviewStats: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
+  overviewLabel: { fontSize: 14, color: onSurfaceVariant, marginBottom: 8 },
+  overviewAmount: { fontSize: 16, fontWeight: "800", color: onSurface, marginBottom: 8 },
+  overviewStats: { flexDirection: "column", marginBottom: 12 },
   overviewStat: { alignItems: "center" },
-  statLabel: { fontSize: 12, color: "rgba(15,23,36,0.6)", marginBottom: 4 },
-  statValue: { fontSize: 16, fontWeight: "800", color: "#0f1724" },
-  statDivider: { width: 1, height: 40, backgroundColor: "rgba(15,23,36,0.1)" },
+  statLabel: { fontSize: 14, color: onSurfaceVariant, marginBottom: 4 },
+  amountLabel: { fontSize: 13, color: onSurfaceVariant, marginBottom: 4 },
+  statValue: { fontSize: 16, fontWeight: "800", color: onSurface },
+  statDivider: { width: 1, height: 40, backgroundColor: outline },
   totalProgress: {
     height: 8,
-    backgroundColor: "rgba(15,23,36,0.1)",
+    backgroundColor: `${onSurface}1A`,
     borderRadius: 4,
     overflow: "hidden",
   },
   totalProgressFill: { height: "100%", borderRadius: 4 },
+  overviewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#0f1724", marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: onSurface, marginBottom: 16 },
   budgetCard: {
-    backgroundColor: "rgba(15,23,36,0.04)",
+    backgroundColor: surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: outline,
   },
   budgetHeader: {
     flexDirection: "row",
@@ -897,7 +907,7 @@ const styles = StyleSheet.create({
   },
   budgetInfo: { flexDirection: "row", alignItems: "center" },
   budgetIcon: { fontSize: 28, marginRight: 10 },
-  budgetCategory: { fontSize: 16, fontWeight: "800", color: "#0f1724" },
+  budgetCategory: { fontSize: 16, fontWeight: "800", color: onSurface },
   warningBadge: {
     width: 20,
     height: 20,
@@ -910,27 +920,29 @@ const styles = StyleSheet.create({
   warningBadgeText: { color: "#fff", fontSize: 12, fontWeight: "900" },
   editContainer: { marginBottom: 12 },
   editInput: {
-    backgroundColor: "rgba(15,23,36,0.08)",
+    backgroundColor: surface,
     borderRadius: 12,
     padding: 12,
-    color: "#0f1724",
+    color: onSurface,
     fontSize: 16,
     fontWeight: "700",
+    borderWidth: 1,
+    borderColor: outline,
   },
-  budgetAmounts: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
-  amountItem: { alignItems: "center" },
-  amountLabel: { fontSize: 11, color: "rgba(15,23,36,0.5)", marginBottom: 4 },
-  amountValue: { fontSize: 14, fontWeight: "800", color: "#0f1724" },
+  budgetAmounts: { flexDirection: "column", marginBottom: 12 },
+  amountItem: { alignItems: "flex-start", marginBottom: 8 },
+  amountRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' },
+  amountValue: { fontSize: 14, fontWeight: "800", color: onSurface },
   progressContainer: { flexDirection: "row", alignItems: "center", gap: 12 },
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: "rgba(15,23,36,0.1)",
+    backgroundColor: `${onSurface}1A`,
     borderRadius: 4,
     overflow: "hidden",
   },
   progressFill: { height: "100%", borderRadius: 4 },
-  progressText: { fontSize: 13, fontWeight: "700", color: "rgba(15,23,36,0.7)", minWidth: 40 },
+  progressText: { fontSize: 13, fontWeight: "700", color: onSurfaceVariant, minWidth: 40 },
   predictionAlert: {
     marginTop: 8,
     backgroundColor: "rgba(245,158,11,0.1)",
@@ -941,20 +953,20 @@ const styles = StyleSheet.create({
   actionsGrid: { flexDirection: "row", gap: 12 },
   actionCard: {
     flex: 1,
-    backgroundColor: "rgba(15,23,36,0.04)",
+    backgroundColor: surface,
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(15,23,36,0.1)",
+    borderColor: outline,
   },
   actionIcon: { fontSize: 32, marginBottom: 8 },
-  actionText: { fontSize: 13, color: "rgba(15,23,36,0.8)", fontWeight: "600", textAlign: "center" },
+  actionText: { fontSize: 13, color: onSurfaceVariant, fontWeight: "600", textAlign: "center" },
   statValueDanger: { color: "#EF4444" },
   statValueSuccess: { color: "#10B981" },
   statValueWarning: { color: "#F59E0B" },
   totalProgressFillDanger: { backgroundColor: "#EF4444" },
-  totalProgressFillNormal: { backgroundColor: "#6366F1" },
+  totalProgressFillNormal: { backgroundColor: primary },
 
   // Loading, Error, Empty states
   loadingContainer: {
@@ -965,7 +977,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: "rgba(15,23,36,0.7)",
+    color: onSurfaceVariant,
     fontWeight: "600",
   },
   errorContainer: {
@@ -982,7 +994,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   retryButton: {
-    backgroundColor: "#6366F1",
+    backgroundColor: primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -1004,12 +1016,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#0f1724",
+    color: onSurface,
     fontWeight: "700",
   },
   emptySubtext: {
     fontSize: 13,
-    color: "rgba(15,23,36,0.6)",
+    color: onSurfaceVariant,
   },
   emptySubtextExtra: { marginTop: 6 },
 
@@ -1035,7 +1047,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: "85%",
@@ -1047,31 +1059,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(15,23,36,0.1)",
+    borderBottomColor: outline,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#0f1724",
+    color: onSurface,
   },
   modalCloseButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(15,23,36,0.08)",
+    backgroundColor: outline,
     alignItems: "center",
     justifyContent: "center",
   },
   modalCloseIcon: {
     fontSize: 18,
-    color: "#0f1724",
+    color: onSurface,
     fontWeight: "700",
   },
   modalAIWrapper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   modalAIRightMargin: { marginRight: 6 },
   modalAIXIcon: {
     fontSize: 18,
-    color: "#0f1724",
+    color: onSurface,
     fontWeight: "700",
     marginRight: 6,
   },
@@ -1084,18 +1096,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0f1724",
+    color: onSurface,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: "rgba(15,23,36,0.06)",
+    backgroundColor: surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
-    color: "#0f1724",
+    color: onSurface,
     borderWidth: 1,
-    borderColor: "rgba(15,23,36,0.1)",
+    borderColor: outline,
   },
   colorGrid: {
     flexDirection: "row",
@@ -1110,7 +1122,7 @@ const styles = StyleSheet.create({
   },
   colorOptionSelected: {
     borderWidth: 3,
-    borderColor: "#0f1724",
+    borderColor: outline,
   },
   modalFooter: {
     flexDirection: "row",
@@ -1120,19 +1132,21 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: "rgba(15,23,36,0.1)",
+    backgroundColor: surface,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: outline,
   },
   cancelButtonText: {
-    color: "#0f1724",
+    color: onSurface,
     fontWeight: "700",
     fontSize: 14,
   },
   saveButton: {
     flex: 1,
-    backgroundColor: "#6366F1",
+    backgroundColor: primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
@@ -1145,30 +1159,31 @@ const styles = StyleSheet.create({
 
   /* New UI: suggestion card, FAB, remaining text */
   suggestionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: outline,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.04,
     shadowRadius: 12,
     elevation: 4,
   },
-  suggestionText: { color: '#0f1724', fontSize: 14, fontWeight: '700', marginBottom: 12 },
+  suggestionText: { color: onSurface, fontSize: 14, fontWeight: '700', marginBottom: 12 },
   suggestionActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  suggestionButtonSkip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: 'rgba(15,23,36,0.06)' },
-  suggestionSkipText: { color: '#0f1724', fontWeight: '700' },
+  suggestionButtonSkip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: outline },
+  suggestionSkipText: { color: surface, fontWeight: '700' },
   suggestionButtonAgree: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#10B981' },
   suggestionAgreeText: { color: '#fff', fontWeight: '800' },
 
-  remainingText: { color: 'rgba(15,23,36,0.6)', fontSize: 12, marginTop: 6 },
+  remainingText: { color: onSurfaceVariant, fontSize: 12, marginTop: 6 },
+  remainingUnderProgress: { color: onSurfaceVariant, fontSize: 12, marginTop: 8, alignSelf: 'flex-end', fontWeight: '700' },
 
   fabWrap: { position: 'absolute', right: 20, bottom: 28, zIndex: 30 },
-  fabButton: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', shadowColor: '#6366F1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 10 },
-  fabPlus: { color: '#FFFFFF', fontSize: 28, fontWeight: '800' },
+  fabButton: { width: 60, height: 60, borderRadius: 30, backgroundColor: primary, alignItems: 'center', justifyContent: 'center', shadowColor: primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 10 },
+  fabPlus: { color: surface, fontSize: 28, fontWeight: '800' },
 
   iconTextRow: { flexDirection: 'row', alignItems: 'center' },
   iconSpacingSmall: { marginRight: 8 },
@@ -1199,4 +1214,5 @@ const styles = StyleSheet.create({
   },
 
   // Smart Budget styles removed
-} as const);
+  });
+}

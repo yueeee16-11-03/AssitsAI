@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useTransactionStore } from "../../store/transactionStore";
@@ -26,6 +27,10 @@ type Props = NativeStackScreenProps<RootStackParamList, "EditTransaction">;
 
 export default function EditTransactionScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = getStyles(theme);
+  const surface = theme.colors.surface;
+  const onSurface = theme.colors.onSurface;
   const TAB_BAR_HEIGHT = 70;
   const { transaction } = route.params;
   const [billImage, setBillImage] = useState<string | null>(transaction.billImageUri || null);
@@ -157,7 +162,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={styles.safeAreaView}>
       <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -167,9 +172,9 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={[styles.backIcon, { color: '#111827' }]}>←</Text>
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sửa ghi chú</Text>
+        <Text style={styles.headerTitle}>Sửa giao dịch</Text>
         <View style={styles.placeholderButton} />
       </View>
 
@@ -192,7 +197,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
                   style={styles.billRemoveButton}
                   onPress={handleRemoveBillImage}
                 >
-                  <MaterialCommunityIcons name="close" size={18} color="#fff" />
+                  <MaterialCommunityIcons name="close" size={18} color={onSurface} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -201,7 +206,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
           {/* Original Transaction Info */}
           <View style={styles.section}>
             <View style={styles.headerRow}>
-              <MaterialCommunityIcons name="file-document-outline" size={18} color="#111827" style={styles.iconMargin} />
+              <MaterialCommunityIcons name="file-document-outline" size={18} color={onSurface} style={styles.iconMargin} />
               <Text style={styles.infoLabel}>Thông tin gốc</Text>
             </View>
             <View style={styles.infoBox}>
@@ -239,7 +244,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
           {(transaction.totalAmount !== undefined || transaction.items?.length > 0 || transaction.category) && (
             <View style={styles.section}>
               <View style={styles.headerRow}>
-                <MaterialCommunityIcons name="robot" size={18} color="#111827" style={styles.iconMargin} />
+                <MaterialCommunityIcons name="robot" size={18} color={onSurface} style={styles.iconMargin} />
                 <Text style={styles.infoLabel}>Thông tin xử lý AI</Text>
               </View>
               <View style={styles.aiSection}>
@@ -278,7 +283,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
                 {/* Editable Items */}
                 <View style={styles.itemsBreakdown}>
                   <View style={styles.headerRow}>
-                    <MaterialCommunityIcons name="format-list-bulleted" size={16} color="#111827" style={styles.iconMargin} />
+                    <MaterialCommunityIcons name="format-list-bulleted" size={16} color={onSurface} style={styles.iconMargin} />
                     <Text style={styles.itemsTitle}>Chi tiết các mục</Text>
                   </View>
                   {aiItems.map((it, idx) => (
@@ -311,7 +316,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
                           setAiItems(copy);
                         }}
                       >
-                        <MaterialCommunityIcons name="trash-can-outline" size={16} color="#111827" />
+                        <MaterialCommunityIcons name="trash-can-outline" size={16} color={onSurface} />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -338,7 +343,7 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
                 <ActivityIndicator color="#EF4444" />
               ) : (
                 <View style={styles.iconRow}>
-                  <MaterialCommunityIcons name="trash-can-outline" size={16} color="#111827" style={styles.iconMargin} />
+                  <MaterialCommunityIcons name="trash-can-outline" size={16} color={onSurface} style={styles.iconMargin} />
                   <Text style={styles.deleteButtonText}>Xóa ghi chú</Text>
                 </View>
               )}
@@ -354,11 +359,11 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={surface} />
               ) : (
                 <View style={styles.iconRow}>
                   <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-                  <MaterialCommunityIcons name="check" size={16} color="#fff" style={styles.iconMargin} />
+                  <MaterialCommunityIcons name="check" size={16} color={surface} style={styles.iconMargin} />
                 </View>
               )}
             </TouchableOpacity>
@@ -380,6 +385,9 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
             Alert.alert("Thành công", "Ảnh đã được cập nhật");
           }}
           onClose={() => setIsCameraOpen(false)}
+          theme={theme}
+          surface={surface}
+          onSurface={onSurface}
         />
       </Modal>
       </KeyboardAvoidingView>
@@ -388,7 +396,10 @@ export default function EditTransactionScreen({ navigation, route }: Props) {
 }
 
 // Camera Screen Component
-function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
+function CameraScreen({ onCapture, onClose, surface: _surface, theme: _theme, onSurface: _onSurface }: { onCapture: (uri: string) => void; onClose: () => void; theme?: any; surface?: any; onSurface?: any }) {
+  const themeObj = useTheme();
+  const themeSurface = _surface || themeObj.colors.surface;
+  const styles = getStyles(themeObj);
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice("back");
   const camera = React.useRef<Camera>(null);
@@ -459,7 +470,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
     return (
       <View style={styles.cameraError}>
         <View style={styles.iconRow}>
-          <MaterialCommunityIcons name="camera-off" size={20} color="#fff" style={styles.iconMargin} />
+          <MaterialCommunityIcons name="camera-off" size={20} color={themeSurface} style={styles.iconMargin} />
           <Text style={styles.cameraErrorText}>Camera không khả dụng</Text>
         </View>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -473,7 +484,7 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
     return (
       <View style={styles.cameraError}>
         <View style={styles.iconRow}>
-          <MaterialCommunityIcons name="lock" size={20} color="#fff" style={styles.iconMargin} />
+          <MaterialCommunityIcons name="lock" size={20} color={themeSurface} style={styles.iconMargin} />
           <Text style={styles.cameraErrorText}>Cần cấp quyền camera</Text>
         </View>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -487,16 +498,16 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
     return (
       <View style={styles.optionsContainer}>
         <TouchableOpacity style={styles.optionButton} onPress={() => setShowOptions(false)}>
-          <MaterialCommunityIcons name="camera" size={48} color="#fff" style={styles.optionIcon} />
-          <Text style={styles.optionTitle}>Chụp ảnh</Text>
+          <MaterialCommunityIcons name="camera" size={48} color={themeSurface} style={styles.optionIcon} />
+          <Text style={{...styles.optionTitle, color: themeSurface}}>Chụp ảnh</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.optionButton} onPress={handlePickFromGallery}>
-          <MaterialCommunityIcons name="image" size={48} color="#fff" style={styles.optionIcon} />
-          <Text style={styles.optionTitle}>Từ thư viện</Text>
+          <MaterialCommunityIcons name="image" size={48} color={themeSurface} style={styles.optionIcon} />
+          <Text style={{...styles.optionTitle, color: themeSurface}}>Từ thư viện</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.optionButtonCancel} onPress={onClose}>
-          <MaterialCommunityIcons name="close" size={18} color="#fff" style={styles.iconMargin} />
-          <Text style={styles.optionTitle}>Hủy</Text>
+          <MaterialCommunityIcons name="close" size={18} color={themeSurface} style={styles.iconMargin} />
+          <Text style={{...styles.optionTitle, color: themeSurface}}>Hủy</Text>
         </TouchableOpacity>
       </View>
     );
@@ -514,12 +525,12 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
       />
       <View style={styles.cameraHeader}>
         <TouchableOpacity onPress={() => setShowOptions(true)}>
-          <Text style={styles.cameraHeaderText}>← Quay lại</Text>
+          <Text style={{...styles.cameraHeaderText, color: themeSurface}}>← Quay lại</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.cameraFooter}>
         <TouchableOpacity style={styles.torchButton} onPress={() => setTorchEnabled(!torchEnabled)}>
-          <MaterialCommunityIcons name={torchEnabled ? "flash" : "lightbulb"} size={18} color="#fff" />
+          <MaterialCommunityIcons name={torchEnabled ? "flash" : "lightbulb"} size={18} color={themeSurface} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.captureButton} onPress={handleTakePhoto} />
         <View style={styles.spacer} />
@@ -528,8 +539,16 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+function getStyles(theme: any): any {
+  const surface = theme.colors.surface;
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant;
+  const outline = theme.colors.outline;
+
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: surface },
+  safeAreaView: { flex: 1, backgroundColor: surface },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -538,8 +557,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-    backgroundColor: "#FFFFFF",
+    borderBottomColor: outline,
+    backgroundColor: surface,
   },
   backButton: {
     width: 40,
@@ -549,19 +568,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#111827" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  backIcon: { fontSize: 20, color: onSurface },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: onSurface },
   placeholderButton: { width: 40, height: 40 },
   voiceButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 137, 123, 0.2)",
+    backgroundColor: `rgba(${primary}, 0.2)`,
     alignItems: "center",
     justifyContent: "center",
   },
   voiceButtonActive: {
-    backgroundColor: "rgba(99,102,241,0.3)",
+    backgroundColor: `rgba(${primary}, 0.3)`,
   },
   voiceIcon: { fontSize: 18 },
   content: { padding: 16, paddingBottom: 80 },
@@ -575,7 +594,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#00796B",
+    color: primary,
   },
   fontSizeControl: {
     flexDirection: "row",
@@ -585,26 +604,26 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: `rgba(${primary}, 0.06)`,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 137, 123, 0.15)",
+    borderColor: `rgba(${primary}, 0.15)`,
   },
   fontButtonActive: {
-    backgroundColor: "#6366F1",
-    borderColor: "#6366F1",
+    backgroundColor: primary,
+    borderColor: primary,
   },
-  fontButtonSmall: { fontSize: 12, fontWeight: "700", color: "#00796B" },
-  fontButtonMedium: { fontSize: 14, fontWeight: "700", color: "#00796B" },
-  fontButtonLarge: { fontSize: 16, fontWeight: "700", color: "#00796B" },
+  fontButtonSmall: { fontSize: 12, fontWeight: "700", color: primary },
+  fontButtonMedium: { fontSize: 14, fontWeight: "700", color: primary },
+  fontButtonLarge: { fontSize: 16, fontWeight: "700", color: primary },
   noteInput: {
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: `rgba(${primary}, 0.06)`,
     borderRadius: 16,
     padding: 16,
-    color: "#00796B",
+    color: primary,
     borderWidth: 1,
-    borderColor: "rgba(0, 137, 123, 0.15)",
+    borderColor: `rgba(${primary}, 0.15)`,
     textAlignVertical: "top",
     minHeight: 120,
   },
@@ -615,19 +634,19 @@ const styles = StyleSheet.create({
   },
   toolbarButton: {
     flex: 1,
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: `rgba(${primary}, 0.06)`,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 137, 123, 0.15)",
+    borderColor: `rgba(${primary}, 0.15)`,
   },
   toolbarIcon: { fontSize: 20 },
   billImageContainer: {
     position: "relative",
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
+    backgroundColor: `rgba(${primary}, 0.06)`,
   },
   billImage: {
     width: "100%",
@@ -646,50 +665,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   billRemoveButtonText: {
-    color: "#fff",
+    color: surface,
     fontSize: 20,
     fontWeight: "700",
   },
   infoLabel: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#111827",
+    color: onSurface,
     marginBottom: 0,
   },
   infoBox: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: outline,
   },
   infoText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#00796B",
+    color: primary,
     marginBottom: 4,
   },
   infoAmount: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#00796B",
+    color: primary,
     marginBottom: 4,
   },
   infoDate: {
     fontSize: 12,
-    color: "#999999",
+    color: onSurfaceVariant,
   },
   aiSection: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: outline,
   },
   aiTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#6366F1",
+    color: primary,
     marginBottom: 12,
   },
   aiItemRow: {
@@ -699,7 +718,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(99, 102, 241, 0.1)",
+    borderBottomColor: `rgba(${primary}, 0.1)`,
   },
   aiItemRowLast: {
     flexDirection: "row",
@@ -711,28 +730,28 @@ const styles = StyleSheet.create({
   },
   aiItemLabel: {
     fontSize: 12,
-    color: "#111827",
+    color: onSurface,
   },
   aiItemValue: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#111827",
+    color: onSurface,
   },
   itemsBreakdown: {
-    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    backgroundColor: "rgba(0, 137, 123, 0.08)",
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
   },
   aiInput: {
     minWidth: 120,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
-    color: "#111827",
+    borderColor: outline,
+    color: onSurface,
     textAlign: "right",
   },
   itemInputRow: {
@@ -742,24 +761,26 @@ const styles = StyleSheet.create({
   },
   itemInput: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: surface,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: outline,
     marginRight: 8,
+    color: onSurface,
   },
   itemAmountInput: {
     width: 100,
-    backgroundColor: "#fff",
+    backgroundColor: surface,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: outline,
     textAlign: "right",
     marginRight: 8,
+    color: onSurface,
   },
   addItemButton: {
     marginTop: 8,
@@ -770,19 +791,19 @@ const styles = StyleSheet.create({
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: surface,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: outline,
     minWidth: 140,
   },
   aiInputInner: {
     flex: 1,
     paddingVertical: 4,
     paddingHorizontal: 6,
-    color: '#111827',
+    color: onSurface,
   },
   categoryIcon: { marginLeft: 8 },
   itemRemoveButton: {
@@ -796,7 +817,7 @@ const styles = StyleSheet.create({
   itemsTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#6366F1",
+    color: "#00897B",
     marginBottom: 8,
   },
   itemRow: {
@@ -807,27 +828,27 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 12,
-    color: "#111827",
+    color: onSurface,
   },
   itemAmount: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#111827",
+    color: onSurface,
   },
   buttonContainer: {
     gap: 12,
     marginTop: 24,
   },
   deleteButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: surface,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: outline,
   },
   deleteButtonText: {
-    color: "#111827",
+    color: onSurface,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -840,10 +861,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saveButtonDefault: {
-    backgroundColor: "#00897B",
+    backgroundColor: primary,
   },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  saveButtonIcon: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  saveButtonText: { color: surface, fontSize: 16, fontWeight: "700" },
+  saveButtonIcon: { color: surface, fontSize: 18, fontWeight: "700" },
   buttonDisabled: { opacity: 0.6 },
 
   /* Camera Styles */
@@ -854,7 +875,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     zIndex: 10,
   },
-  cameraHeaderText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  cameraHeaderText: { color: surface, fontSize: 16, fontWeight: "700" },
   cameraFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -875,7 +896,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#fff",
+    backgroundColor: surface,
     borderWidth: 4,
     borderColor: "rgba(255,255,255,0.3)",
   },
@@ -886,14 +907,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cameraErrorText: { color: "#fff", fontSize: 16, marginBottom: 20, fontWeight: "700" },
+  cameraErrorText: { color: surface, fontSize: 16, marginBottom: 20, fontWeight: "700" },
   closeButton: {
-    backgroundColor: "#6366F1",
+    backgroundColor: primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
   },
-  closeButtonText: { color: "#fff", fontWeight: "700" },
+  closeButtonText: { color: surface, fontWeight: "700" },
   optionsContainer: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
@@ -909,13 +930,13 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   optionButton: {
     width: "100%",
-    backgroundColor: "rgba(99,102,241,0.2)",
+    backgroundColor: `rgba(${primary}, 0.2)`,
     borderRadius: 16,
     paddingVertical: 20,
     paddingHorizontal: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(99,102,241,0.3)",
+    borderColor: `rgba(${primary}, 0.3)`,
   },
   optionButtonCancel: {
     width: "100%",
@@ -927,5 +948,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(239,68,68,0.3)",
   },
   optionIcon: { fontSize: 48, marginBottom: 12 },
-  optionTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
-});
+  optionTitle: { color: surface, fontSize: 16, fontWeight: "700" },
+  });
+}

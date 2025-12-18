@@ -13,6 +13,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -34,6 +35,8 @@ interface Message {
 export default function FamilyChatScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -139,7 +142,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
           <Text style={styles.headerSubtitle}>4 thành viên • Online</Text>
         </View>
         <TouchableOpacity style={styles.infoButton}>
-          <Icon name="information" size={20} color="#00796B" />
+          <Icon name="information" size={20} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -161,7 +164,7 @@ export default function FamilyChatScreen({ navigation }: Props) {
               {message.type === "ai-suggestion" ? (
                 <View style={styles.aiSuggestionCard}>
                   <View style={styles.aiSuggestionHeader}>
-                    <Icon name={message.sender.avatar as any} size={24} color="#8B5CF6" style={{ marginRight: 8 }} />
+                    <Icon name={message.sender.avatar as any} size={24} color={theme.colors.secondary} style={{ marginRight: 8 }} />
                     <Text style={styles.aiName}>{message.sender.name}</Text>
                   </View>
                   <Text style={styles.aiSuggestionText}>{message.text}</Text>
@@ -245,13 +248,13 @@ export default function FamilyChatScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: { flexDirection: "row", alignItems: "center", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00897B" },
+  backIcon: { fontSize: 20, color: theme.colors.primary },
   headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary },
   headerSubtitle: { fontSize: 12, color: "rgba(255,255,255,0.6)" },
   infoButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   infoIcon: { fontSize: 20 },
@@ -267,13 +270,13 @@ const styles = StyleSheet.create({
   messageBubble: { backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 12, padding: 12, borderBottomLeftRadius: 4 },
   messageText: { fontSize: 15, color: "#333333", lineHeight: 20 },
   timestamp: { fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 4 },
-  aiSuggestionCard: { backgroundColor: "rgba(139,92,246,0.15)", borderRadius: 16, padding: 16, maxWidth: "90%", borderWidth: 1, borderColor: "rgba(139,92,246,0.3)" },
+  aiSuggestionCard: { backgroundColor: `${theme.colors.secondary}26`, borderRadius: 16, padding: 16, maxWidth: "90%", borderWidth: 1, borderColor: `${theme.colors.secondary}4D` },
   aiSuggestionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   aiAvatar: { fontSize: 24, marginRight: 8 },
-  aiName: { fontSize: 14, fontWeight: "800", color: "#8B5CF6" },
+  aiName: { fontSize: 14, fontWeight: "800", color: theme.colors.secondary },
   aiSuggestionText: { fontSize: 14, color: "rgba(255,255,255,0.9)", lineHeight: 20, marginBottom: 12 },
   aiActions: { flexDirection: "row", gap: 8 },
-  aiActionButton: { flex: 1, backgroundColor: "#8B5CF6", borderRadius: 8, paddingVertical: 8, alignItems: "center" },
+  aiActionButton: { flex: 1, backgroundColor: theme.colors.secondary, borderRadius: 8, paddingVertical: 8, alignItems: "center" },
   aiActionText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   aiActionButtonSecondary: { backgroundColor: "rgba(255,255,255,0.1)" },
   aiActionTextSecondary: { color: "rgba(255,255,255,0.8)", fontWeight: "700", fontSize: 13 },
@@ -285,7 +288,7 @@ const styles = StyleSheet.create({
   attachButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
   attachIcon: { fontSize: 20 },
   input: { flex: 1, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, color: "#333333", fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  sendButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center" },
+  sendButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.secondary, alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: "rgba(99,102,241,0.3)" },
-  sendIcon: { fontSize: 20, color: "#00897B", fontWeight: "700" },
+  sendIcon: { fontSize: 20, color: theme.colors.primary, fontWeight: "700" },
 });

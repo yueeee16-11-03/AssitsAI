@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -13,6 +14,8 @@ type GoalPriority = 'high' | 'medium' | 'low';
 
 export default function GoalEditScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const TAB_BAR_HEIGHT = 70;
   // Get goal data directly from params - it's passed as the initial goal object
   const initialGoal = (route.params?.goal as any) || null;
@@ -210,7 +213,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-left" size={20} color="#111827" />
+            <Icon name="arrow-left" size={20} color={theme.colors.onSurface} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chỉnh sửa mục tiêu</Text>
           <View style={styles.spacer} />
@@ -226,7 +229,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-left" size={20} color="#111827" />
+          <Icon name="arrow-left" size={20} color={theme.colors.onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chỉnh sửa mục tiêu</Text>
         <View style={styles.spacer} />
@@ -244,7 +247,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
               onChangeText={setTitle}
               placeholder="VD: Mua xe"
               style={styles.input}
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={theme.colors.onSurfaceVariant}
             />
 
             <View style={styles.formGroup}>
@@ -254,7 +257,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
                 onChangeText={setDescription}
                 style={[styles.input, styles.textArea]}
                 placeholder="Mô tả ngắn"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={theme.colors.onSurfaceVariant}
                 multiline
               />
             </View>
@@ -268,7 +271,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
                   placeholder="0"
                   keyboardType="numeric"
                   style={styles.input}
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                 />
               </View>
 
@@ -280,7 +283,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
                   placeholder="0"
                   keyboardType="numeric"
                   style={styles.input}
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                 />
               </View>
             </View>
@@ -292,7 +295,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
                 onChangeText={setDeadline}
                 placeholder="MM/YYYY"
                 style={styles.input}
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={theme.colors.onSurfaceVariant}
               />
             </View>
 
@@ -351,7 +354,7 @@ export default function GoalEditScreen({ navigation, route }: Props) {
                 <Icon
                   name={showProgress ? 'chevron-up' : 'chevron-down'}
                   size={20}
-                  color="#6B7280"
+                  color={theme.colors.onSurfaceVariant}
                   style={styles.progressIcon}
                 />
               </TouchableOpacity>
@@ -464,124 +467,121 @@ export default function GoalEditScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  containerCentered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
-  backBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  body: { padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },
-  rowCenter: { flexDirection: 'row', alignItems: 'center' },
-  iconWrap: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  sub: { fontSize: 13, color: 'rgba(0,0,0,0.6)', marginTop: 2 },
-  metricsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
-  metricCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
-  // For progress detail alignment: left-align labels & values
-  progressMetricCol: { flex: 1, alignItems: 'flex-start' },
-  metricLabel: { fontSize: 12, color: 'rgba(0,0,0,0.6)', minHeight: 18, textAlign: 'left' },
-  metricValue: { fontSize: 15, fontWeight: '900', marginTop: 4, color: '#111827', textAlign: 'left' },
-  section: { marginTop: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 8 },
-  label: { fontSize: 12, fontWeight: '700', color: '#374151', marginBottom: 8, marginTop: 12 },
-  input: { backgroundColor: '#F3F4F6', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E5E7EB', color: '#111827', marginBottom: 8 },
-  textArea: { minHeight: 80 },
-  actionsRow: { flexDirection: 'row', gap: 8 },
-  btn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
-  btnPrimary: { backgroundColor: '#10B981' },
-  btnDanger: { backgroundColor: '#EF4444' },
-  btnText: { color: '#fff', fontWeight: '800' },
-  btnGhost: { backgroundColor: 'rgba(15,23,36,0.06)' },
-  btnGhostText: { color: '#111827', fontWeight: '700' },
-  empty: { color: 'rgba(0,0,0,0.5)', marginTop: 8 },
-  txRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
-  txAmt: { fontWeight: '800', color: '#111827' },
-  txDate: { fontSize: 12, color: 'rgba(0,0,0,0.6)', marginTop: 2 },
-  txNote: { color: 'rgba(0,0,0,0.7)', marginLeft: 12, maxWidth: 180, textAlign: 'right' },
-  // New styles for icon and color selection
-  iconGridContainer: { marginBottom: 8 },
-  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 8 },
-  iconSelectBtn: { width: '23%', aspectRatio: 1, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  iconSelectBtnActive: { borderColor: '#10B981', backgroundColor: '#10B98122' },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 12, marginBottom: 8 },
-  colorBtn: { width: '23%', aspectRatio: 1, borderRadius: 12, borderWidth: 3, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
-  colorBtnActive: { borderColor: '#111827' },
-  actionSection: { marginTop: 24, gap: 12 },
-  spacer: { width: 40 },
-  colorSectionTitle: { marginTop: 16 },
-  transactionHistoryContainer: { marginTop: 12 },
-  iconMargin: { marginRight: 8 },
-  // Form group styles
-  formGroup: { marginTop: 12 },
-  formRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12 },
-  formGroupHalf: { flex: 1 },
-  formGroupLeft: {},
-  formGroupRight: {},
-  // Category styles
-  categoryGridModal: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 },
-  categoryButton: { 
-    flex: 1, 
-    minWidth: '48%',
-    backgroundColor: '#F3F4F6', 
-    borderRadius: 12, 
-    paddingVertical: 12, 
-    paddingHorizontal: 8,
-    alignItems: 'center', 
-    borderWidth: 2, 
-    borderColor: '#10B981'
-  },
-  categoryButtonActive: { backgroundColor: '#10B98133', borderColor: '#10B981' },
-  categoryIcon: { marginBottom: 4 },
-  categoryButtonLabel: { fontSize: 12, fontWeight: '600', color: '#10B981' },
-  categoryButtonLabelActive: { color: '#0F1724', fontWeight: '700' },
-  // Priority styles
-  priorityGroupModal: { flexDirection: 'row', gap: 8 },
-  priorityButton: { 
-    flex: 1, 
-    backgroundColor: '#F3F4F6', 
-    borderRadius: 12, 
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#D1D5DB'
-  },
-  priorityButtonActive: { backgroundColor: '#10B98133', borderColor: '#10B981' },
-  priorityButtonLabel: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  priorityButtonLabelActive: { color: '#0F1724', fontWeight: '700' },
-  // Progress button styles
-  progressButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginTop: 8,
-  },
-  progressButtonContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  progressButtonTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  progressButtonSubtitle: { fontSize: 11, color: '#6B7280', marginTop: 4 },
-  progressPercentage: {
-    backgroundColor: '#10B981',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginLeft: 12,
-  },
-  progressPercentageText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  progressIcon: { marginLeft: 8 },
-  progressDetails: { backgroundColor: '#F9FAFB', borderRadius: 12, padding: 12, marginTop: 8 },
-  transactionHistoryTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  paginationContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 8 },
-  paginationBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
-  paginationBtnDisabled: { opacity: 0.5 },
-  paginationText: { fontSize: 12, fontWeight: '600', color: '#6B7280', minWidth: 40, textAlign: 'center' },
-});
+const getStyles = (theme: any) => {
+  const { surface, onSurface, onSurfaceVariant, outline } = theme.colors;
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: surface },
+    containerCentered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: outline },
+    backBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    headerTitle: { fontSize: 16, fontWeight: '800', color: onSurface },
+    body: { padding: 16 },
+    card: { backgroundColor: surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: outline },
+    rowCenter: { flexDirection: 'row', alignItems: 'center' },
+    iconWrap: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+    title: { fontSize: 16, fontWeight: '800', color: onSurface },
+    sub: { fontSize: 13, color: onSurfaceVariant, marginTop: 2 },
+    metricsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+    metricCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
+    progressMetricCol: { flex: 1, alignItems: 'flex-start' },
+    metricLabel: { fontSize: 12, color: onSurfaceVariant, minHeight: 18, textAlign: 'left' },
+    metricValue: { fontSize: 15, fontWeight: '900', marginTop: 4, color: onSurface, textAlign: 'left' },
+    section: { marginTop: 16 },
+    sectionTitle: { fontSize: 14, fontWeight: '800', color: onSurface, marginBottom: 8 },
+    label: { fontSize: 12, fontWeight: '700', color: onSurfaceVariant, marginBottom: 8, marginTop: 12 },
+    input: { backgroundColor: surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: outline, color: onSurface, marginBottom: 8 },
+    textArea: { minHeight: 80 },
+    actionsRow: { flexDirection: 'row', gap: 8 },
+    btn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+    btnPrimary: { backgroundColor: '#10B981' },
+    btnDanger: { backgroundColor: '#EF4444' },
+    btnText: { color: '#fff', fontWeight: '800' },
+    btnGhost: { backgroundColor: `${onSurface}0A` },
+    btnGhostText: { color: onSurface, fontWeight: '700' },
+    empty: { color: onSurfaceVariant, marginTop: 8 },
+    txRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: outline },
+    txAmt: { fontWeight: '800', color: onSurface },
+    txDate: { fontSize: 12, color: onSurfaceVariant, marginTop: 2 },
+    txNote: { color: onSurfaceVariant, marginLeft: 12, maxWidth: 180, textAlign: 'right' },
+    iconGridContainer: { marginBottom: 8 },
+    iconGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 8 },
+    iconSelectBtn: { width: '23%', aspectRatio: 1, borderRadius: 12, backgroundColor: surface, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+    iconSelectBtnActive: { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.1)' },
+    colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 12, marginBottom: 8 },
+    colorBtn: { width: '23%', aspectRatio: 1, borderRadius: 12, borderWidth: 3, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+    colorBtnActive: { borderColor: onSurface },
+    actionSection: { marginTop: 24, gap: 12 },
+    spacer: { width: 40 },
+    colorSectionTitle: { marginTop: 16 },
+    transactionHistoryContainer: { marginTop: 12 },
+    iconMargin: { marginRight: 8 },
+    formGroup: { marginTop: 12 },
+    formRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12 },
+    formGroupHalf: { flex: 1 },
+    formGroupLeft: {},
+    formGroupRight: {},
+    categoryGridModal: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 },
+    categoryButton: { 
+      flex: 1, 
+      minWidth: '48%',
+      backgroundColor: surface, 
+      borderRadius: 12, 
+      paddingVertical: 12, 
+      paddingHorizontal: 8,
+      alignItems: 'center', 
+      borderWidth: 2, 
+      borderColor: '#10B981'
+    },
+    categoryButtonActive: { backgroundColor: 'rgba(16,185,129,0.2)', borderColor: '#10B981' },
+    categoryIcon: { marginBottom: 4 },
+    categoryButtonLabel: { fontSize: 12, fontWeight: '600', color: '#10B981' },
+    categoryButtonLabelActive: { color: onSurface, fontWeight: '700' },
+    priorityGroupModal: { flexDirection: 'row', gap: 8 },
+    priorityButton: { 
+      flex: 1, 
+      backgroundColor: surface, 
+      borderRadius: 12, 
+      paddingVertical: 12,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: outline
+    },
+    priorityButtonActive: { backgroundColor: 'rgba(16,185,129,0.2)', borderColor: '#10B981' },
+    priorityButtonLabel: { fontSize: 13, fontWeight: '600', color: onSurfaceVariant },
+    priorityButtonLabelActive: { color: onSurface, fontWeight: '700' },
+    progressButton: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      justifyContent: 'space-between',
+      backgroundColor: surface,
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: outline,
+      marginTop: 8,
+    },
+    progressButtonContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    progressButtonTitle: { fontSize: 13, fontWeight: '700', color: onSurface },
+    progressButtonSubtitle: { fontSize: 11, color: onSurfaceVariant, marginTop: 4 },
+    progressPercentage: {
+      backgroundColor: '#10B981',
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      marginLeft: 12,
+    },
+    progressPercentageText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+    progressIcon: { marginLeft: 8 },
+    progressDetails: { backgroundColor: surface, borderRadius: 12, padding: 12, marginTop: 8, borderWidth: 1, borderColor: outline },
+    transactionHistoryTitle: { fontSize: 13, fontWeight: '700', color: onSurface, marginBottom: 8 },
+    paginationContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 8 },
+    paginationBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: outline },
+    paginationBtnDisabled: { opacity: 0.5 },
+    paginationText: { fontSize: 12, fontWeight: '600', color: onSurfaceVariant, minWidth: 40, textAlign: 'center' },
+  });
+};

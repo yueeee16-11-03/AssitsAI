@@ -12,6 +12,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { ThemeContext } from '../../context/ThemeProvider';
+import { useTheme } from 'react-native-paper';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
 
@@ -21,10 +24,18 @@ export default function SettingsScreen({ navigation }: Props) {
   const TAB_BAR_HEIGHT = 70;
   
   // Settings state
-  const [darkMode, setDarkMode] = useState(true);
+  // Use global theme provider
+  // const [darkMode, setDarkMode] = useState(true);
+  const { isDark, setIsDark } = React.useContext(ThemeContext);
+  const theme = useTheme();
+  const borderColor = theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  const surfaceStyle = { backgroundColor: theme.colors.surface, borderColor };
+  const dangerStyle = { backgroundColor: theme.colors.surface, borderColor: 'rgba(239,68,68,0.12)' };
+  const smallButtonBg = theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,137,123,0.08)';
   const [language, setLanguage] = useState<"vi" | "en">("vi");
   const [notifications, setNotifications] = useState(true);
-  const [aiMode, setAIMode] = useState<"basic" | "advanced">("advanced");
+  // AI mode state removed (section removed)
+  // const [aiMode, setAIMode] = useState<"basic" | "advanced">("advanced");
   const [autoBackup, setAutoBackup] = useState(true);
   const [biometric, setBiometric] = useState(false);
 
@@ -35,6 +46,8 @@ export default function SettingsScreen({ navigation }: Props) {
       useNativeDriver: true,
     }).start();
   }, [fadeAnim]);
+
+
 
   const handleClearCache = () => {
     Alert.alert(
@@ -57,10 +70,10 @@ export default function SettingsScreen({ navigation }: Props) {
           text: "Đặt lại", 
           style: "destructive",
           onPress: () => {
-            setDarkMode(true);
+            setIsDark(true);
             setLanguage("vi");
             setNotifications(true);
-            setAIMode("advanced");
+            // setAIMode("advanced"); // removed (AI settings were removed)
             setAutoBackup(true);
             setBiometric(false);
             Alert.alert("Thành công", "Đã đặt lại cài đặt");
@@ -71,12 +84,12 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }] }>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface }] }>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: smallButtonBg }]} onPress={() => navigation.goBack()}>
+          <Text style={[styles.backIcon, { color: theme.colors.primary }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cài đặt</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.primary }]}>Cài đặt</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -84,22 +97,25 @@ export default function SettingsScreen({ navigation }: Props) {
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Appearance */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🎨 Giao diện</Text>
+            <View style={styles.sectionHeader}>
+              <Icon name="palette-outline" size={18} color="#00796B" style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>Giao diện</Text>
+            </View>
 
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Chế độ tối</Text>
-                <Text style={styles.settingDescription}>Giao diện tối dễ nhìn hơn</Text>
+                <Text style={[styles.settingLabel, { color: theme.colors.primary }]}>Chế độ tối</Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.onSurface }]}>Giao diện tối dễ nhìn hơn</Text>
               </View>
               <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                value={isDark}
+                onValueChange={setIsDark}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
                 thumbColor="#fff"
               />
             </View>
 
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Ngôn ngữ</Text>
                 <Text style={styles.settingDescription}>
@@ -107,7 +123,7 @@ export default function SettingsScreen({ navigation }: Props) {
                 </Text>
               </View>
               <TouchableOpacity
-                style={styles.languageToggle}
+                style={[styles.languageToggle, { backgroundColor: smallButtonBg }]}
                 onPress={() => setLanguage(language === "vi" ? "en" : "vi")}
               >
                 <Text style={styles.languageText}>
@@ -119,49 +135,52 @@ export default function SettingsScreen({ navigation }: Props) {
 
           {/* Notifications */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🔔 Thông báo</Text>
+            <View style={styles.sectionHeader}>
+              <Icon name="bell-outline" size={18} color="#00796B" style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>Thông báo</Text>
+            </View>
 
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Bật thông báo</Text>
-                <Text style={styles.settingDescription}>Nhận nhắc nhở và cập nhật</Text>
+                <Text style={[styles.settingLabel, { color: theme.colors.primary }]}>Bật thông báo</Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.onSurface }]}>Nhận nhắc nhở và cập nhật</Text>
               </View>
               <Switch
                 value={notifications}
                 onValueChange={setNotifications}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
                 thumbColor="#00897B"
               />
             </View>
 
             {notifications && (
               <>
-                <View style={styles.subSettingRow}>
-                  <Text style={styles.subSettingLabel}>Thói quen hàng ngày</Text>
+                <View style={[styles.subSettingRow, surfaceStyle]}>
+                  <Text style={[styles.subSettingLabel, { color: theme.colors.onSurface }]}>Thói quen hàng ngày</Text>
                   <Switch
                     value={true}
                     onValueChange={() => {}}
-                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
                     thumbColor="#00897B"
                   />
                 </View>
 
-                <View style={styles.subSettingRow}>
-                  <Text style={styles.subSettingLabel}>Nhắc nhở ngân sách</Text>
+                <View style={[styles.subSettingRow, surfaceStyle]}>
+                  <Text style={[styles.subSettingLabel, { color: theme.colors.onSurface }]}>Nhắc nhở ngân sách</Text>
                   <Switch
                     value={true}
                     onValueChange={() => {}}
-                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
                     thumbColor="#00897B"
                   />
                 </View>
 
-                <View style={styles.subSettingRow}>
+                <View style={[styles.subSettingRow, surfaceStyle]}>
                   <Text style={styles.subSettingLabel}>Cập nhật từ AI</Text>
                   <Switch
                     value={false}
                     onValueChange={() => {}}
-                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
                     thumbColor="#00897B"
                   />
                 </View>
@@ -169,55 +188,17 @@ export default function SettingsScreen({ navigation }: Props) {
             )}
           </View>
 
-          {/* AI Settings */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🤖 Trợ lý AI</Text>
 
-            <TouchableOpacity
-              style={styles.settingRow}
-              onPress={() => navigation.navigate("AISetting")}
-            >
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Cấu hình AI chi tiết</Text>
-                <Text style={styles.settingDescription}>Tính cách, giọng nói, ngôn ngữ</Text>
-              </View>
-              <Text style={styles.chevron}>→</Text>
-            </TouchableOpacity>
-
-            <View style={styles.aiModeSelector}>
-              <Text style={styles.aiModeLabel}>Chế độ AI</Text>
-              <View style={styles.aiModeButtons}>
-                <TouchableOpacity
-                  style={[styles.aiModeButton, aiMode === "basic" && styles.aiModeButtonActive]}
-                  onPress={() => setAIMode("basic")}
-                >
-                  <Text style={[styles.aiModeButtonText, aiMode === "basic" && styles.aiModeButtonTextActive]}>
-                    Cơ bản
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.aiModeButton, aiMode === "advanced" && styles.aiModeButtonActive]}
-                  onPress={() => setAIMode("advanced")}
-                >
-                  <Text style={[styles.aiModeButtonText, aiMode === "advanced" && styles.aiModeButtonTextActive]}>
-                    Nâng cao
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.aiModeDescription}>
-                {aiMode === "basic" 
-                  ? "AI đưa ra gợi ý đơn giản, dễ hiểu" 
-                  : "AI phân tích sâu và đưa ra gợi ý chi tiết"}
-              </Text>
-            </View>
-          </View>
 
           {/* Finance Management */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💳 Quản lý tài chính</Text>
+            <View style={styles.sectionHeader}>
+              <Icon name="credit-card-outline" size={18} color="#00796B" style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>Quản lý tài chính</Text>
+            </View>
 
             <TouchableOpacity 
-              style={styles.settingRow}
+              style={[styles.settingRow, surfaceStyle]}
               onPress={() => navigation.navigate("WalletManagement")}
             >
               <View style={styles.settingInfo}>
@@ -228,7 +209,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.settingRow}
+              style={[styles.settingRow, surfaceStyle]}
               onPress={() => navigation.navigate("CategoryManagement")}
             >
               <View style={styles.settingInfo}>
@@ -239,7 +220,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.settingRow}
+              style={[styles.settingRow, surfaceStyle]}
               onPress={() => navigation.navigate("RecurringTransactions")}
             >
               <View style={styles.settingInfo}>
@@ -252,9 +233,12 @@ export default function SettingsScreen({ navigation }: Props) {
 
           {/* Data & Security */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🔒 Dữ liệu & Bảo mật</Text>
+            <View style={styles.sectionHeader}>
+              <Icon name="lock-outline" size={18} color="#00796B" style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>Dữ liệu & Bảo mật</Text>
+            </View>
 
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Tự động sao lưu</Text>
                 <Text style={styles.settingDescription}>Sao lưu mỗi ngày lúc 2AM</Text>
@@ -262,12 +246,12 @@ export default function SettingsScreen({ navigation }: Props) {
               <Switch
                 value={autoBackup}
                 onValueChange={setAutoBackup}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
                 thumbColor="#00897B"
               />
             </View>
 
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Xác thực sinh học</Text>
                 <Text style={styles.settingDescription}>Face ID / Touch ID</Text>
@@ -275,12 +259,12 @@ export default function SettingsScreen({ navigation }: Props) {
               <Switch
                 value={biometric}
                 onValueChange={setBiometric}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
                 thumbColor="#00897B"
               />
             </View>
 
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Xuất dữ liệu</Text>
                 <Text style={styles.settingDescription}>Tải về file CSV/JSON</Text>
@@ -291,9 +275,12 @@ export default function SettingsScreen({ navigation }: Props) {
 
           {/* About */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ℹ️ Thông tin</Text>
+            <View style={styles.sectionHeader}>
+              <Icon name="information-outline" size={18} color="#00796B" style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>Thông tin</Text>
+            </View>
 
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Phiên bản</Text>
                 <Text style={styles.settingDescription}>1.0.0 (Build 100)</Text>
@@ -301,7 +288,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.settingRow}
+              style={[styles.settingRow, surfaceStyle]}
               onPress={() => navigation.navigate("About")}
             >
               <View style={styles.settingInfo}>
@@ -312,7 +299,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.settingRow}
+              style={[styles.settingRow, surfaceStyle]}
               onPress={() => navigation.navigate("HelpCenter")}
             >
               <View style={styles.settingInfo}>
@@ -322,14 +309,14 @@ export default function SettingsScreen({ navigation }: Props) {
               <Text style={styles.chevron}>→</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Điều khoản dịch vụ</Text>
               </View>
               <Text style={styles.chevron}>→</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Chính sách bảo mật</Text>
               </View>
@@ -339,19 +326,20 @@ export default function SettingsScreen({ navigation }: Props) {
 
           {/* Danger Zone */}
           <View style={styles.section}>
-            <TouchableOpacity 
-              style={styles.dangerButton}
-              onPress={() => navigation.navigate("GeminiTest")}
-            >
-              <Text style={styles.dangerButtonText}>🚀 Test Gemini API</Text>
+            {/* Test Gemini API button removed */}
+
+            <TouchableOpacity style={[styles.dangerButton, styles.dangerButtonCompact, dangerStyle]} onPress={handleClearCache}>
+              <View style={styles.sectionHeader}>
+                <Icon name="trash-can-outline" size={16} color="#EF4444" style={styles.sectionIcon} />
+                <Text style={styles.dangerButtonText}>Xóa bộ nhớ đệm</Text>
+              </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.dangerButton} onPress={handleClearCache}>
-              <Text style={styles.dangerButtonText}>🗑️ Xóa bộ nhớ đệm</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.dangerButton} onPress={handleResetSettings}>
-              <Text style={styles.dangerButtonText}>🔄 Đặt lại cài đặt</Text>
+            <TouchableOpacity style={[styles.dangerButton, styles.dangerButtonCompact, dangerStyle]} onPress={handleResetSettings}>
+              <View style={styles.sectionHeader}>
+                <Icon name="restore" size={16} color="#EF4444" style={styles.sectionIcon} />
+                <Text style={styles.dangerButtonText}>Đặt lại cài đặt</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -362,7 +350,7 @@ export default function SettingsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0, 137, 123, 0.08)", alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20, color: "#00897B" },
@@ -370,24 +358,29 @@ const styles = StyleSheet.create({
   placeholder: { width: 40 },
   content: { padding: 16 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 12 },
-  settingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(0, 137, 123, 0.06)", borderRadius: 12, padding: 16, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B" },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  sectionIcon: { marginRight: 8 },
+  rowCenter: { flexDirection: "row", alignItems: "center" },
+  dangerIcon: { marginRight: 8 },
+  settingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
   settingInfo: { flex: 1 },
   settingLabel: { fontSize: 16, fontWeight: "700", color: "#00796B", marginBottom: 4 },
   settingDescription: { fontSize: 13, color: "#999999" },
   chevron: { fontSize: 20, color: "#999999", marginLeft: 12 },
   languageToggle: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0, 137, 123, 0.12)", alignItems: "center", justifyContent: "center" },
   languageText: { fontSize: 24 },
-  subSettingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(0, 137, 123, 0.04)", borderRadius: 8, padding: 12, marginBottom: 8, marginLeft: 16 },
+  subSettingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 8, padding: 10, marginBottom: 8, marginLeft: 16, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
   subSettingLabel: { fontSize: 14, fontWeight: "600", color: "#00796B" },
-  aiModeSelector: { backgroundColor: "rgba(0, 137, 123, 0.06)", borderRadius: 12, padding: 16 },
+  aiModeSelector: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
   aiModeLabel: { fontSize: 14, fontWeight: "700", color: "#00796B", marginBottom: 12 },
   aiModeButtons: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  aiModeButton: { flex: 1, backgroundColor: "rgba(0, 137, 123, 0.08)", borderRadius: 8, paddingVertical: 12, alignItems: "center", borderWidth: 2, borderColor: "transparent" },
-  aiModeButtonActive: { borderColor: "#6366F1", backgroundColor: "rgba(99,102,241,0.1)" },
+  aiModeButton: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 8, paddingVertical: 10, alignItems: "center", borderWidth: 2, borderColor: "transparent" },
+  aiModeButtonActive: { borderColor: "#06B6D4", backgroundColor: "rgba(6,182,212,0.1)" },
   aiModeButtonText: { fontSize: 14, fontWeight: "700", color: "#999999" },
   aiModeButtonTextActive: { color: "#FFFFFF" },
   aiModeDescription: { fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 18 },
-  dangerButton: { backgroundColor: "rgba(239,68,68,0.1)", borderRadius: 12, padding: 16, alignItems: "center", marginBottom: 12, borderWidth: 1, borderColor: "rgba(239,68,68,0.3)" },
-  dangerButtonText: { color: "#EF4444", fontWeight: "700", fontSize: 15 },
+  dangerButton: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, alignItems: "center", marginBottom: 12, borderWidth: 1, borderColor: "rgba(239,68,68,0.12)" },
+  dangerButtonCompact: { paddingVertical: 8, paddingHorizontal: 12 },
+  dangerButtonText: { color: "#EF4444", fontWeight: "700", fontSize: 14 },
 });

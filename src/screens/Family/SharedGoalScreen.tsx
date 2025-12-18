@@ -11,6 +11,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -40,6 +41,8 @@ export default function SharedGoalScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
+  const theme = useTheme();
+  const styles = getStyles(theme);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -124,12 +127,12 @@ export default function SharedGoalScreen({ navigation }: Props) {
             <View style={styles.summaryStats}>
               <View style={styles.summaryStat}>
                 <Text style={styles.statLabel}>Đã góp</Text>
-                <Text style={[styles.statValue, { color: "#10B981" }]}>₫{(totalCurrent / 1000000).toFixed(1)}M</Text>
+                <Text style={[styles.statValue, { color: theme.colors.secondary }]}>₫{(totalCurrent / 1000000).toFixed(1)}M</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.summaryStat}>
                 <Text style={styles.statLabel}>Còn lại</Text>
-                <Text style={[styles.statValue, { color: "#F59E0B" }]}>₫{((totalTarget - totalCurrent) / 1000000).toFixed(1)}M</Text>
+                <Text style={[styles.statValue, { color: theme.colors.onSurfaceVariant }]}>₫{((totalTarget - totalCurrent) / 1000000).toFixed(1)}M</Text>
               </View>
             </View>
           </View>
@@ -137,14 +140,14 @@ export default function SharedGoalScreen({ navigation }: Props) {
           {/* AI Allocation Card */}
           <View style={styles.aiCard}>
             <View style={styles.aiHeader}>
-              <Icon name="robot" size={18} color="#6366F1" style={{ marginRight: 8 }} />
+              <Icon name="robot" size={18} color={theme.colors.secondary} style={{ marginRight: 8 }} />
               <Text style={styles.aiTitle}>Gợi ý phân bổ AI</Text>
             </View>
             <Text style={styles.aiText}>
               AI đã phân tích thu nhập và chi tiêu của từng thành viên. Dưới đây là gợi ý đóng góp công bằng cho mỗi mục tiêu:
             </Text>
             <View style={styles.aiInsight}>
-              <Icon name="lightbulb-on" size={16} color="#F59E0B" style={{ marginRight: 8 }} />
+              <Icon name="lightbulb-on" size={16} color={theme.colors.secondary} style={{ marginRight: 8 }} />
               <Text style={styles.aiInsightText}>
                 Bố và Mẹ nên đóng góp nhiều hơn vì thu nhập ổn định. Con cái có thể đóng góp từ tiền lì xì hoặc học bổng.
               </Text>
@@ -162,7 +165,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
                 <View key={goal.id} style={styles.goalCard}>
                   <View style={styles.goalHeader}>
                     <View style={styles.goalInfo}>
-                      <Icon name={goal.icon as any} size={24} color="#00796B" />
+                      <Icon name={goal.icon as any} size={24} color={theme.colors.primary} />
                       <View style={styles.goalDetails}>
                         <Text style={styles.goalTitle}>{goal.title}</Text>
                         <Text style={styles.goalCategory}>{goal.category} • <Icon name="calendar" size={12} color="#999" /> {goal.deadline}</Text>
@@ -209,7 +212,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
 
                   <View style={styles.goalActions}>
                     <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Đóng góp", `Thêm tiền vào "${goal.title}"`)}>
-                      <Icon name="currency-usd" size={16} color="#00796B" style={{ marginRight: 8 }} />
+                      <Icon name="currency-usd" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
                       <Text style={styles.actionBtnText}>Đóng góp</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.actionBtn, styles.actionBtnSecondary]}>
@@ -239,20 +242,20 @@ export default function SharedGoalScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00897B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
-  addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#00897B", alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: theme.colors.primary },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary },
+  addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
   addIcon: { fontSize: 24, color: "#fff", fontWeight: "700" },
   content: { padding: 16 },
   summaryCard: { backgroundColor: "rgba(99,102,241,0.15)", borderRadius: 20, padding: 24, marginBottom: 20, borderWidth: 1, borderColor: "rgba(99,102,241,0.3)" },
   summaryLabel: { fontSize: 14, color: "rgba(255,255,255,0.7)", marginBottom: 8, textAlign: "center" },
   summaryAmount: { fontSize: 32, fontWeight: "900", color: "#333333", marginBottom: 16, textAlign: "center" },
   summaryProgress: { height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", marginBottom: 16 },
-  summaryProgressFill: { height: "100%", backgroundColor: "#00897B", borderRadius: 4 },
+  summaryProgressFill: { height: "100%", backgroundColor: theme.colors.primary, borderRadius: 4 },
   summaryStats: { flexDirection: "row", justifyContent: "space-around" },
   summaryStat: { alignItems: "center" },
   statLabel: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginBottom: 4 },
@@ -261,25 +264,25 @@ const styles = StyleSheet.create({
   aiCard: { backgroundColor: "rgba(139,92,246,0.1)", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "rgba(139,92,246,0.3)" },
   aiHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   aiIcon: { fontSize: 24, marginRight: 8 },
-  aiTitle: { fontSize: 16, fontWeight: "800", color: "#00796B" },
+  aiTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary },
   aiText: { fontSize: 14, color: "rgba(255,255,255,0.8)", lineHeight: 20, marginBottom: 12 },
   aiInsight: { flexDirection: "row", backgroundColor: "rgba(139,92,246,0.15)", borderRadius: 12, padding: 12 },
   aiInsightIcon: { fontSize: 20, marginRight: 8 },
   aiInsightText: { flex: 1, fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 18 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary, marginBottom: 16 },
   goalCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 16, marginBottom: 16 },
   goalHeader: { marginBottom: 12 },
   goalInfo: { flexDirection: "row", alignItems: "center" },
   goalIcon: { fontSize: 32, marginRight: 12 },
   goalDetails: { flex: 1 },
-  goalTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 4 },
+  goalTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary, marginBottom: 4 },
   goalCategory: { fontSize: 12, color: "rgba(255,255,255,0.6)" },
   goalAmounts: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  goalCurrent: { fontSize: 20, fontWeight: "900", color: "#6366F1" },
+  goalCurrent: { fontSize: 20, fontWeight: "900", color: theme.colors.secondary },
   goalTarget: { fontSize: 14, color: "rgba(255,255,255,0.6)", marginLeft: 4 },
   goalProgress: { height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
-  goalProgressFill: { height: "100%", backgroundColor: "#00897B", borderRadius: 4 },
+  goalProgressFill: { height: "100%", backgroundColor: theme.colors.primary, borderRadius: 4 },
   goalPercent: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 16 },
   contributorsSection: { marginBottom: 12 },
   contributorsTitle: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.8)", marginBottom: 12 },
@@ -287,13 +290,13 @@ const styles = StyleSheet.create({
   contributorInfo: { flexDirection: "row", alignItems: "center" },
   contributorAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", marginRight: 8 },
   contributorAvatarText: { fontSize: 16 },
-  contributorName: { fontSize: 14, fontWeight: "700", color: "#00796B" },
+  contributorName: { fontSize: 14, fontWeight: "700", color: theme.colors.primary },
   contributorAmounts: { flexDirection: "row", gap: 16 },
   amountColumn: { alignItems: "flex-end" },
   amountLabel: { fontSize: 10, color: "rgba(255,255,255,0.5)", marginBottom: 2 },
   amountValue: { fontSize: 13, fontWeight: "700", color: "#333333" },
   goalActions: { flexDirection: "row", gap: 8 },
-  actionBtn: { flex: 1, backgroundColor: "#00897B", borderRadius: 10, paddingVertical: 10, alignItems: "center" },
+  actionBtn: { flex: 1, backgroundColor: theme.colors.primary, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
   actionBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   actionBtnSecondary: { backgroundColor: "rgba(255,255,255,0.06)" },
   actionBtnTextSecondary: { color: "rgba(255,255,255,0.8)", fontWeight: "700", fontSize: 13 },

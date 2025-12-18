@@ -12,6 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { useTheme } from 'react-native-paper';
 
 type Props = NativeStackScreenProps<RootStackParamList, "About">;
 
@@ -19,6 +20,7 @@ export default function AboutScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -70,12 +72,12 @@ export default function AboutScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
+          <Text style={[styles.backIcon, { color: theme.colors.primary }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Giới thiệu</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.primary }]}>Giới thiệu</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -83,13 +85,13 @@ export default function AboutScreen({ navigation }: Props) {
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* App Logo & Info */}
           <View style={styles.logoSection}>
-            <View style={styles.logoContainer}>
+            <View style={[styles.logoContainer, { backgroundColor: `${theme.colors.primary}20`, borderColor: `${theme.colors.primary}30` }]}>
               <Text style={styles.logo}>🤖</Text>
             </View>
-            <Text style={styles.appName}>{appInfo.name}</Text>
+            <Text style={[styles.appName, { color: theme.colors.primary }]}>{appInfo.name}</Text>
             <Text style={styles.appTagline}>AI Assistant cho cuộc sống thông minh</Text>
             <View style={styles.versionCard}>
-              <Text style={styles.versionText}>
+              <Text style={[styles.versionText, { color: theme.colors.primary }]}> 
                 Version {appInfo.version} ({appInfo.build})
               </Text>
               <Text style={styles.releaseDate}>Released {appInfo.releaseDate}</Text>
@@ -98,12 +100,12 @@ export default function AboutScreen({ navigation }: Props) {
 
           {/* Features */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tính năng nổi bật</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>Tính năng nổi bật</Text>
             <View style={styles.featuresGrid}>
               {features.map((feature, index) => (
                 <View key={index} style={styles.featureCard}>
                   <Text style={styles.featureIcon}>{feature.icon}</Text>
-                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={[styles.featureTitle, { color: theme.colors.primary }]}>{feature.title}</Text>
                   <Text style={styles.featureDescription}>{feature.description}</Text>
                 </View>
               ))}
@@ -192,9 +194,9 @@ export default function AboutScreen({ navigation }: Props) {
           </View>
 
           {/* Feedback */}
-          <TouchableOpacity style={styles.feedbackButton} onPress={handleFeedback}>
+          <TouchableOpacity style={[styles.feedbackButton, { backgroundColor: `${theme.colors.primary}15`, borderColor: `${theme.colors.primary}20` }]} onPress={handleFeedback}>
             <Text style={styles.feedbackIcon}>💬</Text>
-            <Text style={styles.feedbackText}>Gửi phản hồi</Text>
+            <Text style={[styles.feedbackText, { color: theme.colors.primary }]}>Gửi phản hồi</Text>
           </TouchableOpacity>
 
           {/* Copyright */}
@@ -222,7 +224,7 @@ const styles = StyleSheet.create({
   appName: { fontSize: 32, fontWeight: "900", color: "#00796B", marginBottom: 8 },
   appTagline: { fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 16, textAlign: "center" },
   versionCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10, alignItems: "center" },
-  versionText: { fontSize: 14, fontWeight: "700", color: "#6366F1", marginBottom: 2 },
+  versionText: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
   releaseDate: { fontSize: 11, color: "rgba(255,255,255,0.5)" },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
@@ -248,6 +250,6 @@ const styles = StyleSheet.create({
   socialText: { fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.8)" },
   feedbackButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(99,102,241,0.15)", borderRadius: 16, padding: 18, marginBottom: 24, borderWidth: 1, borderColor: "rgba(99,102,241,0.3)" },
   feedbackIcon: { fontSize: 24, marginRight: 8 },
-  feedbackText: { color: "#6366F1", fontSize: 16, fontWeight: "700" },
+  feedbackText: { fontSize: 16, fontWeight: "700" },
   copyright: { fontSize: 12, color: "rgba(255,255,255,0.4)", textAlign: "center", marginBottom: 16 },
 });

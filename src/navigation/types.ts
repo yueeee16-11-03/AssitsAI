@@ -50,10 +50,6 @@ export type RootStackParamList = {
   DailyCheckIn: undefined;
   AIHabitCoach: undefined;
   HabitReport: undefined;
-  FamilyOverview: undefined;
-  MemberDetail: undefined;
-  SharedGoal: undefined;
-  FamilyChat: undefined;
   Profile: undefined;
   Settings: undefined;
   Notification: undefined;
@@ -64,13 +60,6 @@ export type RootStackParamList = {
   WalletManagement: undefined;
   CategoryManagement: undefined;
   RecurringTransactions: undefined;
-  
-  // New Family Screens
-  CreateFamily: undefined;
-  InviteMember: undefined;
-  JoinFamily: undefined;
-  FamilyPermissions: undefined;
-  FamilyRoles: undefined;
   
   // New Security Screens
   SecuritySettings: undefined;
@@ -114,6 +103,12 @@ export type RootStackParamList = {
     transactionType?: 'income' | 'expense'; // 🟢 NĐ loại giao dịch
   };
   
-  // Gemini Test Screen
-  GeminiTest: undefined;
+  // Family Module Screens
+  FamilyOverview: undefined;
+  FamilyChat: undefined;
+  FamilyPermissions: undefined;
+  MemberDetail: undefined;
+  SharedGoal: undefined;
+  InviteMember: undefined;
+
 };

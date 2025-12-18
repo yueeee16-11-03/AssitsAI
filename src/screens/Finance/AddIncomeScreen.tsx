@@ -17,6 +17,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTheme } from 'react-native-paper';
 import BottomTabs from '../../navigation/BottomTabs';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -35,6 +36,12 @@ type TransactionType = "expense" | "income";
 
 export default function AddIncomeScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const surface = theme.colors.surface;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
+  const outline = theme.colors.outline || 'rgba(0,0,0,0.06)';
+  const styles = getStyles(theme);
   const TAB_BAR_HEIGHT = 70;
   // Note state
   const [note, setNote] = useState("");
@@ -257,10 +264,10 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="arrow-left" size={20} color="#111827" />
+          <MaterialCommunityIcons name="arrow-left" size={20} color={onSurface} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Thêm thu nhập</Text>
+        <Text style={[styles.headerTitle, { color: onSurface }]}>Thêm thu nhập</Text>
 
         <TouchableOpacity
           style={styles.saveButtonHeader}
@@ -307,7 +314,7 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
             {transcript && !isRecording && !isProcessing && (
               <View style={styles.transcriptPreview}>
                 <View style={styles.rowCenter}>
-                  <MaterialCommunityIcons name="file-document-outline" size={16} color="#1F2937" />
+                  <MaterialCommunityIcons name="file-document-outline" size={16} color={onSurface} />
                   <Text style={[styles.transcriptPreviewTitle, styles.transcriptTitleMargin]}>Kết quả phiên âm:</Text>
                 </View>
                 <Text style={styles.transcriptPreviewText}>{transcript}</Text>
@@ -328,9 +335,10 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
                 style={[
                   styles.fullScreenInput,
                   getNoteInputStyle(),
+                  { color: onSurface }
                 ]}
                 placeholder="Viết ghi chú ở đây..."
-                placeholderTextColor="#BBBBBB"
+                placeholderTextColor={onSurfaceVariant}
                 value={note}
                 onChangeText={setNote}
                 multiline
@@ -386,7 +394,7 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
               <MaterialCommunityIcons 
                 name={fontStyle === 'title' ? 'format-bold' : fontStyle === 'regular' ? 'format-size' : 'format-italic'} 
                 size={28} 
-                color="#6B7280" 
+                color={onSurfaceVariant} 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
@@ -418,7 +426,7 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
               <MaterialCommunityIcons 
                 name="check-circle-outline" 
                 size={28} 
-                color="#6B7280" 
+                color={onSurfaceVariant} 
                 style={styles.iconStyle}
               />
             </TouchableOpacity>
@@ -460,9 +468,9 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
         >
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowManualForm(false)}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#111827" />
+              <MaterialCommunityIcons name="arrow-left" size={24} color={onSurface} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Thêm Thu Nhập</Text>
+            <Text style={[styles.modalTitle, { color: onSurface }]}>Thêm Thu Nhập</Text>
             <View style={styles.headerPlaceholder} />
           </View>
 
@@ -488,7 +496,7 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
               <MaterialCommunityIcons
                 name={showTemplateForm ? "file-document" : "file-document-outline"}
                 size={16}
-                color={showTemplateForm ? "#FFFFFF" : "#6B7280"}
+                color={showTemplateForm ? surface : onSurfaceVariant}
               />
               <Text style={[styles.aiToggleText, showTemplateForm && styles.aiToggleTextActive]}>
                 {showTemplateForm ? "Sử dụng mẫu: Bật" : "Sử dụng mẫu: Tắt"}
@@ -538,11 +546,11 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
             )}
 
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>Mô tả</Text>
+              <Text style={[styles.formLabel, { color: onSurface }]}>Mô tả</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: onSurface }]}
                 placeholder="Ví dụ: Lương tháng, bán hàng..."
-                placeholderTextColor="#D1D5DB"
+                placeholderTextColor={outline}
                 value={description}
                 onChangeText={setDescription}
               />
@@ -686,6 +694,8 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
 
 // Camera Screen Component
 function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const { hasPermission, requestPermission } = useCameraPermission();
   const [cameraPosition, setCameraPosition] = React.useState<"back" | "front">("back");
   const device = useCameraDevice(cameraPosition);
@@ -906,9 +916,15 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+function getStyles(theme: any): any {
+  const surface = theme.colors.surface;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
+  const outline = theme.colors.outline || 'rgba(0,0,0,0.06)';
+
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: surface },
+  safeArea: { flex: 1, backgroundColor: surface },
   
   header: {
     flexDirection: "row",
@@ -918,8 +934,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-    backgroundColor: "#FFFFFF",
+    borderBottomColor: outline,
+    backgroundColor: surface,
   },
   
   mainContent: {
@@ -934,7 +950,7 @@ const styles = StyleSheet.create({
   
   scrollContent: {
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
   },
   
   backButton: {
@@ -966,8 +982,8 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 18,
     lineHeight: 26,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: onSurface,
+    backgroundColor: surface,
     textAlignVertical: 'top',
     minHeight: 420,
   },
@@ -980,7 +996,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     backgroundColor: '#F3F4F6',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.06)',
+    borderTopColor: outline,
     alignItems: 'center',
     justifyContent: 'space-around',
     gap: 8,
@@ -1424,7 +1440,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
   },
   modalHeader: {
     flexDirection: "row",
@@ -1433,13 +1449,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
+    borderBottomColor: outline,
+    backgroundColor: surface,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#111827",
+    color: onSurface,
     flex: 1,
     textAlign: "center",
   },
@@ -1448,7 +1464,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
   },
   modalScrollContent: {
     padding: 16,
@@ -1460,9 +1476,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingBottom: 24,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderTopColor: outline,
   },
   cancelButton: {
     flex: 1,
@@ -1472,12 +1488,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: outline,
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#6B7280",
+    color: onSurfaceVariant,
   },
   submitButton: {
     flex: 1,
@@ -1501,22 +1517,22 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#111827",
+    color: onSurface,
   },
   amountInputField: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: outline,
     paddingHorizontal: 12,
     height: 48,
   },
   currencyPrefix: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#6B7280",
+    color: onSurfaceVariant,
     marginRight: 6,
   },
   amountFieldInput: {
@@ -1535,9 +1551,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: outline,
     marginRight: 8,
   },
   categoryPillActive: {
@@ -1547,7 +1563,7 @@ const styles = StyleSheet.create({
   categoryPillText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#6B7280",
+    color: onSurfaceVariant,
   },
   categoryPillTextActive: {
     color: "#FFFFFF",
@@ -1557,10 +1573,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: outline,
     paddingHorizontal: 12,
     height: 48,
   },
@@ -1571,7 +1587,7 @@ const styles = StyleSheet.create({
   timePickerButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#6B7280",
+    color: onSurfaceVariant,
     flex: 1,
   },
   timePickerButtonTextActive: {
@@ -1587,9 +1603,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: outline,
     marginBottom: 12,
   },
   aiToggleButtonActive: {
@@ -1599,7 +1615,7 @@ const styles = StyleSheet.create({
   aiToggleText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#6B7280",
+    color: onSurfaceVariant,
   },
   aiToggleTextActive: {
     color: "#FFFFFF",
@@ -1663,7 +1679,7 @@ const styles = StyleSheet.create({
   suggestionName: { fontSize: 13, fontWeight: "800", color: "#111827", marginBottom: 4, flexShrink: 1, flexWrap: 'wrap' },
   templateEmptyContainer: { paddingHorizontal: 12, paddingVertical: 8, justifyContent: 'center', alignItems: 'center' },
   templateEmptyText: { color: '#6B7280', fontSize: 13 },
-  input: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, color: "#111827", fontSize: 16, borderWidth: 1, borderColor: "#E5E7EB" },
+  input: { backgroundColor: surface, borderRadius: 12, padding: 12, color: onSurface, fontSize: 16, borderWidth: 1, borderColor: outline },
   successBanner: {
     position: 'absolute',
     top: 70,
@@ -1697,4 +1713,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
   },
-});
+  });
+}

@@ -15,6 +15,7 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -44,7 +45,7 @@ const PERIODS = ["day", "week", "month", "year"] as const;
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-function HabitCard({ habit }: { habit: any }) {
+function HabitCard({ habit, theme }: { habit: any; theme: any }) {
   const scale = useRef(new Animated.Value(1)).current;
   const streakAnim = useRef(new Animated.Value(0)).current;
   const confettiAnim = useRef(new Animated.Value(0)).current;
@@ -138,7 +139,7 @@ function HabitCard({ habit }: { habit: any }) {
 
   return (
     <AnimatedTouchable
-      style={[styles.habitCardVertical, { transform: [{ scale }] }]}
+      style={[styles.habitCardVertical, { transform: [{ scale }], backgroundColor: theme.habitCardBg, borderColor: theme.habitCardBorder }]}
       activeOpacity={0.85}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
@@ -154,14 +155,14 @@ function HabitCard({ habit }: { habit: any }) {
         </View>
         <View style={styles.habitTextCol}>
           <View style={styles.habitHeaderRow}>
-            <Text style={styles.habitName}>{habit.name}</Text>
+            <Text style={[styles.habitName, { color: theme.habitNameColor }]}>{habit.name}</Text>
             <View style={styles.habitStreakRow}>
               {(habit.streak || 0) > 0 && (
                 <Animated.Text style={[styles.streakFire, { transform: [{ scale: streakAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.12] }) }], opacity: streakAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }]}>
                   🔥
                 </Animated.Text>
               )}
-              <Text style={styles.streakTextSmall}>{habit.streak}d</Text>
+              <Text style={[styles.streakTextSmall, { color: theme.textSecondary }]}>{habit.streak}d</Text>
             </View>
           </View>
           <View style={styles.checklistRow}>
@@ -189,7 +190,27 @@ function HabitCard({ habit }: { habit: any }) {
 
 export default function AIInsightScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const TAB_BAR_HEIGHT = 70;
+  
+  // Theme colors
+  const bgColor = theme.colors.background;
+  const surfaceColor = theme.colors.surface;
+  const textPrimary = theme.colors.onSurface;
+  const textSecondary = theme.colors.onSurfaceVariant;
+  const borderColor = theme.dark ? '#404040' : 'rgba(0,0,0,0.06)';
+  const cardBg = theme.dark ? '#2A2D3A' : '#F9FAFB';
+  const periodBgInactive = theme.dark ? '#3F4451' : '#F3F4F6';
+  const habitCardBg = theme.dark ? '#2A2D3A' : '#FFFFFF';
+  const habitCardBorder = theme.dark ? '#404040' : 'rgba(31,41,55,0.12)';
+  const habitNameColor = theme.dark ? textPrimary : '#111827';
+  const insightTextColor = theme.dark ? '#FFFFFF' : '#051126';
+  const insightWarningGradient = theme.dark ? ['#7C2D12', '#5B21B6'] : ['#FFEDD5', '#FFE4D6'];
+  const insightSuccessGradient = theme.dark ? ['#065F46', '#047857'] : ['#ECFDF5', '#D1FAE5'];
+  const insightInfoGradient = theme.dark ? [theme.colors.primary, '#4F46E5'] : [`${theme.colors.primary}20`, `${theme.colors.primary}10`];
+  const accentColor = theme.colors.primary;
+  const accentError = '#dc2626';
+  
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month" | "year">("month");
   
   const [containerWidth, setContainerWidth] = useState(0);
@@ -470,17 +491,17 @@ export default function AIInsightScreen({ navigation }: Props) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+      <View style={[styles.header, { backgroundColor: surfaceColor, borderBottomColor: borderColor }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="chevron-left" size={18} color="#111827" />
+          <MaterialCommunityIcons name="chevron-left" size={18} color={textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Phân tích thông minh</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>Phân tích thông minh</Text>
         <TouchableOpacity style={styles.refreshButton}>
-          <MaterialCommunityIcons name="refresh" size={16} color="#111827" />
+          <MaterialCommunityIcons name="refresh" size={16} color={textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -506,27 +527,27 @@ export default function AIInsightScreen({ navigation }: Props) {
                 ]}
               />
             )}
-            {PERIODS.map((period, idx) => (
-              <TouchableOpacity
-                key={period}
-                style={[
-                  styles.periodButton,
-                  selectedPeriod === period && styles.periodButtonActive,
-                  idx === 0 && styles.periodButtonFirst,
-                  idx === PERIODS.length - 1 && styles.periodButtonLast,
-                ]}
-                onPress={() => setSelectedPeriod(period)}
-              >
-                <Text
+            {PERIODS.map((period, idx) => {
+              const label = period === "day" ? "Ngày" : period === "week" ? "Tuần" : period === "month" ? "Tháng" : "Năm";
+              const selected = selectedPeriod === period;
+              return (
+                <TouchableOpacity
+                  key={period}
                   style={[
-                    styles.periodText,
-                    selectedPeriod === period && styles.periodTextActive,
+                    styles.periodButton,
+                    selected && { backgroundColor: '#06B6D4' },
+                    !selected && { backgroundColor: periodBgInactive },
+                    idx === 0 && styles.periodButtonFirst,
+                    idx === PERIODS.length - 1 && styles.periodButtonLast,
                   ]}
+                  onPress={() => setSelectedPeriod(period)}
                 >
-                  {period === "day" ? "Ngày" : period === "week" ? "Tuần" : period === "month" ? "Tháng" : "Năm"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <View style={styles.periodTextWrap}>
+                    <Text style={[styles.periodText, selected ? [styles.periodTextActive, { color: '#FFFFFF' }] : { color: textSecondary }]}>{label}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* AI Summary Card */}
@@ -578,46 +599,46 @@ export default function AIInsightScreen({ navigation }: Props) {
           }}>
             <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
               <TouchableWithoutFeedback>
-                <View style={styles.modalContent}>
-                <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>Trợ lý AI</Text>
+                <View style={[styles.modalContent, { backgroundColor: bgColor }]}>
+                <View style={[styles.modalHeaderRow, { backgroundColor: surfaceColor, borderBottomColor: borderColor }]}>
+                  <Text style={[styles.modalTitle, { color: textPrimary }]}>Trợ lý AI</Text>
                   <TouchableOpacity onPress={() => {
                     setModalVisible(false);
                     setAiRequested(false);
                   }}>
-                    <Text style={styles.modalClose}>Đóng</Text>
+                    <Text style={[styles.modalClose, { color: accentColor }]}>Đóng</Text>
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
                   {aiLoading ? (
                     <View style={styles.modalLoadingRow}>
-                      <MaterialCommunityIcons name="clock-outline" size={20} color="#111827" />
-                      <Text style={styles.modalGreeting}>Đang phân tích dữ liệu của bạn...</Text>
+                      <MaterialCommunityIcons name="clock-outline" size={20} color={textPrimary} />
+                      <Text style={[styles.modalGreeting, { color: textPrimary }]}>Đang phân tích dữ liệu của bạn...</Text>
                     </View>
                   ) : aiResult?.summary ? (
                     <View style={styles.modalLoadingRow}>
                       <MaterialCommunityIcons name="check-circle-outline" size={20} color="#10B981" />
-                      <Text style={styles.modalGreetingFlex}>Tóm tắt: {aiResult.summary}</Text>
+                      <Text style={[styles.modalGreetingFlex, { color: textPrimary }]}>Tóm tắt: {aiResult.summary}</Text>
                     </View>
                   ) : (
-                    <Text style={styles.modalGreeting}>Mình có thể giúp bạn phân tích chi tiết thu chi và đưa ra gợi ý. Tháng này bạn đã chi khoảng {(financial.totalExpense || 0).toLocaleString('vi-VN')} VNĐ</Text>
+                    <Text style={[styles.modalGreeting, { color: textPrimary }]}>Mình có thể giúp bạn phân tích chi tiết thu chi và đưa ra gợi ý. Tháng này bạn đã chi khoảng {(financial.totalExpense || 0).toLocaleString('vi-VN')} VNĐ</Text>
                   )}
                   {aiError && (
                     <View style={styles.aiErrorContainerRow}>
                       <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#dc2626" />
-                      <Text style={styles.aiErrorMessageFlex}>Lỗi: {aiError}</Text>
+                      <Text style={[styles.aiErrorMessageFlex, { color: accentError }]}>Lỗi: {aiError}</Text>
                     </View>
                   )}
                   {!aiLoading && aiResult && ( (aiResult?.suggestions && aiResult.suggestions.length > 0) || (aiResult?.actions && aiResult.actions.length > 0) ) && (
                     <View style={styles.modalSectionSpacing}>
                       <View style={styles.sectionTitleRow}>
                         <MaterialCommunityIcons name="lightbulb-outline" size={20} color="#F59E0B" />
-                        <Text style={styles.sectionTitle}>Gợi ý từ AI</Text>
+                        <Text style={[styles.sectionTitle, { color: textPrimary }]}>Gợi ý từ AI</Text>
                       </View>
                       { (aiResult?.suggestions || aiResult?.actions).map((s: any, i: number) => (
                         <View key={`modal-sugg-${i}`} style={styles.aiDetailRow}>
-                          <Text style={styles.aiDetailBullet}>•</Text>
-                          <Text style={styles.aiDetailText}>{typeof s === 'string' ? s : `${s.title || s.name || ''}${s.description ? ' — ' + s.description : ''}`}</Text>
+                          <Text style={[styles.aiDetailBullet, { color: textSecondary }]}>•</Text>
+                          <Text style={[styles.aiDetailText, { color: textPrimary }]}>{typeof s === 'string' ? s : `${s.title || s.name || ''}${s.description ? ' — ' + s.description : ''}`}</Text>
                         </View>
                       )) }
                     </View>
@@ -674,9 +695,9 @@ export default function AIInsightScreen({ navigation }: Props) {
           {/* Spending Breakdown */}
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Phân tích chi tiêu</Text>
+              <Text style={[styles.sectionTitle, { color: textPrimary }]}>Phân tích chi tiêu</Text>
               <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('Report')}>
-                <Text style={styles.viewAllText}>Xem tất cả</Text>
+                <Text style={[styles.viewAllText, { color: accentColor }]}>Xem tất cả</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.spendingChartCarouselWrap}>
@@ -692,32 +713,32 @@ export default function AIInsightScreen({ navigation }: Props) {
                   {displaySpending.slice(0, 3).map((item: any, index: number) => (
                     <TouchableOpacity
                       key={index}
-                      style={[styles.spendingCard, index === 0 && styles.spendingCardFeatured, { width: CAROUSEL_CARD_WIDTH }]}
+                      style={[styles.spendingCard, index === 0 && styles.spendingCardFeatured, { width: CAROUSEL_CARD_WIDTH, backgroundColor: cardBg, borderColor: borderColor }]}
                       activeOpacity={0.9}
                       onPress={() => Alert.alert(item.category || 'Hạng mục', `${(item.amount || 0).toLocaleString('vi-VN')} VNĐ`)}
                     >
                       <View style={styles.cardHeaderRow}>
                         <View style={styles.cardLeftRow}>
                           <View style={[styles.categoryDotLarge, { backgroundColor: item.color }]} />
-                          <Text style={styles.spendingCardTitle}>{item.category}</Text>
+                          <Text style={[styles.spendingCardTitle, { color: textPrimary }]}>{item.category}</Text>
                         </View>
-                        <Text style={styles.spendingCardAmount}>{(item.amount || 0).toLocaleString('vi-VN')} VNĐ</Text>
+                        <Text style={[styles.spendingCardAmount, { color: textPrimary }]}>{(item.amount || 0).toLocaleString('vi-VN')} VNĐ</Text>
                       </View>
-                      <View style={styles.spendingCardProgressBar}>
+                      <View style={[styles.spendingCardProgressBar, { backgroundColor: borderColor }]}>
                         <View style={[styles.spendingCardProgressFill, { width: `${item.percent}%`, backgroundColor: item.color }]} />
                       </View>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
               ) : (
-                <View style={styles.emptySpending}>
-                  <Text style={styles.emptySpendingText}>Không có dữ liệu chi tiêu cho khoảng thời gian này.</Text>
+                <View style={[styles.emptySpending, { backgroundColor: cardBg, borderColor: borderColor }]}>
+                  <Text style={[styles.emptySpendingText, { color: textSecondary }]}>Không có dữ liệu chi tiêu cho khoảng thời gian này.</Text>
                   <View style={styles.spendingCTARow}>
                     <TouchableOpacity style={styles.spendingCTAButton} onPress={() => navigation.navigate('AddTransaction', { defaultType: 'expense' })}>
                       <Text style={styles.spendingCTAText}>Thêm giao dịch</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.spendingCTAButtonOutline} onPress={() => navigation.navigate('Report')}>
-                      <Text style={styles.spendingCTAOutlineText}>Mở báo cáo</Text>
+                      <Text style={[styles.spendingCTAOutlineText, { color: accentColor }]}>Mở báo cáo</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -727,10 +748,10 @@ export default function AIInsightScreen({ navigation }: Props) {
 
           {/* Habits Progress */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tiến độ thói quen</Text>
+            <Text style={[styles.sectionTitle, { color: textPrimary }]}>Tiến độ thói quen</Text>
             <View style={styles.habitsGridVertical}>
               {habits.map((habit: any, index: number) => (
-                <HabitCard key={index} habit={habit} />
+                <HabitCard key={index} habit={habit} theme={{ habitCardBg, habitCardBorder, habitNameColor, textSecondary }} />
               ))}
             </View>
           </View>
@@ -738,9 +759,9 @@ export default function AIInsightScreen({ navigation }: Props) {
           {/* Insights & Recommendations */}
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Khuyến nghị</Text>
+              <Text style={[styles.sectionTitle, { color: textPrimary }]}>Khuyến nghị</Text>
               <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('AIChat')}>
-                <Text style={styles.viewAllText}>Tương tác</Text>
+                <Text style={[styles.viewAllText, { color: accentColor }]}>Tương tác</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.insightCarouselWrap}>
@@ -753,9 +774,9 @@ export default function AIInsightScreen({ navigation }: Props) {
                 contentContainerStyle={styles.carouselContent}
               >
                 {insights.map((insight, index) => {
-                  const colors = insight.type === 'warning' ? ['#FFEDD5', '#FFE4D6'] : insight.type === 'success' ? ['#ECFDF5', '#D1FAE5'] : ['#EEF2FF', '#E9D5FF'];
+                  const colors = insight.type === 'warning' ? insightWarningGradient : insight.type === 'success' ? insightSuccessGradient : insightInfoGradient;
                   const iconName = insight.type === 'warning' ? 'alert-circle-outline' : insight.type === 'success' ? 'check-circle-outline' : 'lightbulb-outline';
-                  const iconColor = insight.type === 'warning' ? '#F97316' : insight.type === 'success' ? '#059669' : '#6366F1';
+                  const iconColor = insight.type === 'warning' ? '#F97316' : insight.type === 'success' ? '#059669' : accentColor;
                   return (
                     <TouchableOpacity key={index} activeOpacity={0.9} onPress={() => Alert.alert(insight.title, insight.description)} style={[styles.insightStoryCard, { width: INSIGHT_CARD_WIDTH }]}> 
                       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.insightStoryGradient}>
@@ -765,8 +786,8 @@ export default function AIInsightScreen({ navigation }: Props) {
                           </View>
                         </View>
                         <View style={styles.insightStoryBody}>
-                          <Text style={styles.insightStoryTitle}>{insight.title}</Text>
-                          <Text numberOfLines={3} style={styles.insightStoryDesc}>{insight.description}</Text>
+                          <Text style={[styles.insightStoryTitle, { color: insightTextColor }]}>{insight.title}</Text>
+                          <Text numberOfLines={3} style={[styles.insightStoryDesc, { color: insightTextColor }]}>{insight.description}</Text>
                         </View>
                       </LinearGradient>
                     </TouchableOpacity>
@@ -796,16 +817,13 @@ export default function AIInsightScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   spendingItem: {
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(31,41,55,0.12)',
   },
   header: {
     flexDirection: "row",
@@ -815,8 +833,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 3,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-    backgroundColor: "#FFFFFF",
   },
   spendingChart: {
     backgroundColor: "transparent",
@@ -840,7 +856,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#111827",
     marginBottom: 0,
   },
   refreshButton: {
@@ -860,20 +875,17 @@ const styles = StyleSheet.create({
   },
   periodSelector: {
     flexDirection: "row",
-    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     padding: 0,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
     overflow: 'hidden',
   },
   periodButton: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 6,
     alignItems: "center",
     borderRadius: 0,
-    backgroundColor: '#FFFFFF',
     zIndex: 2,
     borderWidth: 0,
     shadowColor: 'transparent',
@@ -886,7 +898,6 @@ const styles = StyleSheet.create({
   periodButtonMiddle: { borderRadius: 0 },
   periodButtonLast: { borderTopRightRadius: 8, borderBottomRightRadius: 8 },
   periodButtonActive: {
-    backgroundColor: '#06B6D4',
     zIndex: 3,
     shadowColor: '#06B6D4',
     shadowOpacity: 0.14,
@@ -895,13 +906,12 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   periodText: {
-    color: "#111827",
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
     letterSpacing: 0.2,
   },
   periodTextActive: {
-    color: "#FFFFFF",
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
     letterSpacing: 0.2,
@@ -920,6 +930,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     zIndex: 0,
   },
+  periodTextWrap: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   summaryCardGlass: {
     borderRadius: 16,
     padding: 20,
@@ -1007,20 +1018,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#111827",
     marginBottom: 16,
   },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   viewAllButton: { paddingHorizontal: 8 },
-  viewAllText: { color: '#06B6D4', fontWeight: '700' },
+  viewAllText: { fontWeight: '700' },
   insightCarouselWrap: { marginTop: 6, marginBottom: 6 },
   insightStoryCard: { marginRight: 12, borderRadius: 14, overflow: 'hidden' },
   insightStoryGradient: { borderRadius: 14, padding: 16, height: 160, justifyContent: 'space-between' },
   insightStoryTop: { alignItems: 'flex-end' },
   insightStoryIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   insightStoryBody: { marginTop: 6 },
-  insightStoryTitle: { color: '#051126', fontWeight: '800', fontSize: 15, marginBottom: 6 },
-  insightStoryDesc: { color: '#051126', fontSize: 13, lineHeight: 18 },
+  insightStoryTitle: { fontWeight: '800', fontSize: 15, marginBottom: 6 },
+  insightStoryDesc: { fontSize: 13, lineHeight: 18 },
   
   spendingInfo: {
     flexDirection: "row",
@@ -1037,12 +1047,12 @@ const styles = StyleSheet.create({
 
   spendingChartCarouselWrap: { marginTop: 6, marginBottom: 6 },
   carouselContent: { paddingHorizontal: 16 },
-  spendingCard: { backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, marginRight: 12, borderWidth: 2, borderColor: '#06B6D4' },
+  spendingCard: { borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, marginRight: 12, borderWidth: 2, borderColor: '#06B6D4' },
   spendingCardFeatured: { transform: [{ scale: 1.03 }], shadowColor: 'rgba(0,0,0,0.08)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  spendingCardTitle: { color: '#111827', fontWeight: '800', fontSize: 16 },
-  spendingCardAmount: { color: '#111827', fontWeight: '800' },
-  spendingCardProgressBar: { height: 10, backgroundColor: 'rgba(6,182,212,0.08)', borderRadius: 6, overflow: 'hidden' },
+  spendingCardTitle: { fontWeight: '800', fontSize: 16 },
+  spendingCardAmount: { fontWeight: '800' },
+  spendingCardProgressBar: { height: 10, borderRadius: 6, overflow: 'hidden' },
   spendingCardProgressFill: { height: '100%' },
   cardLeftRow: { flexDirection: 'row', alignItems: 'center' },
   habitIconCircle: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
@@ -1087,19 +1097,16 @@ const styles = StyleSheet.create({
   },
   habitCardVertical: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
     alignItems: 'flex-start',
     borderWidth: 1,
-    borderColor: 'rgba(31,41,55,0.12)',
     marginBottom: 10,
   },
   habitRowHorizontal: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   habitIcon: { fontSize: 28, marginRight: 8, width: 36, textAlign: 'center' },
   habitName: {
-    color: "#111827",
     fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
@@ -1108,7 +1115,7 @@ const styles = StyleSheet.create({
   habitProgressBarHorizontal: { flex: 1, height: 8, backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 6, overflow: 'hidden' },
   habitProgressFillHorizontal: { height: '100%', backgroundColor: '#10B981' },
   habitPercent: { color: '#9CA3AF', fontSize: 12, marginLeft: 8 },
-  streakTextSmall: { color: '#9CA3AF', fontSize: 12, marginTop: 8 },
+  streakTextSmall: { fontSize: 12, marginTop: 8 },
   insightCard: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -1210,23 +1217,23 @@ const styles = StyleSheet.create({
   summaryActionText: { color: 'rgba(255,255,255,0.98)', fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto', letterSpacing: 0.2 },
   summaryActionTextOutline: { color: 'rgba(255,255,255,0.98)' },
 
-  emptySpending: { padding: 18, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)', alignItems: 'center' },
-  emptySpendingText: { color: '#6B7280', marginBottom: 12 },
+  emptySpending: { padding: 18, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  emptySpendingText: { marginBottom: 12 },
   spendingCTARow: { flexDirection: 'row', gap: 8 },
   spendingCTAButton: { backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
   spendingCTAText: { color: '#FFFFFF', fontWeight: '700' },
-  spendingCTAButtonOutline: { backgroundColor: 'transparent', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
-  spendingCTAOutlineText: { color: '#111827', fontWeight: '700' },
+  spendingCTAButtonOutline: { backgroundColor: 'transparent', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1 },
+  spendingCTAOutlineText: { fontWeight: '700' },
 
   aiDetailRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 8 },
-  aiDetailBullet: { color: '#10B981', fontSize: 18, lineHeight: 22, marginTop: 2 },
-  aiDetailText: { color: '#111827', flex: 1 },
+  aiDetailBullet: { fontSize: 18, lineHeight: 22, marginTop: 2 },
+  aiDetailText: { flex: 1 },
   aiDetailEmpty: { color: '#6B7280' },
 
   habitIconMargin: { marginRight: 12 },
   habitTextCol: { flex: 1 },
   aiAnomalyWrap: { marginTop: 12 },
-  aiAnomalyTitle: { fontSize: 14, fontWeight: '800', marginBottom: 8, color: '#111827' },
+  aiAnomalyTitle: { fontSize: 14, fontWeight: '800', marginBottom: 8 },
   /* Floating Action Button */
   fabContainer: { position: 'absolute', left: 16, right: 16, zIndex: 999 },
   fabButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#111827', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 12, shadowColor: 'rgba(0,0,0,0.2)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
@@ -1242,13 +1249,13 @@ const styles = StyleSheet.create({
   confettiRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
   confettiDot: { width: 8, height: 8, borderRadius: 4 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 16 },
-  modalContent: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16, maxHeight: '86%' },
-  modalHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  modalTitle: { fontWeight: '800', fontSize: 16, color: '#111827' },
-  modalClose: { color: '#6B7280', fontWeight: '700' },
-  modalGreeting: { marginBottom: 8, color: '#111827', fontSize: 14 },
+  modalContent: { borderRadius: 14, padding: 16, maxHeight: '86%' },
+  modalHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, borderBottomWidth: 1, paddingBottom: 12 },
+  modalTitle: { fontWeight: '800', fontSize: 16 },
+  modalClose: { fontWeight: '700' },
+  modalGreeting: { marginBottom: 8, fontSize: 14 },
   modalLoadingRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 16 },
-  modalGreetingFlex: { marginBottom: 8, color: '#111827', fontSize: 14, flex: 1 },
+  modalGreetingFlex: { marginBottom: 8, fontSize: 14, flex: 1 },
   modalSectionSpacing: { marginTop: 12 },
   modalActionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
   modalActionLeft: { flex: 1, marginRight: 8 },

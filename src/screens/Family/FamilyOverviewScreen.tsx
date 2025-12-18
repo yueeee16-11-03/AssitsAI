@@ -8,6 +8,7 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -38,6 +39,8 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const styles = getStyles(theme);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -117,21 +120,21 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
             <View style={styles.summaryStats}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Thu nhập</Text>
-                <Text style={[styles.summaryValue, { color: "#10B981" }]}>
+                <Text style={[styles.summaryValue, { color: theme.colors.secondary }]}>
                   ₫{(totalIncome / 1000000).toFixed(1)}M
                 </Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Chi tiêu</Text>
-                <Text style={[styles.summaryValue, { color: "#EF4444" }]}>
+                <Text style={[styles.summaryValue, { color: theme.colors.onSurfaceVariant }]}>
                   ₫{(totalExpense / 1000000).toFixed(1)}M
                 </Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Tiết kiệm</Text>
-                <Text style={[styles.summaryValue, { color: "#6366F1" }]}>
+                <Text style={[styles.summaryValue, { color: theme.colors.primary }]}>
                   ₫{(totalSaving / 1000000).toFixed(1)}M
                 </Text>
               </View>
@@ -177,7 +180,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                   {/* Finance Stats */}
                   <View style={styles.memberStats}>
                     <View style={styles.statRow}>
-                      <Icon name="currency-usd" size={20} color="#10B981" style={{ marginRight: 6 }} />
+                      <Icon name="currency-usd" size={20} color={theme.colors.secondary} style={{ marginRight: 6 }} />
                       <View style={styles.statInfo}>
                         <Text style={styles.statLabel}>Thu nhập</Text>
                         <Text style={styles.statValue}>
@@ -186,7 +189,7 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                       </View>
                     </View>
                     <View style={styles.statRow}>
-                      <Icon name="cash-remove" size={20} color="#EF4444" style={{ marginRight: 6 }} />
+                      <Icon name="cash-remove" size={20} color={theme.colors.onSurfaceVariant} style={{ marginRight: 6 }} />
                       <View style={styles.statInfo}>
                         <Text style={styles.statLabel}>Chi tiêu</Text>
                         <Text style={styles.statValue}>
@@ -223,11 +226,11 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
                     </View>
                     <View style={styles.habitMeta}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name="fire" size={12} color="#F59E0B" style={{ marginRight: 4 }} />
+                        <Icon name="fire" size={12} color={theme.colors.secondary} style={{ marginRight: 4 }} />
                         <Text style={styles.habitStreak}>{member.habits.streak} ngày</Text>
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name="target" size={12} color="#00796B" style={{ marginRight: 4 }} />
+                        <Icon name="target" size={12} color={theme.colors.primary} style={{ marginRight: 4 }} />
                         <Text style={styles.habitGoals}>{member.goals} mục tiêu</Text>
                       </View>
                     </View>
@@ -250,25 +253,25 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
           {/* AI Family Insights */}
           <View style={styles.aiCard}>
             <View style={styles.aiHeader}>
-              <Icon name="robot" size={24} color="#8B5CF6" style={{ marginRight: 8 }} />
+              <Icon name="robot" size={24} color={theme.colors.secondary} style={{ marginRight: 8 }} />
               <Text style={styles.aiTitle}>Phân tích AI</Text>
             </View>
             <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-              <Icon name="lightbulb-on" size={14} color="#F59E0B" style={{ marginRight: 6, marginTop: 2 }} />
+              <Icon name="lightbulb-on" size={14} color={theme.colors.secondary} style={{ marginRight: 6, marginTop: 2 }} />
               <Text style={styles.aiText}>
                 <Text style={styles.aiBold}>Mẹ</Text> đang duy trì thói quen tốt nhất với 100% hoàn thành.
                 Cả gia đình nên học hỏi!
               </Text>
             </View>
             <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-              <Icon name="alert" size={14} color="#EF4444" style={{ marginRight: 6, marginTop: 2 }} />
+              <Icon name="alert" size={14} color={theme.colors.onSurfaceVariant} style={{ marginRight: 6, marginTop: 2 }} />
               <Text style={styles.aiText}>
                 <Text style={styles.aiBold}>Con trai</Text> cần cải thiện thói quen đọc sách.
                 Đề xuất đặt nhắc nhở 8PM mỗi tối.
               </Text>
             </View>
             <View style={{ flexDirection: 'row', marginBottom: 0 }}>
-              <Icon name="chart-bar" size={14} color="#10B981" style={{ marginRight: 6, marginTop: 2 }} />
+              <Icon name="chart-bar" size={14} color={theme.colors.secondary} style={{ marginRight: 6, marginTop: 2 }} />
               <Text style={styles.aiText}>
                 Gia đình đang tiết kiệm được <Text style={styles.aiHighlight}>
                   {((totalSaving / totalIncome) * 100).toFixed(1)}%
@@ -280,11 +283,11 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
           {/* Quick Actions */}
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("SharedGoal")}>
-              <Icon name="target" size={32} color="#6366F1" style={{ marginBottom: 8 }} />
+              <Icon name="target" size={32} color={theme.colors.primary} style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Mục tiêu chung</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("FinanceDashboard")}>
-              <Icon name="cash-multiple" size={32} color="#10B981" style={{ marginBottom: 8 }} />
+              <Icon name="cash-multiple" size={32} color={theme.colors.secondary} style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Tài chính</Text>
             </TouchableOpacity>
           </View>
@@ -295,66 +298,66 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E0F2F1" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0, 137, 123, 0.08)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00796B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
-  addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center" },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', backgroundColor: theme.colors.surface },
+  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.08)', alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 20, color: theme.colors.primary },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary },
+  addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.colors.secondary, alignItems: "center", justifyContent: "center" },
   addIcon: { fontSize: 24, color: "#00897B", fontWeight: "700" },
   content: { padding: 16 },
-  summaryCard: { backgroundColor: "rgba(99,102,241,0.15)", borderRadius: 20, padding: 24, marginBottom: 24, borderWidth: 1, borderColor: "rgba(99,102,241,0.3)" },
-  summaryTitle: { fontSize: 18, fontWeight: "800", color: "#00796B", marginBottom: 16, textAlign: "center" },
+  summaryCard: { backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.15)' : `${theme.colors.secondary}26`, borderRadius: 20, padding: 24, marginBottom: 24, borderWidth: 1, borderColor: theme.dark ? 'rgba(99, 102, 241, 0.4)' : `${theme.colors.secondary}4D` },
+  summaryTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary, marginBottom: 16, textAlign: "center" },
   summaryStats: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
   summaryItem: { alignItems: "center" },
-  summaryLabel: { fontSize: 12, color: "#999999", marginBottom: 4 },
+  summaryLabel: { fontSize: 12, color: theme.colors.onSurfaceVariant, marginBottom: 4 },
   summaryValue: { fontSize: 18, fontWeight: "800" },
-  summaryDivider: { width: 1, height: 40, backgroundColor: "rgba(0, 137, 123, 0.15)" },
-  summaryProgress: { height: 8, backgroundColor: "rgba(0, 137, 123, 0.15)", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
-  summaryProgressFill: { height: "100%", backgroundColor: "#6366F1", borderRadius: 4 },
-  summaryPercentage: { fontSize: 13, color: "#999999", textAlign: "center" },
+  summaryDivider: { width: 1, height: 40, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)' },
+  summaryProgress: { height: 8, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)', borderRadius: 4, overflow: "hidden", marginBottom: 8 },
+  summaryProgressFill: { height: "100%", backgroundColor: theme.colors.secondary, borderRadius: 4 },
+  summaryPercentage: { fontSize: 13, color: theme.colors.onSurfaceVariant, textAlign: "center" },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
-  memberCard: { backgroundColor: "rgba(0, 137, 123, 0.06)", borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary, marginBottom: 16, backgroundColor: theme.colors.background },
+  memberCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, borderTopColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderTopWidth: 1 },
   memberHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   memberInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
   memberAvatar: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginRight: 12 },
   memberAvatarText: { fontSize: 32 },
   memberDetails: { flex: 1 },
-  memberName: { fontSize: 18, fontWeight: "800", color: "#00796B", marginBottom: 4 },
-  memberRole: { fontSize: 13, color: "#999999" },
+  memberName: { fontSize: 18, fontWeight: "800", color: theme.colors.primary, marginBottom: 4 },
+  memberRole: { fontSize: 13, color: theme.colors.onSurfaceVariant },
   memberBadge: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
   memberBadgeText: { fontSize: 16, fontWeight: "800" },
   memberStats: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
   statRow: { flexDirection: "row", alignItems: "center", flex: 1 },
   statIcon: { fontSize: 20, marginRight: 6 },
   statInfo: { flex: 1 },
-  statLabel: { fontSize: 11, color: "#999999", marginBottom: 2 },
-  statValue: { fontSize: 13, fontWeight: "700", color: "#333333" },
+  statLabel: { fontSize: 11, color: theme.colors.onSurfaceVariant, marginBottom: 2 },
+  statValue: { fontSize: 13, fontWeight: "700", color: theme.colors.onSurface },
   memberHabits: { marginBottom: 12 },
   habitInfo: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  habitLabel: { fontSize: 13, color: "#00796B", fontWeight: "700" },
-  habitValue: { fontSize: 13, color: "#333333", fontWeight: "700" },
-  habitProgress: { height: 6, backgroundColor: "rgba(0, 137, 123, 0.15)", borderRadius: 3, overflow: "hidden", marginBottom: 8 },
+  habitLabel: { fontSize: 13, color: theme.colors.primary, fontWeight: "700" },
+  habitValue: { fontSize: 13, color: theme.colors.onSurface, fontWeight: "700" },
+  habitProgress: { height: 6, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)', borderRadius: 3, overflow: "hidden", marginBottom: 8 },
   habitProgressFill: { height: "100%", borderRadius: 3 },
   habitMeta: { flexDirection: "row", justifyContent: "space-between" },
-  habitStreak: { fontSize: 12, color: "#00796B", fontWeight: "700" },
-  habitGoals: { fontSize: 12, color: "#00796B", fontWeight: "700" },
+  habitStreak: { fontSize: 12, color: theme.colors.primary, fontWeight: "700" },
+  habitGoals: { fontSize: 12, color: theme.colors.primary, fontWeight: "700" },
   memberActions: { flexDirection: "row", gap: 8 },
-  actionBtn: { flex: 1, backgroundColor: "rgba(0, 137, 123, 0.08)", borderRadius: 10, paddingVertical: 10, alignItems: "center" },
-  actionBtnText: { color: "#00796B", fontWeight: "700", fontSize: 13 },
-  actionBtnPrimary: { backgroundColor: "#6366F1" },
+  actionBtn: { flex: 1, backgroundColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0, 137, 123, 0.08)', borderRadius: 10, paddingVertical: 10, alignItems: "center" },
+  actionBtnText: { color: theme.colors.primary, fontWeight: "700", fontSize: 13 },
+  actionBtnPrimary: { backgroundColor: theme.colors.secondary },
   actionBtnTextPrimary: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  aiCard: { backgroundColor: "rgba(139,92,246,0.1)", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "rgba(139,92,246,0.3)" },
+  aiCard: { backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.12)' : `${theme.colors.secondary}19`, borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: theme.dark ? 'rgba(99, 102, 241, 0.3)' : `${theme.colors.secondary}4D` },
   aiHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   aiIcon: { fontSize: 24, marginRight: 8 },
-  aiTitle: { fontSize: 16, fontWeight: "800", color: "#00796B" },
-  aiText: { fontSize: 14, color: "#333333", lineHeight: 20, marginBottom: 8 },
-  aiBold: { fontWeight: "800", color: "#00796B" },
-  aiHighlight: { color: "#8B5CF6", fontWeight: "900" },
+  aiTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary },
+  aiText: { fontSize: 14, color: theme.colors.onSurface, lineHeight: 20, marginBottom: 8 },
+  aiBold: { fontWeight: "800", color: theme.colors.primary },
+  aiHighlight: { color: theme.colors.secondary, fontWeight: "900" },
   actionsGrid: { flexDirection: "row", gap: 12 },
-  actionCard: { flex: 1, backgroundColor: "rgba(0, 137, 123, 0.06)", borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: "rgba(0, 137, 123, 0.15)" },
+  actionCard: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)' },
   actionIcon: { fontSize: 32, marginBottom: 8 },
-  actionText: { fontSize: 13, color: "#00796B", fontWeight: "600", textAlign: "center" },
+  actionText: { fontSize: 13, color: theme.colors.primary, fontWeight: "600", textAlign: "center" },
 });

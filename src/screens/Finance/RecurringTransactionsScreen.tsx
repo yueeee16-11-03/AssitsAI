@@ -20,6 +20,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { useFocusEffect } from '@react-navigation/native';
 import NotificationService from '../../services/NotificationService';
 import { useRecurringTransactionStore } from '../../store/recurringTransactionStore';
+import { useTheme } from 'react-native-paper';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
 
@@ -61,6 +62,16 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const styles = getStyles(theme);
+
+  const primary = theme.colors.primary;
+  const onPrimary = theme.colors.onPrimary || '#FFFFFF';
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || 'rgba(0,0,0,0.06)';
+  const errorColor = theme.colors.error || '#EF4444';
+  const successColor = '#10B981';
+  const warningColor = '#F59E0B';
   
   // Store hooks
   const recurringTransactions = useRecurringTransactionStore((state: any) => state.recurringTransactions);
@@ -153,13 +164,13 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
     const daysUntil = getDaysUntilDue(transaction.nextDue);
     
     if (daysUntil < 0) {
-      return { status: 'overdue', text: `Quá hạn ${Math.abs(daysUntil)} ngày`, color: '#EF4444' };
+      return { status: 'overdue', text: `Quá hạn ${Math.abs(daysUntil)} ngày`, color: errorColor };
     } else if (daysUntil === 0) {
-      return { status: 'due', text: 'Đến hạn hôm nay', color: '#F59E0B' };
+      return { status: 'due', text: 'Đến hạn hôm nay', color: warningColor };
     } else if (daysUntil <= transaction.reminderDays) {
-      return { status: 'upcoming', text: `Còn ${daysUntil} ngày`, color: '#F59E0B' };
+      return { status: 'upcoming', text: `Còn ${daysUntil} ngày`, color: warningColor };
     } else {
-      return { status: 'normal', text: `Còn ${daysUntil} ngày`, color: '#10B981' };
+      return { status: 'normal', text: `Còn ${daysUntil} ngày`, color: successColor };
     }
   };
 
@@ -430,7 +441,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
         <View style={styles.transactionHeader}>
           <View style={styles.transactionInfo}>
             <View style={styles.transactionIcon}>
-              <Icon name={transaction.categoryIcon as any} size={22} color="#374151" />
+              <Icon name={transaction.categoryIcon as any} size={22} color={primary} />
             </View>
             <View style={styles.transactionDetails}>
               <Text style={styles.transactionName}>{transaction.name}</Text>
@@ -447,13 +458,13 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
               style={[styles.actionButton, styles.actionButtonPrimary]}
               onPress={() => handleEditTransaction(transaction)}
             >
-              <Icon name="pencil" size={14} color="#374151" />
+              <Icon name="pencil" size={14} color={onPrimary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.actionButtonDanger]}
               onPress={() => handleDeleteTransaction(transaction.id)}
             >
-              <Icon name="trash-can-outline" size={14} color="#374151" />
+              <Icon name="trash-can-outline" size={14} color={errorColor} />
             </TouchableOpacity>
           </View>
         </View>
@@ -462,7 +473,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           <View style={styles.transactionAmount}>
             <Text style={[
               styles.amountText,
-              transaction.type === 'income' && styles.incomeAmountText
+              transaction.type === 'income' ? styles.incomeAmountText : styles.expenseAmountText
             ]}>
               {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
             </Text>
@@ -477,7 +488,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
             </View>
             {transaction.isAutomatic && (
                 <View style={styles.automaticBadgeRow}>
-                <Icon name="robot" size={12} color="#6366F1" />
+                <Icon name="robot" size={12} color={primary} />
                 <Text style={[styles.automaticText, styles.automaticTextSpacing]}>Tự động</Text>
               </View>
             )}
@@ -498,8 +509,8 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
             <Switch
               value={transaction.isActive}
               onValueChange={() => handleToggleActive(transaction.id)}
-              trackColor={{ false: '#374151', true: '#10B981' }}
-              thumbColor={transaction.isActive ? '#FFFFFF' : '#9CA3AF'}
+              trackColor={{ false: onSurfaceVariant, true: primary }}
+              thumbColor={transaction.isActive ? onPrimary : '#9CA3AF'}
             />
             {!transaction.isAutomatic && statusInfo.status !== 'normal' && (
               <TouchableOpacity
@@ -541,7 +552,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           <View style={styles.headerPlaceholder} />
         </View>
 
-        <ScrollView style={styles.modalFullBody} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }}>
+        <ScrollView style={styles.modalFullBody} contentContainerStyle={[styles.modalFullBodyContent, { paddingBottom: Math.max(120, insets.bottom + TAB_BAR_HEIGHT) }]}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Tên giao dịch *</Text>
             <TextInput
@@ -563,8 +574,8 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
                 ]}
                 onPress={() => setTransactionType('expense')}
               >
-                <Icon name="cash-minus" size={20} color={transactionType === 'expense' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
-                <Text style={styles.typeLabel}>Chi tiêu</Text>
+                <Icon name="cash-minus" size={20} color={transactionType === 'expense' ? onPrimary : onSurface} style={styles.typeIconIcon} />
+                <Text style={[styles.typeLabel, transactionType === 'expense' && styles.typeLabelSelected]}>Chi tiêu</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -573,8 +584,8 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
                 ]}
                 onPress={() => setTransactionType('income')}
               >
-                <Icon name="cash-plus" size={20} color={transactionType === 'income' ? '#FFFFFF' : '#374151'} style={styles.typeIconIcon} />
-                <Text style={styles.typeLabel}>Thu nhập</Text>
+                <Icon name="cash-plus" size={20} color={transactionType === 'income' ? onPrimary : onSurface} style={styles.typeIconIcon} />
+                <Text style={[styles.typeLabel, transactionType === 'income' && styles.typeLabelSelected]}>Thu nhập</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -603,7 +614,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
                   ]}
                   onPress={() => setFrequency(option.key as any)}
                 >
-                  <Icon name={option.icon as any} size={16} color={frequency === option.key ? '#FFFFFF' : '#111827'} />
+                  <Icon name={option.icon as any} size={16} color={frequency === option.key ? onPrimary : onSurface} />
                     <Text style={[styles.frequencyLabel, frequency === option.key ? styles.frequencyLabelSelected : undefined]}>{option.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -648,8 +659,8 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
               <Switch
                 value={isAutomatic}
                 onValueChange={setIsAutomatic}
-                trackColor={{ false: '#374151', true: '#6366F1' }}
-                thumbColor={isAutomatic ? '#FFFFFF' : '#9CA3AF'}
+                trackColor={{ false: onSurfaceVariant, true: primary }}
+                thumbColor={isAutomatic ? onPrimary : '#9CA3AF'}
               />
             </View>
             <Text style={styles.formHint}>
@@ -750,7 +761,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
       <View style={styles.summaryCard}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#6366F1" />
+            <ActivityIndicator size="small" color={primary} />
             <Text style={styles.loadingText}>Đang tải...</Text>
           </View>
         ) : (
@@ -785,7 +796,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
           filteredTransactions.map(renderTransactionCard)
         ) : (
           <View style={styles.emptyState}>
-            <Icon name="clipboard-text-outline" size={48} color="#111827" style={styles.emptyStateIcon} />
+            <Icon name="clipboard-text-outline" size={48} color={onSurface} style={styles.emptyStateIcon} />
             <Text style={styles.emptyStateText}>Chưa có giao dịch lặp lại nào</Text>
             <Text style={styles.emptyStateSubtext}>
               Thêm hóa đơn định kỳ để theo dõi chi tiêu tự động
@@ -813,7 +824,7 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
         }}
       >
         <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
-        <Icon name="plus" size={28} color="#FFFFFF" />
+        <Icon name="plus" size={28} color={onPrimary} />
       </TouchableOpacity>
 
       {/* Decorative Elements */}
@@ -824,60 +835,70 @@ export default function RecurringTransactionsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonText: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  headerTitleWrapper: {
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    flex: 1,
-  },
-  headerTitleText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#6366F1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+const getStyles = (theme: any) => {
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || 'rgba(0,0,0,0.06)';
+  const surface = theme.colors.surface;
+  const background = theme.colors.background;
+  const primary = theme.colors.primary;
+  const onPrimary = theme.colors.onPrimary || '#FFFFFF';
+  const errorColor = theme.colors.error || '#EF4444';
+  const successColor = '#10B981';
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 8,
+      backgroundColor: surface,
+      borderBottomWidth: 1,
+      borderBottomColor: onSurfaceVariant,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+      borderColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonText: {
+      fontSize: 20,
+      color: onSurface,
+      fontWeight: 'bold',
+    },
+    headerTitleWrapper: {
+      backgroundColor: 'transparent',
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      flex: 1,
+    },
+    headerTitleText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: onSurface,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
@@ -901,8 +922,8 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: 'bold',
   },
-  addButtonTextDark: { color: '#111827' },
-  backButtonTextDark: { color: '#111827' },
+  addButtonTextDark: { color: onSurface },
+  backButtonTextDark: { color: onSurface },
   filterTabs: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -914,32 +935,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
     alignItems: 'center',
   },
   filterTabActive: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#9CA3AF',
+    backgroundColor: surface,
+    borderColor: onSurfaceVariant,
   },
   filterTabText: {
     fontSize: 12,
-    color: '#374151',
+    color: onSurface,
     fontWeight: '600',
   },
   filterTabTextActive: {
-    color: '#111827',
+    color: primary,
   },
   summaryCard: {
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 20,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -951,7 +972,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: onSurfaceVariant,
     marginBottom: 4,
   },
   summaryAmount: {
@@ -965,10 +986,10 @@ const styles = StyleSheet.create({
   transactionCard: {
     padding: 20,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   transactionHeader: {
     flexDirection: 'row',
@@ -985,9 +1006,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1001,7 +1022,7 @@ const styles = StyleSheet.create({
   transactionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: onSurface,
     marginBottom: 4,
   },
   transactionMeta: {
@@ -1010,16 +1031,16 @@ const styles = StyleSheet.create({
   },
   transactionCategory: {
     fontSize: 12,
-    color: '#6B7280',
+    color: onSurfaceVariant,
   },
   transactionMetaSeparator: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: onSurfaceVariant,
     marginHorizontal: 6,
   },
   transactionWallet: {
     fontSize: 12,
-    color: '#6B7280',
+    color: onSurfaceVariant,
   },
   transactionActions: {
     flexDirection: 'row',
@@ -1031,13 +1052,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   actionButtonText: {
     fontSize: 14,
-    color: '#374151',
+    color: onSurfaceVariant,
   },
   transactionBody: {
     marginBottom: 16,
@@ -1052,7 +1073,7 @@ const styles = StyleSheet.create({
   },
   frequencyText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: onSurfaceVariant,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -1085,7 +1106,7 @@ const styles = StyleSheet.create({
   automaticText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#6366F1',
+    color: primary,
   },
   automaticTextSpacing: {
     marginLeft: 8,
@@ -1100,12 +1121,12 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     fontSize: 11,
-    color: '#6B7280',
+    color: onSurfaceVariant,
     marginBottom: 4,
   },
   notesText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: onSurfaceVariant,
     fontStyle: 'italic',
   },
   transactionControls: {
@@ -1117,14 +1138,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   payButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#111827',
+    color: onSurface,
   },
   emptyState: {
     alignItems: 'center',
@@ -1133,18 +1154,18 @@ const styles = StyleSheet.create({
   emptyStateIcon: {
     fontSize: 48,
     marginBottom: 16,
-    color: '#111827',
+    color: onSurface,
   },
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: onSurface,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#6B7280',
+    color: onSurfaceVariant,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -1153,14 +1174,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   emptyStateButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: onSurface,
   },
   bottomSpace: {
     height: 100,
@@ -1168,7 +1189,7 @@ const styles = StyleSheet.create({
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: background,
   },
   modalFullHeader: {
     flexDirection: 'row',
@@ -1177,25 +1198,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: onSurfaceVariant,
   },
   modalBackButton: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
+    color: onSurface,
   },
   modalFullTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: onSurface,
     flex: 1,
     textAlign: 'center',
   },
   modalFullBody: {
     flex: 1,
-    padding: 20,
+    // padding moved to modalFullBodyContent to allow dynamic paddingBottom
+  },
+  modalFullBodyContent: {
+    paddingHorizontal: 20,
   },
   modalFullFooter: {
     flexDirection: 'row',
@@ -1242,17 +1266,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: onSurface,
     marginBottom: 8,
   },
   formInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#111827',
+    color: onSurface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   textArea: {
     height: 80,
@@ -1267,13 +1291,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   typeOptionSelected: {
-    borderColor: '#9CA3AF',
-    backgroundColor: '#E5E7EB',
+    borderColor: primary,
+    backgroundColor: primary,
   },
   typeIcon: {
     fontSize: 24,
@@ -1284,9 +1308,13 @@ const styles = StyleSheet.create({
   },
   typeLabel: {
     fontSize: 12,
-    color: '#111827',
+    color: onSurface,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  typeLabelSelected: {
+    color: onPrimary,
+    fontWeight: '700',
   },
   frequencySelector: {
     flexDirection: 'row',
@@ -1299,23 +1327,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   frequencyOptionSelected: {
-    borderColor: '#9CA3AF',
-    backgroundColor: '#E5E7EB',
+    borderColor: primary,
+    backgroundColor: primary,
   },
   frequencyIcon: {
     marginRight: 6,
   },
   frequencyLabel: {
     fontSize: 12,
-    color: '#111827',
+    color: onSurface,
   },
   frequencyLabelSelected: {
-    color: '#111827',
+    color: onPrimary,
     fontWeight: '600',
   },
   reminderSelector: {
@@ -1327,20 +1355,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: onSurfaceVariant,
   },
   reminderOptionSelected: {
-    borderColor: '#9CA3AF',
-    backgroundColor: '#E5E7EB',
+    borderColor: primary,
+    backgroundColor: primary,
   },
   reminderLabel: {
     fontSize: 12,
-    color: '#111827',
+    color: onSurface,
   },
   reminderLabelSelected: {
-    color: '#111827',
+    color: onPrimary,
     fontWeight: '600',
   },
   switchContainer: {
@@ -1372,19 +1400,19 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   modalButtonPrimary: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: primary,
     borderWidth: 1,
-    borderColor: '#6366F1',
+    borderColor: primary,
   },
   modalButtonTextSecondary: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: onSurface,
   },
   modalButtonTextPrimary: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: onPrimary,
   },
   decorativeCircle: {
     position: 'absolute',
@@ -1394,32 +1422,32 @@ const styles = StyleSheet.create({
   decorativeCircle1: {
     width: 200,
     height: 200,
-    backgroundColor: '#6366F1',
+    backgroundColor: primary,
     top: -100,
     right: -100,
   },
   decorativeCircle2: {
     width: 150,
     height: 150,
-    backgroundColor: '#EC4899',
+    backgroundColor: theme.colors.secondary || '#EC4899',
     bottom: -75,
     left: -75,
   },
   actionButtonPrimary: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: primary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: primary,
   },
   actionButtonDanger: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: errorColor,
   },
   incomeAmountText: {
-    color: '#10B981',
+    color: successColor,
   },
   expenseAmountText: {
-    color: '#EF4444',
+    color: errorColor,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -1428,7 +1456,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: onSurfaceVariant,
     marginTop: 8,
   },
-});
+  });
+};

@@ -7,6 +7,8 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
+import { useTheme } from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 
@@ -15,6 +17,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Splash">;
 const { width } = Dimensions.get("window");
 
 export default function SplashScreen({ navigation }: Props) {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [logoScale] = useState(new Animated.Value(0));
   const [logoRotate] = useState(new Animated.Value(0));
   const [textFade] = useState(new Animated.Value(0));
@@ -87,11 +91,11 @@ export default function SplashScreen({ navigation }: Props) {
             },
           ]}
         >
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>AI</Text>
+          <View style={[styles.logo, { backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)', borderColor: theme.dark ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.4)' }]}>
+            <Icon name="robot-outline" size={60} color={theme.colors.primary} />
           </View>
-          <View style={styles.logoRing} />
-          <View style={styles.logoRingOuter} />
+          <View style={[styles.logoRing, { borderColor: theme.dark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.3)' }]} />
+          <View style={[styles.logoRingOuter, { borderColor: theme.dark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)' }]} />
         </Animated.View>
 
         <Animated.View style={[styles.textContainer, { opacity: textFade }]}>
@@ -116,10 +120,10 @@ export default function SplashScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: theme.colors.background,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -135,7 +139,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 400,
     borderRadius: 200,
-    backgroundColor: "rgba(99, 102, 241, 0.15)",
+    backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)',
   },
   circleMiddle: {
     position: "absolute",
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "rgba(139, 92, 246, 0.1)",
+    backgroundColor: theme.dark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)',
   },
   circleBottom: {
     position: "absolute",
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
     width: 500,
     height: 500,
     borderRadius: 250,
-    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)',
   },
   content: {
     alignItems: "center",
@@ -174,7 +178,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(99, 102, 241, 0.4)",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#6366F1",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.6,
     shadowRadius: 24,
@@ -183,7 +187,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 48,
     fontWeight: "900",
-    color: "#00897B",
+    color: theme.colors.primary,
     letterSpacing: -2,
   },
   logoRing: {
@@ -209,27 +213,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontWeight: "900",
-    color: "#00796B",
+    color: theme.colors.primary,
     marginBottom: 8,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
-    color: "rgba(0, 0, 0, 0.6)",
+    color: theme.colors.onSurfaceVariant,
     letterSpacing: 1,
   },
   progressContainer: {
     width: width - 48,
     height: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: theme.dark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)',
     borderRadius: 2,
     overflow: "hidden",
   },
   progressBar: {
     height: 4,
-    backgroundColor: "#00897B",
+    backgroundColor: theme.colors.primary,
     borderRadius: 2,
-    shadowColor: "#00897B",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 8,
@@ -238,7 +242,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 40,
     fontSize: 12,
-    color: "rgba(0, 0, 0, 0.4)",
+    color: theme.colors.onSurfaceVariant,
     letterSpacing: 1.5,
   },
 });

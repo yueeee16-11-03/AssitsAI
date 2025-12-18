@@ -15,6 +15,7 @@ import { useHabitStore } from '../../store/habitStore';
 import { useCheckInStore } from '../../store/checkInStore';
 import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator } from 'react-native';
+import { useTheme } from 'react-native-paper';
 
 type Props = NativeStackScreenProps<RootStackParamList, "HabitReport">;
 
@@ -38,6 +39,12 @@ export default function HabitReportScreen({ navigation }: Props) {
   const [weekStats, setWeekStats] = useState<Array<any>>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const theme = useTheme();
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const surfaceVariant = theme.colors.surfaceVariant || '#F3F4F6';
+  const styles = getStyles(theme);
+
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -47,12 +54,11 @@ export default function HabitReportScreen({ navigation }: Props) {
   }, [fadeAnim]);
 
   // Heatmap and stats driven from Firestore via stores
-  // Improved visibility: white for empty, stronger indigo gradient for completed counts
+  // Use theme: surfaceVariant for missed, primary for done
   const getHeatColor = (value: number) => {
-    // Missed -> light gray, Done -> strong indigo
-    if (!value || value <= 0) return '#F3F4F6'; // light gray for missed
-    return '#4C1D95'; // indigo-800 for done
-  };
+    if (!value || value <= 0) return surfaceVariant;
+    return primary;
+  }; 
 
   const getPerformanceBarColor = (completion: number) => {
     if (completion >= 80) return "#10B981";
@@ -207,9 +213,9 @@ export default function HabitReportScreen({ navigation }: Props) {
           setWeekStats([
             { metric: 'Hoàn thành', value: `${periodCompletionPct}%`, change: '', icon: 'check', color: '#10B981' },
             { metric: 'Streak dài nhất', value: `${longestStreak}`, change: '', icon: 'fire', color: '#F59E0B' },
-            { metric: 'Điểm TB', value: `${avgCompletionPct}`, change: '', icon: 'star', color: '#6366F1' },
+            { metric: 'Điểm TB', value: `${avgCompletionPct}`, change: '', icon: 'star', color: primary },
             { metric: 'Thói quen tốt nhất', value: bestHabit, change: '', icon: 'book-open-variant', color: '#EC4899' },
-          ]);
+          ]); 
 
         } catch (err) {
           console.error('❌ [HABIT-REPORT] Failed to load report data:', err);
@@ -227,24 +233,24 @@ export default function HabitReportScreen({ navigation }: Props) {
 
       load();
       return () => { mounted = false; };
-    }, [fetchHabits, getCheckInHistory, selectedPeriod])
+    }, [fetchHabits, getCheckInHistory, selectedPeriod, primary])
   );
 
   return (
     <SafeAreaView style={styles.container}>
       {isLoading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color={primary} />
         </View>
-      )}
+      )} 
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-left" size={20} color="#000000" />
+          <Icon name="chevron-left" size={20} color={onSurface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Báo cáo thói quen</Text>
+        <Text style={[styles.headerTitle, { color: onSurface }]}>Báo cáo thói quen</Text>
         <TouchableOpacity style={styles.exportButton}>
-          <Icon name="chart-box" size={20} color="#000000" />
-        </TouchableOpacity>
+          <Icon name="chart-box" size={20} color={onSurface} />
+        </TouchableOpacity> 
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
@@ -305,21 +311,21 @@ export default function HabitReportScreen({ navigation }: Props) {
               const isBest = stat.metric === 'Thói quen tốt nhất';
               return (
                 <View key={index} style={styles.statCard}>
-                  <Icon name={stat.icon} size={28} color={isBest ? '#000000' : stat.color} style={styles.statIcon} />
-                  <Text style={[styles.statMetric, isBest && { color: '#000000' }]}>{stat.metric}</Text>
+                  <Icon name={stat.icon} size={28} color={isBest ? onSurface : stat.color} style={styles.statIcon} />
+                  <Text style={[styles.statMetric, isBest && { color: onSurface }]}>{stat.metric}</Text>
                   <Text style={[styles.statValue, isBest ? styles.statValueBest : { color: stat.color }]}>{stat.value}</Text>
-                  <Text style={[styles.statChange, isBest && { color: '#000000' }]}>{stat.change}</Text>
+                  <Text style={[styles.statChange, isBest && { color: onSurface }]}>{stat.change}</Text>
                 </View>
               );
-            })}
+            })} 
           </View>
 
           {/* AI Insights */}
           <View style={styles.aiCard}>
             <View style={styles.aiHeader}>
-              <Icon name="robot" size={24} color="#6366F1" style={styles.aiIcon} />
+              <Icon name="robot" size={24} color={primary} style={styles.aiIcon} />
               <Text style={styles.aiTitle}>Phân tích AI</Text>
-            </View>
+            </View> 
             <View style={styles.insightItem}>
               <Icon name="trophy" size={20} color="#10B981" style={styles.insightIcon} />
               <Text style={styles.insightText}>
@@ -349,7 +355,7 @@ export default function HabitReportScreen({ navigation }: Props) {
             {habitPerformance.map((habit, index) => (
               <View key={index} style={styles.performanceCard}>
                 <View style={styles.performanceHeader}>
-                  <Icon name={habit.icon} size={28} color="#8B5CF6" style={styles.performanceIcon} />
+                  <Icon name={habit.icon} size={28} color={primary} style={styles.performanceIcon} />
                   <View style={styles.performanceInfo}>
                     <Text style={styles.performanceName}>{habit.name}</Text>
                     <View style={styles.performanceMeta}>
@@ -366,7 +372,7 @@ export default function HabitReportScreen({ navigation }: Props) {
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.performancePercent}>{habit.completion}%</Text>
+                  <Text style={[styles.performancePercent, { color: primary }]}>{habit.completion}%</Text>
                 </View>
                 <View style={styles.performanceBar}>
                   <View
@@ -380,20 +386,20 @@ export default function HabitReportScreen({ navigation }: Props) {
                   />
                 </View>
               </View>
-            ))}
+            ))} 
           </View>
 
           {/* Quick Actions */}
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("HabitDashboard")}>
-              <Icon name="file-document-outline" size={32} style={styles.actionIcon} color="#8B5CF6" />
+              <Icon name="file-document-outline" size={32} style={styles.actionIcon} color={primary} />
               <Text style={styles.actionText}>Chi tiết thói quen</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("AIHabitCoach")}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("AIHabitCoach") }>
               <Icon name="robot" size={32} style={styles.actionIcon} color="#3B82F6" />
               <Text style={styles.actionText}>AI Coach</Text>
             </TouchableOpacity>
-          </View>
+          </View> 
         </Animated.View>
         <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
@@ -401,72 +407,72 @@ export default function HabitReportScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   loadingOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999 },
   streakContainer: { flexDirection: 'row', alignItems: 'center' },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.outline || 'rgba(0,0,0,0.06)' },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#000000" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#000000" },
+  backIcon: { fontSize: 20, color: theme.colors.onSurface },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.onSurface },
   exportButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   exportIcon: { fontSize: 20 },
-  content: { padding: 16, backgroundColor: "#FFFFFF" },
-  periodSelector: { flexDirection: "row", backgroundColor: "#F3F4F6", borderRadius: 12, padding: 4, marginBottom: 20 },
+  content: { padding: 16, backgroundColor: theme.colors.surface },
+  periodSelector: { flexDirection: "row", backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 12, padding: 4, marginBottom: 20 },
   periodButton: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
-  periodButtonActive: { backgroundColor: "#4F46E5", shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 },
-  periodText: { color: "#374151", fontWeight: "700", fontSize: 14 },
+  periodButtonActive: { backgroundColor: theme.colors.primary, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 },
+  periodText: { color: theme.colors.onSurfaceVariant || '#374151', fontWeight: "700", fontSize: 14 },
   periodTextActive: { color: "#FFFFFF" },
-  heatmapCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: "#E5E7EB" },
-  cardTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 16 },
+  heatmapCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  cardTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 16 },
   heatmapGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: 12 },
   heatmapColumn: { alignItems: "center", width: '16.5%', marginBottom: 6 },
-  heatmapCell: { width: 22, height: 22, borderRadius: 4, borderWidth: 0.5, borderColor: '#E5E7EB' },
-  heatmapCellDone: { width: 22, height: 22, borderRadius: 4, backgroundColor: '#4C1D95', borderWidth: 1, borderColor: '#312E81' },
-  heatmapCellMissed: { width: 22, height: 22, borderRadius: 4, backgroundColor: '#F3F4F6', borderWidth: 0.5, borderColor: '#E5E7EB' },
+  heatmapCell: { width: 22, height: 22, borderRadius: 4, borderWidth: 0.5, borderColor: theme.colors.outline || '#E5E7EB' },
+  heatmapCellDone: { width: 22, height: 22, borderRadius: 4, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary },
+  heatmapCellMissed: { width: 22, height: 22, borderRadius: 4, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderWidth: 0.5, borderColor: theme.colors.outline || '#E5E7EB' },
   // Week view: larger square cells
-  heatmapCellWeekDone: { width: 36, height: 36, borderRadius: 6, backgroundColor: '#4C1D95', borderWidth: 1, borderColor: '#312E81' },
-  heatmapCellWeekMissed: { width: 36, height: 36, borderRadius: 6, backgroundColor: '#F3F4F6', borderWidth: 0.5, borderColor: '#E5E7EB' },
-  heatmapDateWeek: { fontSize: 12, color: '#6B7280', marginTop: 6 },
-  cardSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 6, marginBottom: 8 },
-  heatmapDate: { fontSize: 9, color: "#6B7280", marginTop: 2 },
+  heatmapCellWeekDone: { width: 36, height: 36, borderRadius: 6, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.primary },
+  heatmapCellWeekMissed: { width: 36, height: 36, borderRadius: 6, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderWidth: 0.5, borderColor: theme.colors.outline || '#E5E7EB' },
+  heatmapDateWeek: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#6B7280', marginTop: 6 },
+  cardSubtitle: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#6B7280', marginTop: 6, marginBottom: 8 },
+  heatmapDate: { fontSize: 9, color: theme.colors.onSurfaceVariant || '#6B7280', marginTop: 2 },
   heatmapLegend: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 },
-  legendText: { fontSize: 11, color: "#6B7280" },
+  legendText: { fontSize: 11, color: theme.colors.onSurfaceVariant || '#6B7280' },
   legendColors: { flexDirection: "row", gap: 3 },
   legendCell: { width: 12, height: 12, borderRadius: 2 },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 },
-  statCard: { flex: 1, minWidth: "45%", backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
+  statCard: { flex: 1, minWidth: "45%", backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, alignItems: "center", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   statIcon: { fontSize: 28, marginBottom: 8 },
-  statMetric: { fontSize: 12, color: "#6B7280", marginBottom: 4, textAlign: "center" },
-  statValue: { fontSize: 24, fontWeight: "900", marginBottom: 2 },
-  statValueBest: { fontSize: 16, fontWeight: "800", marginBottom: 2, color: '#000000' },
-  statChange: { fontSize: 11, color: "#6B7280" },
-  aiCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: "#E5E7EB" },
+  statMetric: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#6B7280', marginBottom: 4, textAlign: "center" },
+  statValue: { fontSize: 24, fontWeight: "900", marginBottom: 2, color: theme.colors.onSurface },
+  statValueBest: { fontSize: 16, fontWeight: "800", marginBottom: 2, color: theme.colors.onSurface },
+  statChange: { fontSize: 11, color: theme.colors.onSurfaceVariant || '#6B7280' },
+  aiCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   aiHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   aiIcon: { fontSize: 24, marginRight: 8 },
-  aiTitle: { fontSize: 16, fontWeight: "800", color: "#000000" },
+  aiTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface },
   insightItem: { flexDirection: "row", marginBottom: 12 },
   insightIcon: { fontSize: 20, marginRight: 8 },
-  insightText: { flex: 1, fontSize: 14, color: "#333333", lineHeight: 20 },
-  insightBold: { fontWeight: "800", color: "#000000" },
+  insightText: { flex: 1, fontSize: 14, color: theme.colors.onSurfaceVariant || '#333333', lineHeight: 20 },
+  insightBold: { fontWeight: "800", color: theme.colors.onSurface },
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 16 },
-  performanceCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "#E5E7EB" },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 16 },
+  performanceCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   performanceHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   performanceIcon: { fontSize: 28, marginRight: 12 },
   performanceInfo: { flex: 1 },
-  performanceName: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 4 },
+  performanceName: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 4 },
   performanceMeta: { flexDirection: "row", gap: 12 },
-  performanceStreak: { fontSize: 12, color: "#6B7280", fontWeight: "700" },
+  performanceStreak: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#6B7280', fontWeight: "700" },
   performanceTrend: { fontSize: 14, fontWeight: "900" },
   trendUp: { color: "#10B981" },
   trendDown: { color: "#EF4444" },
   trendStable: { color: "#F59E0B" },
-  performancePercent: { fontSize: 20, fontWeight: "900", color: "#6366F1" },
-  performanceBar: { height: 6, backgroundColor: "#F3F4F6", borderRadius: 3, overflow: "hidden" },
+  performancePercent: { fontSize: 20, fontWeight: "900", color: theme.colors.primary },
+  performanceBar: { height: 6, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 3, overflow: "hidden" },
   performanceBarFill: { height: "100%", borderRadius: 3 },
   actionsGrid: { flexDirection: "row", gap: 12 },
-  actionCard: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
+  actionCard: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   actionIcon: { fontSize: 32, marginBottom: 8 },
-  actionText: { fontSize: 13, color: "#333333", fontWeight: "600", textAlign: "center" },
+  actionText: { fontSize: 13, color: theme.colors.onSurface, fontWeight: "600", textAlign: "center" },
 });

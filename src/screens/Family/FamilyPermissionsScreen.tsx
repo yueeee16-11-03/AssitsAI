@@ -10,6 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -116,6 +117,8 @@ const ROLE_PRESETS: Record<MemberRole, PermissionSettings> = {
 };
 
 export default function FamilyPermissionsScreen({ navigation }: Props) {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
@@ -569,7 +572,7 @@ export default function FamilyPermissionsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E0F2F1',
@@ -592,13 +595,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#00796B',
+    color: theme.colors.primary,
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
   },
   headerPlaceholder: {
     width: 40,
@@ -633,7 +636,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   memberTabNameActive: {
-    color: '#00796B',
+    color: theme.colors.primary,
   },
   memberRoleBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -660,7 +663,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   permissionTabActive: {
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.secondary,
   },
   permissionTabText: {
     fontSize: 11,
@@ -693,7 +696,7 @@ const styles = StyleSheet.create({
   memberInfoName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 2,
   },
   memberInfoEmail: {
@@ -704,7 +707,7 @@ const styles = StyleSheet.create({
   memberInfoRole: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6366F1',
+    color: theme.colors.secondary,
   },
   rolePresetsSection: {
     marginBottom: 32,
@@ -712,7 +715,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 16,
   },
   rolePresets: {
@@ -730,13 +733,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   rolePresetActive: {
-    borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: theme.colors.secondary,
+    backgroundColor: `${theme.colors.secondary}33`,
   },
   rolePresetTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 4,
   },
   rolePresetDescription: {
@@ -773,7 +776,7 @@ const styles = StyleSheet.create({
   permissionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 2,
   },
   permissionDescription: {
@@ -794,8 +797,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   levelOptionActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: theme.colors.secondary,
+    borderColor: theme.colors.secondary,
   },
   levelOptionText: {
     fontSize: 10,

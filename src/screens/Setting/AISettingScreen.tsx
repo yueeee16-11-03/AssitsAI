@@ -9,8 +9,9 @@ import {
   Animated,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../navigation/types";
+import type { RootStackParamList } from "../../navigation/types";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AISetting">;
 
@@ -18,6 +19,7 @@ export default function AISettingScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
+  const theme = useTheme();
   
   // Personality Settings
   const [friendliness, setFriendliness] = useState(70);
@@ -65,7 +67,7 @@ export default function AISettingScreen({ navigation }: Props) {
     <View style={styles.sliderContainer}>
       <View style={styles.sliderLabels}>
         <Text style={styles.sliderLabel}>{min}</Text>
-        <Text style={styles.sliderValue}>{value}%</Text>
+        <Text style={[styles.sliderValue, { color: theme.colors.primary }]}>{value}%</Text>
         <Text style={styles.sliderLabel}>{max}</Text>
       </View>
       <View style={styles.sliderTrack}>
@@ -90,7 +92,7 @@ export default function AISettingScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -99,7 +101,7 @@ export default function AISettingScreen({ navigation }: Props) {
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cài đặt AI</Text>
-        <TouchableOpacity style={styles.saveButton}>
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.colors.primary }] }>
           <Text style={styles.saveText}>Lưu</Text>
         </TouchableOpacity>
       </View>
@@ -110,9 +112,9 @@ export default function AISettingScreen({ navigation }: Props) {
       >
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* AI Preview */}
-          <View style={styles.previewCard}>
-            <View style={styles.aiAvatar}>
-              <Text style={styles.aiAvatarText}>AI</Text>
+          <View style={[styles.previewCard, { backgroundColor: `${theme.colors.primary}10`, borderColor: `${theme.colors.primary}20` }]}>
+            <View style={[styles.aiAvatar, { backgroundColor: `${theme.colors.primary}20` }]}>
+              <Text style={[styles.aiAvatarText, { color: theme.colors.primary }]}>AI</Text>
             </View>
             <Text style={styles.previewTitle}>Xin chào! Tôi là AI Assistant</Text>
             <Text style={styles.previewText}>
@@ -159,7 +161,7 @@ export default function AISettingScreen({ navigation }: Props) {
               <Switch
                 value={voiceEnabled}
                 onValueChange={setVoiceEnabled}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: theme.colors.primary }}
                 thumbColor="#fff"
               />
             </View>
@@ -180,7 +182,7 @@ export default function AISettingScreen({ navigation }: Props) {
                       <Text style={styles.voiceName}>{voice.name}</Text>
                       <Text style={styles.voiceDescription}>{voice.description}</Text>
                       {selectedVoice === voice.id && (
-                        <View style={styles.checkMark}>
+                        <View style={[styles.checkMark, { backgroundColor: theme.colors.primary }]}>
                           <Text style={styles.checkMarkText}>✓</Text>
                         </View>
                       )}
@@ -191,7 +193,7 @@ export default function AISettingScreen({ navigation }: Props) {
                 <View style={styles.settingCard}>
                   <View style={styles.settingRow}>
                     <Text style={styles.settingLabel}>Tốc độ giọng nói</Text>
-                    <Text style={styles.speedValue}>{voiceSpeed.toFixed(1)}x</Text>
+                    <Text style={[styles.speedValue, { color: theme.colors.primary }]}>{voiceSpeed.toFixed(1)}x</Text>
                   </View>
                   <View style={styles.speedButtons}>
                     <TouchableOpacity
@@ -249,7 +251,7 @@ export default function AISettingScreen({ navigation }: Props) {
                   <Text style={styles.languageIcon}>{lang.icon}</Text>
                   <Text style={styles.languageName}>{lang.name}</Text>
                   {selectedLanguage === lang.id && (
-                    <View style={styles.checkMarkSmall}>
+                    <View style={[styles.checkMarkSmall, { backgroundColor: theme.colors.primary }]}>
                       <Text style={styles.checkMarkTextSmall}>✓</Text>
                     </View>
                   )}
@@ -267,7 +269,7 @@ export default function AISettingScreen({ navigation }: Props) {
               <Switch
                 value={autoDetect}
                 onValueChange={setAutoDetect}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: theme.colors.primary }}
                 thumbColor="#fff"
               />
             </View>
@@ -278,7 +280,7 @@ export default function AISettingScreen({ navigation }: Props) {
             <Text style={styles.sectionTitle}>⚙️ Nâng cao</Text>
 
             <View style={styles.toggleRow}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.flexOne}>
                 <Text style={styles.toggleLabel}>Ghi nhớ ngữ cảnh</Text>
                 <Text style={styles.toggleDescription}>
                   AI nhớ các cuộc hội thoại trước đó
@@ -287,13 +289,13 @@ export default function AISettingScreen({ navigation }: Props) {
               <Switch
                 value={contextMemory}
                 onValueChange={setContextMemory}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: theme.colors.primary }}
                 thumbColor="#fff"
               />
             </View>
 
             <View style={styles.toggleRow}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.flexOne}>
                 <Text style={styles.toggleLabel}>Chế độ chủ động</Text>
                 <Text style={styles.toggleDescription}>
                   AI sẽ chủ động đưa ra gợi ý và nhắc nhở
@@ -302,7 +304,7 @@ export default function AISettingScreen({ navigation }: Props) {
               <Switch
                 value={proactiveMode}
                 onValueChange={setProactiveMode}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#6366F1" }}
+                trackColor={{ false: "rgba(255,255,255,0.1)", true: theme.colors.primary }}
                 thumbColor="#fff"
               />
             </View>
@@ -346,7 +348,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "#6366F1",
   },
   saveText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
   content: { padding: 16 },
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  aiAvatarText: { fontSize: 24, fontWeight: "800", color: "#6366F1" },
+  aiAvatarText: { fontSize: 24, fontWeight: "800" },
   previewTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 8 },
   previewText: {
     fontSize: 13,
@@ -403,13 +404,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sliderContainer: { marginTop: 8 },
+  flexOne: { flex: 1 },
   sliderLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
   },
   sliderLabel: { fontSize: 11, color: "rgba(255,255,255,0.5)" },
-  sliderValue: { fontSize: 13, fontWeight: "700", color: "#6366F1" },
+  sliderValue: { fontSize: 13, fontWeight: "700" },
   sliderTrack: {
     height: 6,
     backgroundColor: "rgba(255,255,255,0.1)",
@@ -419,7 +421,6 @@ const styles = StyleSheet.create({
   },
   sliderFill: {
     height: "100%",
-    backgroundColor: "#6366F1",
     borderRadius: 3,
   },
   sliderThumb: {
@@ -460,7 +461,6 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   voiceCardActive: {
-    borderColor: "#6366F1",
     backgroundColor: "rgba(99,102,241,0.1)",
   },
   voiceIcon: { fontSize: 32, marginBottom: 8 },
@@ -477,12 +477,11 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#6366F1",
     alignItems: "center",
     justifyContent: "center",
   },
   checkMarkText: { color: "#fff", fontSize: 14, fontWeight: "700" },
-  speedValue: { fontSize: 14, fontWeight: "700", color: "#6366F1" },
+  speedValue: { fontSize: 14, fontWeight: "700" },
   speedButtons: { flexDirection: "row", gap: 8 },
   speedButton: {
     flex: 1,
@@ -494,7 +493,6 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   speedButtonActive: {
-    borderColor: "#6366F1",
     backgroundColor: "rgba(99,102,241,0.1)",
   },
   speedButtonText: { color: "rgba(255,255,255,0.6)", fontWeight: "700" },
@@ -511,7 +509,6 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   languageCardActive: {
-    borderColor: "#6366F1",
     backgroundColor: "rgba(99,102,241,0.1)",
   },
   languageIcon: { fontSize: 32, marginBottom: 8 },
@@ -523,7 +520,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#6366F1",
     alignItems: "center",
     justifyContent: "center",
   },

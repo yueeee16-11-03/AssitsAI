@@ -538,7 +538,7 @@ const scheduleGoalPaydayReminder = async (goal: { id: string; title?: string; mo
           message: notification.body || '',
           type: 'reminder',
           icon: 'currency-usd',
-          actionRoute: 'SharedGoal',
+          actionRoute: 'GoalDetail',
           read: false,
         });
         console.log('NotificationService: persisted scheduled goal payday reminder', notification.id);

@@ -14,6 +14,7 @@ import {
   FlatList,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,7 +25,23 @@ type Props = NativeStackScreenProps<RootStackParamList, "AIChat">;
 
 export default function AIChatScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const TAB_BAR_HEIGHT = 70;
+
+  // Theme variables
+  const bgColor = theme.colors.background;
+  const surfaceColor = theme.colors.surface;
+  const textPrimary = theme.colors.onSurface;
+  const textSecondary = theme.colors.onSurfaceVariant;
+  const borderColor = theme.dark ? '#404040' : 'rgba(0,0,0,0.06)';
+  const aiAvatarBg = theme.dark ? 'rgba(99,102,241,0.15)' : '#F3F4F6';
+  const userAvatarBg = theme.dark ? 'rgba(139,92,246,0.15)' : '#F3F4F6';
+  const userBubbleBg = theme.dark ? 'rgba(99,102,241,0.2)' : '#EEF2FF';
+  const aiBubbleBg = theme.dark ? '#2A2D3A' : '#F3F4F6';
+  const inputBg = theme.dark ? '#3F4451' : '#F3F4F6';
+  const chipBg = theme.dark ? '#3F4451' : '#F3F4F6';
+  const chipBorder = theme.dark ? '#4A4D5A' : '#E5E7EB';
+  
   // Store state
   const {
     messages,
@@ -218,34 +235,34 @@ export default function AIChatScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: surfaceColor, borderBottomColor: borderColor }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="chevron-left" size={20} color="#111827" />
+          <Icon name="chevron-left" size={20} color={textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>AI Assistant</Text>
-          <Text style={styles.headerSubtitle}>Luôn sẵn sàng hỗ trợ</Text>
+          <Text style={[styles.headerTitle, { color: textPrimary }]}>AI Assistant</Text>
+          <Text style={[styles.headerSubtitle, { color: textSecondary }]}>Luôn sẵn sàng hỗ trợ</Text>
         </View>
         <TouchableOpacity 
           style={styles.menuButton}
           onPress={() => setShowMenu(true)}
         >
-          <Icon name="dots-vertical" size={20} color="#111827" />
+          <Icon name="dots-vertical" size={20} color={textPrimary} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         ref={scrollViewRef}
-        style={styles.messagesContainer}
+        style={[styles.messagesContainer, { backgroundColor: bgColor }]}
         contentContainerStyle={[styles.messagesContent, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]}
         showsVerticalScrollIndicator={false}
       >
@@ -257,15 +274,15 @@ export default function AIChatScreen({ navigation }: Props) {
               style={[styles.messageContainer, isUser ? styles.userMessage : styles.aiMessage]}
             >
               {!isUser && (
-                <View style={styles.aiAvatar}>
+                <View style={[styles.aiAvatar, { backgroundColor: aiAvatarBg }]}>
                   <Icon name="robot" size={16} color="#6366F1" />
                 </View>
               )}
-              <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.aiBubble]}>
-                <Text style={[styles.messageText, isUser ? styles.userText : styles.aiText]}>
+              <View style={[styles.messageBubble, isUser ? [styles.userBubble, { backgroundColor: userBubbleBg }] : [styles.aiBubble, { backgroundColor: aiBubbleBg }]]}>
+                <Text style={[styles.messageText, isUser ? styles.userText : styles.aiText, { color: textPrimary }]}>
                   {message.text}
                 </Text>
-                <Text style={styles.timestamp}>
+                <Text style={[styles.timestamp, { color: textSecondary }]}>
                   {message.timestamp.toLocaleTimeString("vi-VN", {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -273,7 +290,7 @@ export default function AIChatScreen({ navigation }: Props) {
                 </Text>
               </View>
               {isUser && (
-                <View style={styles.userAvatar}>
+                <View style={[styles.userAvatar, { backgroundColor: userAvatarBg }]}>
                   <Icon name="account" size={16} color="#8B5CF6" />
                 </View>
               )}
@@ -283,10 +300,10 @@ export default function AIChatScreen({ navigation }: Props) {
         
         {isTyping && (
           <View style={[styles.messageContainer, styles.aiMessage]}>
-            <View style={styles.aiAvatar}>
+            <View style={[styles.aiAvatar, { backgroundColor: aiAvatarBg }]}>
               <Icon name="robot" size={16} color="#6366F1" />
             </View>
-            <View style={[styles.messageBubble, styles.aiBubble, styles.typingBubble]}>
+            <View style={[styles.messageBubble, styles.aiBubble, styles.typingBubble, { backgroundColor: aiBubbleBg }]}>
               <View style={styles.typingIndicator}>
                 <View style={styles.typingDot} />
                 <View style={[styles.typingDot, styles.typingDotDelay1]} />
@@ -298,12 +315,12 @@ export default function AIChatScreen({ navigation }: Props) {
         <View style={[styles.footerSpacer, { height: insets.bottom + TAB_BAR_HEIGHT }]} />
       </ScrollView>
 
-      <View style={styles.inputContainer}>
-        <View style={styles.inputWrapper}>
+      <View style={[styles.inputContainer, { borderTopColor: borderColor, backgroundColor: bgColor }]}>
+        <View style={[styles.inputWrapper, { backgroundColor: inputBg }]}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: textPrimary }]}
             placeholder="Nhập câu hỏi của bạn..."
-            placeholderTextColor="#999"
+            placeholderTextColor={textSecondary}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -311,11 +328,11 @@ export default function AIChatScreen({ navigation }: Props) {
           />
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <TouchableOpacity
-              style={[styles.voiceButton, isRecording && styles.voiceButtonActive]}
+              style={[styles.voiceButton, isRecording && styles.voiceButtonActive, { backgroundColor: inputBg }]}
               onPress={handleVoice}
               activeOpacity={0.8}
             >
-                <Icon name={isRecording ? 'stop-circle' : 'microphone'} size={18} color={isRecording ? '#EF4444' : '#111827'} />
+                <Icon name={isRecording ? 'stop-circle' : 'microphone'} size={18} color={isRecording ? '#EF4444' : textPrimary} />
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -329,7 +346,7 @@ export default function AIChatScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.suggestionsContainer}>
+      <View style={[styles.suggestionsContainer, { backgroundColor: bgColor }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {ChatApi.getSuggestions().map((suggestion, index) => {
             const iconMap = ChatApi.getSuggestionIconMap();
@@ -338,11 +355,11 @@ export default function AIChatScreen({ navigation }: Props) {
             return (
               <TouchableOpacity
                 key={index}
-                style={styles.suggestionChip}
+                style={[styles.suggestionChip, { backgroundColor: chipBg, borderColor: chipBorder }]}
                 onPress={() => setInputText(suggestion)}
               >
-                <Icon name={iconName} size={14} color="#9CA3AF" style={styles.suggestionIcon} />
-                <Text style={styles.suggestionText}>{suggestion}</Text>
+                <Icon name={iconName} size={14} color={textSecondary} style={styles.suggestionIcon} />
+                <Text style={[styles.suggestionText, { color: textPrimary }]}>{suggestion}</Text>
               </TouchableOpacity>
             );
           })}
@@ -361,21 +378,21 @@ export default function AIChatScreen({ navigation }: Props) {
           activeOpacity={1}
           onPress={() => setShowMenu(false)}
         >
-          <View style={styles.menuContainer}>
+          <View style={[styles.menuContainer, { backgroundColor: surfaceColor }]}>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={handleNewChat}
             >
               <Icon name="plus-circle" size={18} color="#6366F1" />
-              <Text style={styles.menuItemText}>Chat mới</Text>
+              <Text style={[styles.menuItemText, { color: textPrimary }]}>Chat mới</Text>
             </TouchableOpacity>
-            <View style={styles.menuDivider} />
+            <View style={[styles.menuDivider, { backgroundColor: borderColor }]} />
             <TouchableOpacity
               style={styles.menuItem}
               onPress={handleShowHistory}
             >
               <Icon name="history" size={18} color="#6366F1" />
-              <Text style={styles.menuItemText}>Lịch sử</Text>
+              <Text style={[styles.menuItemText, { color: textPrimary }]}>Lịch sử</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -388,22 +405,22 @@ export default function AIChatScreen({ navigation }: Props) {
         animationType="slide"
         onRequestClose={() => setShowHistory(false)}
       >
-        <SafeAreaView style={styles.historyContainer}>
-          <View style={styles.historyHeader}>
+        <SafeAreaView style={[styles.historyContainer, { backgroundColor: bgColor }]}>
+          <View style={[styles.historyHeader, { borderBottomColor: borderColor }]}>
             <TouchableOpacity
               style={styles.historyBackButton}
               onPress={() => setShowHistory(false)}
             >
-              <Icon name="chevron-left" size={24} color="#111827" />
+              <Icon name="chevron-left" size={24} color={textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.historyTitle}>Lịch sử chat</Text>
+            <Text style={[styles.historyTitle, { color: textPrimary }]}>Lịch sử chat</Text>
         <View style={styles.historyPlaceholder} />
           </View>
 
           {chatHistory.length === 0 ? (
             <View style={styles.emptyHistory}>
-              <Icon name="history" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyHistoryText}>Chưa có lịch sử chat</Text>
+              <Icon name="history" size={48} color={textSecondary} />
+              <Text style={[styles.emptyHistoryText, { color: textSecondary }]}>Chưa có lịch sử chat</Text>
             </View>
           ) : (
             <FlatList
@@ -411,13 +428,13 @@ export default function AIChatScreen({ navigation }: Props) {
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.historyItem}
+                  style={[styles.historyItem, { backgroundColor: surfaceColor, borderColor }]}
                   onPress={() => handleSelectHistory(item)}
                 >
                   <View style={styles.historyItemContent}>
-                    <Text style={styles.historyItemTitle}>{item.title}</Text>
-                    <Text style={styles.historyItemDate}>{item.date}</Text>
-                    <Text style={styles.historyItemCount}>{item.messageCount} tin nhắn</Text>
+                    <Text style={[styles.historyItemTitle, { color: textPrimary }]}>{item.title}</Text>
+                    <Text style={[styles.historyItemDate, { color: textSecondary }]}>{item.date}</Text>
+                    <Text style={[styles.historyItemCount, { color: textSecondary }]}>{item.messageCount} tin nhắn</Text>
                   </View>
                   <TouchableOpacity
                     style={styles.historyItemDelete}
@@ -440,7 +457,6 @@ export default function AIChatScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   header: {
     flexDirection: "row",
@@ -448,9 +464,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 16,
     paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   backButton: {
     width: 40,
@@ -462,7 +476,6 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 20,
-    color: "#111827",
   },
   headerCenter: {
     flex: 1,
@@ -472,11 +485,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#111827",
   },
   headerSubtitle: {
     fontSize: 12,
-    color: "rgba(0,0,0,0.6)",
   },
   menuButton: {
     width: 40,
@@ -486,11 +497,9 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 24,
-    color: "#111827",
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   messagesContent: {
     padding: 16,
@@ -510,7 +519,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
@@ -524,7 +532,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
@@ -540,26 +547,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   userBubble: {
-    backgroundColor: "#EEF2FF",
     borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: "#F3F4F6",
     borderBottomLeftRadius: 4,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 20,
   },
-  userText: {
-    color: "#111827",
-  },
-  aiText: {
-    color: "#111827",
-  },
+  userText: {},
+  aiText: {},
   timestamp: {
     fontSize: 10,
-    color: "#6B7280",
     marginTop: 4,
   },
   typingBubble: {
@@ -586,12 +586,10 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.06)",
   },
   inputWrapper: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#F3F4F6",
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -599,7 +597,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#111827",
     fontSize: 15,
     maxHeight: 100,
   },
@@ -607,7 +604,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
@@ -622,12 +618,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#10B981",
+    backgroundColor: "#6366F1",
     alignItems: "center",
     justifyContent: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: "rgba(16,185,129,0.3)",
+    backgroundColor: "rgba(99,102,241,0.3)",
   },
   sendIcon: {
     fontSize: 20,
@@ -639,18 +635,15 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   suggestionChip: {
-    backgroundColor: "#F3F4F6",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     flexDirection: 'row',
     alignItems: 'center',
   },
   suggestionText: {
-    color: "#111827",
     fontSize: 13,
     fontWeight: "600",
   },
@@ -666,7 +659,6 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     marginRight: 8,
     shadowColor: '#000',
@@ -687,15 +679,12 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
   },
   menuDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
   },
   historyContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingTop: 8,
   },
   historyHeader: {
@@ -705,7 +694,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   historyBackButton: {
     width: 40,
@@ -716,7 +704,6 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
     flex: 1,
     textAlign: 'center',
   },
@@ -728,13 +715,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   historyItemContent: {
     flex: 1,
@@ -742,16 +727,13 @@ const styles = StyleSheet.create({
   historyItemTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
   },
   historyItemDate: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: 4,
   },
   historyItemCount: {
     fontSize: 12,
-    color: '#9CA3AF',
     marginTop: 2,
   },
   historyItemDelete: {
@@ -769,7 +751,6 @@ const styles = StyleSheet.create({
   },
   emptyHistoryText: {
     fontSize: 15,
-    color: '#9CA3AF',
   },
   historyPlaceholder: {
     width: 40,

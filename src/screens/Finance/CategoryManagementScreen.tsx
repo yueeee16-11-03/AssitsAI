@@ -13,6 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from 'react-native-paper';
 import { RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
@@ -61,6 +62,8 @@ const DEFAULT_CATEGORIES: Category[] = [
 export default function CategoryManagementScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const TAB_BAR_HEIGHT = 70;
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -220,7 +223,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
                 </View>
               )}
             </View>
-            <Text style={[styles.categoryType, { color: category.type === 'income' ? '#10B981' : '#6B7280' }]}>
+            <Text style={styles.categoryType}>
               {category.type === 'income' ? '📥 Thu nhập' : '📤 Chi tiêu'}
             </Text>
           </View>
@@ -228,7 +231,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
 
         <View style={styles.categoryActions}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#6366F1' }]}
+            style={[styles.actionButton, styles.actionButtonEdit]}
             onPress={() => handleEditCategory(category)}
           >
             <Text style={styles.actionButtonText}>✏️</Text>
@@ -236,7 +239,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
           
           {!category.isDefault && (
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#EF4444' }]}
+              style={[styles.actionButton, styles.actionButtonDelete]}
               onPress={() => handleDeleteCategory(category.id)}
             >
               <Text style={styles.actionButtonText}>🗑️</Text>
@@ -254,7 +257,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
         <View style={styles.statSeparator} />
         
         <View style={styles.statItem}>
-          <Text style={[styles.statAmount, { color: category.type === 'income' ? '#10B981' : '#FFFFFF' }]}>
+          <Text style={[styles.statAmount, category.type === 'income' ? styles.incomeColor : styles.expenseColor]}>
             {formatCurrency(category.totalAmount)}
           </Text>
           <Text style={styles.statLabel}>Tổng tiền</Text>
@@ -373,7 +376,7 @@ export default function CategoryManagementScreen({ navigation }: Props) {
                 </View>
                 <View>
                   <Text style={styles.previewName}>{categoryName || 'Tên danh mục'}</Text>
-                  <Text style={[styles.previewType, { color: categoryType === 'income' ? '#10B981' : '#6B7280' }]}>
+                  <Text style={[styles.previewType, categoryType === 'income' ? styles.incomeColor : styles.expenseColor]}>
                     {categoryType === 'income' ? '📥 Thu nhập' : '📤 Chi tiêu'}
                   </Text>
                 </View>
@@ -496,10 +499,17 @@ export default function CategoryManagementScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function getStyles(theme: any): any {
+  const surface = theme.colors.surface;
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
+  const outline = theme.colors.outline || 'rgba(0,0,0,0.06)';
+
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E0F2F1',
+    backgroundColor: surface,
   },
   header: {
     flexDirection: 'row',
@@ -508,9 +518,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: outline,
   },
   backButton: {
     width: 40,
@@ -522,13 +532,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#111827',
+    color: onSurface,
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: onSurface,
   },
   addButton: {
     width: 40,
@@ -540,7 +550,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 24,
-    color: '#111827',
+    color: onSurface,
     fontWeight: 'bold',
   },
   statsCard: {
@@ -548,7 +558,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 20,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: outline,
   },
   statsRow: {
     flexDirection: 'row',
@@ -560,12 +570,12 @@ const styles = StyleSheet.create({
   statsNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: onSurface,
     marginBottom: 4,
   },
   statsLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: onSurfaceVariant,
   },
   filterTabs: {
     flexDirection: 'row',
@@ -577,20 +587,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: outline,
     marginHorizontal: 4,
     alignItems: 'center',
   },
   filterTabActive: {
-    backgroundColor: '#6366F1',
+    backgroundColor: primary,
   },
   filterTabText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: onSurfaceVariant,
     fontWeight: '600',
   },
   filterTabTextActive: {
-    color: '#FFFFFF',
+    color: surface,
   },
   categoriesList: {
     flex: 1,
@@ -652,6 +662,7 @@ const styles = StyleSheet.create({
   },
   categoryType: {
     fontSize: 12,
+    color: onSurfaceVariant,
   },
   categoryActions: {
     flexDirection: 'row',
@@ -664,10 +675,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  actionButtonEdit: {
+    backgroundColor: primary,
+  },
+  actionButtonDelete: {
+    backgroundColor: '#EF4444',
+  },
   actionButtonText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: surface,
   },
+  incomeColor: { color: '#10B981' },
+  expenseColor: { color: surface },
   categoryStats: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -706,7 +725,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1A1D3A',
+    backgroundColor: surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -717,12 +736,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: outline,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: onSurface,
   },
   modalClose: {
     fontSize: 24,
@@ -738,17 +757,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: onSurface,
     marginBottom: 8,
   },
   formInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: outline,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: onSurface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: outline,
   },
   typeSelector: {
     flexDirection: 'row',
@@ -787,13 +806,13 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: outline,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: outline,
   },
   iconOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: primary,
+    backgroundColor: primary,
   },
   iconText: {
     fontSize: 20,
@@ -863,20 +882,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalButtonSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: outline,
   },
   modalButtonPrimary: {
-    backgroundColor: '#6366F1',
+    backgroundColor: primary,
   },
   modalButtonTextSecondary: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: onSurface,
   },
   modalButtonTextPrimary: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: surface,
   },
   decorativeCircle: {
     position: 'absolute',
@@ -897,4 +916,5 @@ const styles = StyleSheet.create({
     bottom: -75,
     left: -75,
   },
-});
+  });
+}

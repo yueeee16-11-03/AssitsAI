@@ -11,6 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -41,6 +42,8 @@ export default function InviteMemberScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [qrCodeVisible, setQrCodeVisible] = useState(false);
   const [currentInviteCode] = useState('FAMILY123456'); // Mock invite code
   const [familyInfo] = useState({
@@ -342,7 +345,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
         {/* Family Info */}
         <View style={styles.familyCard}>
-          <Icon name="account-group" size={48} color="#00796B" style={{ marginBottom: 12 }} />
+          <Icon name="account-group" size={48} color={theme.colors.primary} style={{ marginBottom: 12 }} />
           <Text style={styles.familyName}>{familyInfo.name}</Text>
           <Text style={styles.familyDetails}>
             {familyInfo.memberCount} thành viên • Quản trị: {familyInfo.admin}
@@ -358,7 +361,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
               style={styles.copyCodeButton}
               onPress={() => handleShareVia('copy')}
             >
-              <Icon name="content-copy" size={20} color="#6366F1" />
+              <Icon name="content-copy" size={20} color={theme.colors.secondary} />
             </TouchableOpacity>
           </View>
           <Text style={styles.codeExpiry}>Có hiệu lực trong 7 ngày</Text>
@@ -369,7 +372,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
           style={styles.qrToggleButton}
           onPress={() => setQrCodeVisible(!qrCodeVisible)}
         >
-          <Icon name="qrcode" size={20} color="#00796B" style={{ marginRight: 12 }} />
+          <Icon name="qrcode" size={20} color={theme.colors.primary} style={{ marginRight: 12 }} />
           <Text style={styles.qrToggleText}>
             {qrCodeVisible ? 'Ẩn mã QR' : 'Hiển thị mã QR'}
           </Text>
@@ -418,7 +421,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
       {/* Tips */}
       <View style={styles.tipsCard}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <Icon name="lightbulb-on" size={14} color="#6366F1" style={{ marginRight: 6 }} />
+          <Icon name="lightbulb-on" size={14} color={theme.colors.secondary} style={{ marginRight: 6 }} />
           <Text style={styles.tipsTitle}>Mẹo</Text>
         </View>
         <Text style={styles.tipsText}>
@@ -434,7 +437,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E0F2F1',
@@ -457,13 +460,13 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: '#00796B',
+    color: theme.colors.primary,
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
   },
   refreshButton: {
     width: 40,
@@ -494,7 +497,7 @@ const styles = StyleSheet.create({
   familyName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -512,7 +515,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 16,
   },
   codeContainer: {
@@ -530,7 +533,7 @@ const styles = StyleSheet.create({
   inviteCodeText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#6366F1',
+    color: theme.colors.secondary,
     letterSpacing: 2,
     flex: 1,
     textAlign: 'center',
@@ -562,7 +565,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#00796B',
+    color: theme.colors.primary,
   },
   qrToggleArrow: {
     fontSize: 14,
@@ -602,7 +605,7 @@ const styles = StyleSheet.create({
   qrText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 8,
   },
   shareSection: {
@@ -635,7 +638,7 @@ const styles = StyleSheet.create({
   shareMethodName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00796B',
+    color: theme.colors.primary,
     textAlign: 'center',
   },
   pendingSection: {
@@ -648,7 +651,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pendingCount: {
-    backgroundColor: '#6366F1',
+    backgroundColor: theme.colors.secondary,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -724,12 +727,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   resendButton: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: `rgba(${parseInt(theme.colors.secondary.slice(1,3),16)}, ${parseInt(theme.colors.secondary.slice(3,5),16)}, ${parseInt(theme.colors.secondary.slice(5,7),16)}, 0.2)`,
   },
   resendButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6366F1',
+    color: theme.colors.secondary,
   },
   revokeButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
@@ -766,14 +769,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: `rgba(${parseInt(theme.colors.secondary.slice(1,3),16)}, ${parseInt(theme.colors.secondary.slice(3,5),16)}, ${parseInt(theme.colors.secondary.slice(5,7),16)}, 0.1)`,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: `rgba(${parseInt(theme.colors.secondary.slice(1,3),16)}, ${parseInt(theme.colors.secondary.slice(3,5),16)}, ${parseInt(theme.colors.secondary.slice(5,7),16)}, 0.2)`,
   },
   tipsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6366F1',
+    color: theme.colors.secondary,
     marginBottom: 4,
   },
   tipsText: {

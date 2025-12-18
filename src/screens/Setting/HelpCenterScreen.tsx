@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import type { RootStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "HelpCenter">;
@@ -32,6 +33,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -43,6 +45,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
     },
   ]);
   const [inputText, setInputText] = useState("");
+  const sendBg = inputText.trim() ? theme.colors.primary : 'rgba(99,102,241,0.3)';
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   React.useEffect(() => {
@@ -154,13 +157,13 @@ export default function HelpCenterScreen({ navigation }: Props) {
     : faqs.filter(faq => faq.category === selectedCategory);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trợ giúp</Text>
-        <TouchableOpacity style={styles.chatToggle} onPress={() => setShowChat(!showChat)}>
+        <TouchableOpacity style={[styles.chatToggle, { backgroundColor: theme.colors.primary }]} onPress={() => setShowChat(!showChat)}>
           <Text style={styles.chatToggleIcon}>{showChat ? "📚" : "💬"}</Text>
         </TouchableOpacity>
       </View>
@@ -187,7 +190,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
                   <View
                     style={[
                       styles.messageBubble,
-                      message.isBot ? styles.botBubble : styles.userBubble,
+                      message.isBot ? styles.botBubble : [styles.userBubble, { backgroundColor: theme.colors.primary }],
                     ]}
                   >
                     <Text
@@ -214,7 +217,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
               multiline
             />
             <TouchableOpacity
-              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled, { backgroundColor: sendBg }]}
               onPress={handleSendMessage}
               disabled={!inputText.trim()}
             >
@@ -248,7 +251,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
                   key={category.id}
                   style={[
                     styles.categoryChip,
-                    selectedCategory === category.id && styles.categoryChipActive,
+                    selectedCategory === category.id && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
                   ]}
                   onPress={() => setSelectedCategory(category.id)}
                 >
@@ -295,7 +298,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20, color: "#00897B" },
   headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
-  chatToggle: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center" },
+  chatToggle: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   chatToggleIcon: { fontSize: 20 },
   content: { padding: 16 },
   quickActionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 24 },
@@ -305,13 +308,13 @@ const styles = StyleSheet.create({
   quickActionDescription: { fontSize: 11, color: "rgba(255,255,255,0.6)", textAlign: "center" },
   categoriesScroll: { paddingBottom: 16 },
   categoryChip: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  categoryChipActive: { backgroundColor: "#6366F1", borderColor: "#6366F1" },
+  categoryChipActive: {  },
   categoryIcon: { fontSize: 16, marginRight: 6 },
   categoryText: { fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.6)" },
   categoryTextActive: { color: "#FFFFFF" },
   faqSection: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 16 },
-  faqCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: "#6366F1" },
+  faqCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 16, marginBottom: 12, borderLeftWidth: 3 },
   faqQuestion: { fontSize: 15, fontWeight: "700", color: "#00796B", marginBottom: 8 },
   faqAnswer: { fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 20 },
   supportButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(139,92,246,0.15)", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "rgba(139,92,246,0.3)" },
@@ -326,13 +329,13 @@ const styles = StyleSheet.create({
   botAvatar: { fontSize: 28, marginRight: 8 },
   messageBubble: { maxWidth: "75%", borderRadius: 16, padding: 12 },
   botBubble: { backgroundColor: "rgba(139,92,246,0.2)", borderBottomLeftRadius: 4 },
-  userBubble: { backgroundColor: "#6366F1", borderBottomRightRadius: 4 },
+  userBubble: { borderBottomRightRadius: 4 },
   messageText: { fontSize: 15, lineHeight: 20 },
   botText: { color: "rgba(255,255,255,0.9)" },
   userText: { color: "#FFFFFF" },
   chatInputContainer: { flexDirection: "row", padding: 12, gap: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.05)" },
   chatInput: { flex: 1, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, color: "#333333", fontSize: 15, maxHeight: 100, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  sendButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#6366F1", alignItems: "center", justifyContent: "center" },
+  sendButton: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: "rgba(99,102,241,0.3)" },
   sendIcon: { fontSize: 20, color: "#FFFFFF", fontWeight: "700" },
 });

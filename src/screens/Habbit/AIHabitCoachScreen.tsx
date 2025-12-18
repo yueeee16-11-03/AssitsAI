@@ -12,6 +12,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { useHabitStore } from "../../store/habitStore";
 import AIHabitSuggestionService from "../../services/AIHabitSuggestionService";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -41,6 +42,12 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const habits = useHabitStore((state) => state.habits);
+
+  const theme = useTheme();
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const outline = theme.colors.outline || 'rgba(0,0,0,0.06)';
+  const styles = getStyles(theme);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState<CoachingInsight[]>([]);
@@ -150,11 +157,11 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerTile} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-left" size={20} color="#111827" />
+          <Icon name="chevron-left" size={20} color={onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>AI Coach</Text>
         <TouchableOpacity style={styles.headerTile}>
-          <Icon name="cog-outline" size={20} color="#111827" />
+          <Icon name="cog-outline" size={20} color={onSurface} />
         </TouchableOpacity>
       </View>
 
@@ -163,7 +170,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
           {/* Coach Score */}
           <View style={styles.scoreCard}>
             <View style={styles.scoreHeader}>
-              <Icon name="robot" size={32} color="#8B5CF6" style={styles.iconMarginRight} />
+              <Icon name="robot" size={32} color={primary} style={styles.iconMarginRight} />
               <Text style={styles.scoreTitle}>Điểm đánh giá AI</Text>
             </View>
             <View style={styles.scoreCircle}>
@@ -183,7 +190,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
           {/* Behavior Analysis */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="chart-bar" size={18} color="#00796B" style={styles.iconMarginRight} />
+              <Icon name="chart-bar" size={18} color={primary} style={styles.iconMarginRight} />
               <Text style={styles.sectionTitle}>Phân tích hành vi tuần</Text>
             </View>
             <View style={styles.behaviorChart}>
@@ -220,7 +227,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
                   else setAiInsights([]);
                 }}
               >
-                <Icon name={aiEnabled ? 'robot' : 'robot-outline'} size={16} color={aiEnabled ? '#ffffff' : '#8B5CF6'} />
+                <Icon name={aiEnabled ? 'robot' : 'robot-outline'} size={16} color={aiEnabled ? '#ffffff' : primary} />
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.refreshButton}
@@ -236,7 +243,7 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
             </View>
             {!aiEnabled ? (
               <View style={styles.disabledAiContainer}>
-                <Icon name="robot-off" size={28} color="#D1D5DB" style={styles.infoIcon} />
+                <Icon name="robot-off" size={28} color={outline} style={styles.infoIcon} />
                 <Text style={styles.noSuggestionsText}>Gợi ý AI hiện tắt. Bật để tạo gợi ý.</Text>
                 <TouchableOpacity style={styles.enableButton} onPress={() => { setAiEnabled(true); loadAIInsights(); }}>
                   <Text style={styles.enableButtonText}>Bật gợi ý AI</Text>
@@ -244,12 +251,12 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
               </View>
             ) : insightsLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#8B5CF6" />
+                <ActivityIndicator size="large" color={primary} />
                 <Text style={styles.loadingText}>Đang tạo gợi ý từ AI...</Text>
               </View>
             ) : habits.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Icon name="inbox-multiple-outline" size={48} color="#D1D5DB" />
+                <Icon name="inbox-multiple-outline" size={48} color={outline} />
                 <Text style={styles.emptyText}>Bạn chưa có thói quen nào để phân tích</Text>
               </View>
             ) : (
@@ -288,11 +295,11 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
             {reminders.map((reminder) => (
               <View key={reminder.id} style={styles.reminderCard}>
                 <View style={styles.reminderLeft}>
-                  <Icon name={reminder.icon} size={28} color="#8B5CF6" style={styles.reminderIcon} />
+                  <Icon name={reminder.icon} size={28} color={primary} style={styles.reminderIcon} />
                   <View style={styles.reminderDetails}>
                     <Text style={styles.reminderHabit}>{reminder.habit}</Text>
                     <View style={styles.reminderRowStyle}>
-                      <Icon name="clock-outline" size={14} color="#6366F1" />
+                      <Icon name="clock-outline" size={14} color={primary} />
                       <Text style={[styles.reminderTime, styles.reminderTimeMargin]}>{reminder.time}</Text>
                     </View>
                     <View style={styles.reminderRowStyle2}>
@@ -314,11 +321,11 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
           {/* Quick Actions */}
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("AIChat")}>
-              <Icon name="chat" size={32} style={styles.actionIcon} color="#8B5CF6" />
+              <Icon name="chat" size={32} style={styles.actionIcon} color={primary} />
               <Text style={styles.actionText}>Chat với AI Coach</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("HabitDashboard")}>
-              <Icon name="chart-areaspline" size={32} style={styles.actionIcon} color="#3B82F6" />
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("HabitDashboard") }>
+              <Icon name="chart-areaspline" size={32} style={styles.actionIcon} color={primary} />
               <Text style={styles.actionText}>Xem thống kê</Text>
             </TouchableOpacity>
           </View>
@@ -329,31 +336,31 @@ export default function AIHabitCoachScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.surface },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.outline || 'rgba(0,0,0,0.06)' },
   headerTile: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#111827" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  backIcon: { fontSize: 20, color: theme.colors.onSurface },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.onSurface },
   settingsButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   settingsIcon: { fontSize: 20 },
-  content: { padding: 16, backgroundColor: "#FFFFFF" },
-  scoreCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, marginBottom: 24, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
+  content: { padding: 16, backgroundColor: theme.colors.surface },
+  scoreCard: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 24, marginBottom: 24, alignItems: "center", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   scoreHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   scoreIcon: { fontSize: 32, marginRight: 8 },
-  scoreTitle: { fontSize: 18, fontWeight: "800", color: "#000000" },
-  scoreCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(139,92,246,0.05)", alignItems: "center", justifyContent: "center", marginBottom: 16, borderWidth: 4, borderColor: "#8B5CF6" },
-  scoreValue: { fontSize: 56, fontWeight: "900", color: "#333333" },
-  scoreMax: { fontSize: 18, color: "#666666", fontWeight: "700" },
-  scoreDescription: { fontSize: 15, color: "#333333", marginBottom: 16, textAlign: "center" },
-  scoreProgress: { width: "100%", height: 8, backgroundColor: "#E5E7EB", borderRadius: 4, overflow: "hidden" },
-  scoreProgressFill: { height: "100%", backgroundColor: "#8B5CF6", borderRadius: 4 },
+  scoreTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.onSurface },
+  scoreCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: `${theme.colors.primary}0D`, alignItems: "center", justifyContent: "center", marginBottom: 16, borderWidth: 4, borderColor: theme.colors.primary },
+  scoreValue: { fontSize: 56, fontWeight: "900", color: theme.colors.onSurface },
+  scoreMax: { fontSize: 18, color: theme.colors.onSurfaceVariant || '#666666', fontWeight: "700" },
+  scoreDescription: { fontSize: 15, color: theme.colors.onSurface, marginBottom: 16, textAlign: "center" },
+  scoreProgress: { width: "100%", height: 8, backgroundColor: theme.colors.outline || '#E5E7EB', borderRadius: 4, overflow: "hidden" },
+  scoreProgressFill: { height: "100%", backgroundColor: theme.colors.primary, borderRadius: 4 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 8 },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8, justifyContent: "space-between" },
-  aiToggleButton: { marginLeft: 8, width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#8B5CF6' },
-  aiToggleActive: { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' },
+  aiToggleButton: { marginLeft: 8, width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.primary },
+  aiToggleActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   refreshButton: { padding: 8 },
   behaviorFillStyled: { height: "100%", borderRadius: 4 },
   behaviorFillGood: { backgroundColor: "#10B981" },
@@ -362,49 +369,49 @@ const styles = StyleSheet.create({
   reminderRowStyle2: { flexDirection: "row", alignItems: "center" },
   reminderTimeMargin: { marginLeft: 6 },
   reminderReasonMargin: { marginLeft: 6 },
-  sectionSubtitle: { fontSize: 13, color: "#6B7280", marginBottom: 16 },
+  sectionSubtitle: { fontSize: 13, color: theme.colors.onSurfaceVariant || '#6B7280', marginBottom: 16 },
   disabledAiContainer: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
-  noSuggestionsText: { fontSize: 14, color: '#999999', fontStyle: 'italic', textAlign: 'center', marginTop: 8 },
+  noSuggestionsText: { fontSize: 14, color: theme.colors.onSurfaceVariant || '#999999', fontStyle: 'italic', textAlign: 'center', marginTop: 8 },
   infoIcon: { marginBottom: 8 },
-  enableButton: { marginTop: 12, backgroundColor: '#8B5CF6', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
+  enableButton: { marginTop: 12, backgroundColor: theme.colors.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 },
   loadingContainer: { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
     enableButtonText: { color: '#FFFFFF', fontWeight: '700' },
-  loadingText: { marginTop: 16, fontSize: 14, color: "#666666", fontStyle: "italic" },
+  loadingText: { marginTop: 16, fontSize: 14, color: theme.colors.onSurfaceVariant || '#666666', fontStyle: "italic" },
   emptyContainer: { paddingVertical: 40, alignItems: "center", justifyContent: "center" },
-  emptyText: { marginTop: 12, fontSize: 14, color: "#999999" },
-  behaviorChart: { flexDirection: "row", justifyContent: "space-around", backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, height: 140, marginBottom: 12 },
+  emptyText: { marginTop: 12, fontSize: 14, color: theme.colors.onSurfaceVariant || '#999999' },
+  behaviorChart: { flexDirection: "row", justifyContent: "space-around", backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, height: 140, marginBottom: 12 },
   behaviorDay: { flex: 1, alignItems: "center" },
   behaviorBar: { flex: 1, width: "60%", justifyContent: "flex-end", marginBottom: 8 },
   behaviorFill: { width: "100%", borderRadius: 4 },
-  behaviorLabel: { fontSize: 11, color: "#6B7280", fontWeight: "700", marginBottom: 2 },
-  behaviorValue: { fontSize: 10, color: "#6B7280" },
-  behaviorInsight: { flexDirection: "row", backgroundColor: "#F3F4F6", borderRadius: 12, padding: 12, alignItems: "center" },
+  behaviorLabel: { fontSize: 11, color: theme.colors.onSurfaceVariant || '#6B7280', fontWeight: "700", marginBottom: 2 },
+  behaviorValue: { fontSize: 10, color: theme.colors.onSurfaceVariant || '#6B7280' },
+  behaviorInsight: { flexDirection: "row", backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 12, padding: 12, alignItems: "center" },
   behaviorInsightIcon: { fontSize: 20, marginRight: 8 },
-  behaviorInsightText: { flex: 1, fontSize: 13, color: "#333333", lineHeight: 18 },
-  insightCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderColor: "transparent" },
+  behaviorInsightText: { flex: 1, fontSize: 13, color: theme.colors.onSurface, lineHeight: 18 },
+  insightCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderColor: "transparent" },
   insightHeader: { flexDirection: "row", marginBottom: 12 },
   insightIcon: { fontSize: 32, marginRight: 12 },
   insightTitleContainer: { flex: 1 },
-  insightTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 6 },
+  insightTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 6 },
   insightBadge: { alignSelf: "flex-start", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   insightBadgeText: { fontSize: 11, fontWeight: "700" },
-  insightDescription: { fontSize: 14, color: "#333333", lineHeight: 20, marginBottom: 12 },
+  insightDescription: { fontSize: 14, color: theme.colors.onSurface, lineHeight: 20, marginBottom: 12 },
   insightButton: { borderRadius: 10, padding: 10, alignItems: "center" },
   insightButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  reminderCard: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "#E5E7EB" },
+  reminderCard: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   reminderLeft: { flexDirection: "row", flex: 1 },
   reminderIcon: { fontSize: 28, marginRight: 12 },
   iconMarginRight: { marginRight: 8 },
   reminderDetails: { flex: 1 },
-  reminderHabit: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 4 },
-  reminderTime: { fontSize: 13, color: "#333333", marginBottom: 2, fontWeight: "700" },
-  reminderReason: { fontSize: 12, color: "#6B7280", lineHeight: 16 },
-  reminderToggle: { width: 56, height: 32, borderRadius: 16, backgroundColor: "#F3F4F6", padding: 2, justifyContent: "center" },
+  reminderHabit: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 4 },
+  reminderTime: { fontSize: 13, color: theme.colors.onSurface, marginBottom: 2, fontWeight: "700" },
+  reminderReason: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#6B7280', lineHeight: 16 },
+  reminderToggle: { width: 56, height: 32, borderRadius: 16, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', padding: 2, justifyContent: "center" },
   reminderToggleActive: { backgroundColor: "#10B981" },
-  reminderToggleCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#F3F4F6" },
+  reminderToggleCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6' },
   reminderToggleCircleActive: { alignSelf: "flex-end" },
   actionsGrid: { flexDirection: "row", gap: 12 },
-  actionCard: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
+  actionCard: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   actionIcon: { fontSize: 32, marginBottom: 8 },
-  actionText: { fontSize: 13, color: "#333333", fontWeight: "600", textAlign: "center" },
+  actionText: { fontSize: 13, color: theme.colors.onSurface, fontWeight: "600", textAlign: "center" },
 });

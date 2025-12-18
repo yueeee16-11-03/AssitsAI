@@ -10,11 +10,14 @@ import {
   AppState,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTheme } from 'react-native-paper';
 import { RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
 
 export default function UnlockAppScreen({ navigation }: Props) {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [shakeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(1));
@@ -320,7 +323,7 @@ export default function UnlockAppScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E0F2F1',
@@ -356,7 +359,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
   },
   titleContainer: {
     alignItems: 'center',
@@ -365,7 +368,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#00796B',
+    color: theme.colors.primary,
     marginBottom: 8,
   },
   subtitle: {
@@ -412,13 +415,13 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: 'rgba(0, 137, 123, 0.1)',
+    backgroundColor: `${theme.colors.primary}15`,
     borderWidth: 2,
-    borderColor: 'rgba(0, 137, 123, 0.3)',
+    borderColor: `${theme.colors.primary}4D`,
   },
   pinDotFilled: {
-    backgroundColor: '#00897B',
-    borderColor: '#00897B',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   warningContainer: {
     marginBottom: 20,
@@ -446,7 +449,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(0, 137, 123, 0.1)',
+    backgroundColor: `${theme.colors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -461,11 +464,11 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: `${theme.colors.secondary}33`,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#6366F1',
+    borderColor: theme.colors.secondary,
   },
   biometricButtonText: {
     fontSize: 24,
@@ -490,7 +493,7 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 16,
-    color: '#6366F1',
+    color: theme.colors.secondary,
     textDecorationLine: 'underline',
   },
   emergencyExit: {

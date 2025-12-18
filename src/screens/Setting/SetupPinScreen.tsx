@@ -9,6 +9,7 @@ import {
   Vibration,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTheme } from 'react-native-paper';
 import { RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, any>;
@@ -17,6 +18,7 @@ type SetupStep = 'choose-length' | 'enter-pin' | 'confirm-pin' | 'complete';
 
 export default function SetupPinScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const theme = useTheme();
   const [shakeAnim] = useState(new Animated.Value(0));
   const [step, setStep] = useState<SetupStep>('choose-length');
   const [pinLength, setPinLength] = useState(4);
@@ -133,13 +135,13 @@ export default function SetupPinScreen({ navigation }: Props) {
             key={length}
             style={[
               styles.lengthOption,
-              pinLength === length && styles.lengthOptionSelected
+              pinLength === length && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}10` }
             ]}
             onPress={() => setPinLength(length)}
           >
             <Text style={[
               styles.lengthOptionText,
-              pinLength === length && styles.lengthOptionTextSelected
+              pinLength === length && { color: theme.colors.primary }
             ]}>
               {length} chữ số
             </Text>
@@ -151,7 +153,7 @@ export default function SetupPinScreen({ navigation }: Props) {
       </View>
 
       <TouchableOpacity
-        style={styles.continueButton}
+        style={[styles.continueButton, { backgroundColor: theme.colors.primary }]}
         onPress={() => setStep('enter-pin')}
       >
         <Text style={styles.continueButtonText}>Tiếp tục</Text>
@@ -183,7 +185,7 @@ export default function SetupPinScreen({ navigation }: Props) {
             key={index}
             style={[
               styles.pinDot,
-              index < currentInput.length && styles.pinDotFilled
+              index < currentInput.length && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
             ]}
           />
         ))}
@@ -223,7 +225,7 @@ export default function SetupPinScreen({ navigation }: Props) {
           style={styles.startOverButton}
           onPress={handleStartOver}
         >
-          <Text style={styles.startOverText}>Bắt đầu lại</Text>
+          <Text style={[styles.startOverText, { color: theme.colors.primary }]}>Bắt đầu lại</Text>
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -283,7 +285,7 @@ export default function SetupPinScreen({ navigation }: Props) {
           <Animated.View 
             style={[
               styles.progressFill,
-              { width: `${getProgressPercentage()}%` }
+              { width: `${getProgressPercentage()}%`, backgroundColor: theme.colors.primary }
             ]}
           />
         </View>
@@ -365,7 +367,6 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#6366F1',
     borderRadius: 2,
   },
   progressText: {
@@ -408,25 +409,19 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
   },
-  lengthOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-  },
+  lengthOptionSelected: {  },
   lengthOptionText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#00796B',
     marginBottom: 4,
   },
-  lengthOptionTextSelected: {
-    color: '#6366F1',
-  },
+  lengthOptionTextSelected: {  },
   lengthOptionSubtext: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
   },
   continueButton: {
-    backgroundColor: '#6366F1',
     paddingHorizontal: 48,
     paddingVertical: 16,
     borderRadius: 12,
@@ -452,10 +447,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  pinDotFilled: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
-  },
+  pinDotFilled: {  },
   numberPad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -488,7 +480,6 @@ const styles = StyleSheet.create({
   },
   startOverText: {
     fontSize: 16,
-    color: '#6366F1',
     textDecorationLine: 'underline',
   },
   successIcon: {
@@ -549,7 +540,6 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6366F1',
     marginBottom: 8,
   },
   tipsText: {
@@ -565,7 +555,6 @@ const styles = StyleSheet.create({
   decorativeCircle1: {
     width: 200,
     height: 200,
-    backgroundColor: '#6366F1',
     top: -100,
     right: -100,
   },

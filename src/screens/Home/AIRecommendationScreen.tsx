@@ -9,6 +9,7 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import NotificationService from '../../services/NotificationService';
 import { useFocusEffect } from "@react-navigation/native";
 import auth from "@react-native-firebase/auth";
@@ -28,7 +29,16 @@ type Recommendation = DailyRecommendation;
 
 export default function AIRecommendationScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const TAB_BAR_HEIGHT = 70;
+  
+  // Theme variables
+  const bgColor = theme.colors.background;
+  const surfaceColor = theme.colors.surface;
+  const textPrimary = theme.colors.onSurface;
+  const textSecondary = theme.colors.onSurfaceVariant;
+  const borderColor = theme.dark ? '#404040' : '#E5E7EB';
+  
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,21 +166,18 @@ export default function AIRecommendationScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+      <View style={[styles.header, { borderBottomColor: borderColor, backgroundColor: surfaceColor }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="chevron-left" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Gợi ý thông minh</Text>
-          <Text style={styles.headerSubtitle}>{recommendations.length} gợi ý hôm nay</Text>
+          <Text style={[styles.headerTitle, { color: textPrimary }]}>Gợi ý thông minh</Text>
+          <Text style={[styles.headerSubtitle, { color: textSecondary }]}>{recommendations.length} gợi ý hôm nay</Text>
         </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <MaterialCommunityIcons name="refresh" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -180,12 +187,12 @@ export default function AIRecommendationScreen({ navigation }: Props) {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#06B6D4" />
-            <Text style={styles.loadingText}>Đang tải gợi ý...</Text>
+            <Text style={[styles.loadingText, { color: textSecondary }]}>Đang tải gợi ý...</Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
             <MaterialCommunityIcons name="alert-circle" size={48} color="#EF4444" />
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={[styles.errorText, { color: textPrimary }]}>{error}</Text>
             <TouchableOpacity
               style={styles.retryButton}
               onPress={loadAndGenerateRecommendations}
@@ -198,11 +205,11 @@ export default function AIRecommendationScreen({ navigation }: Props) {
             {/* Active Recommendations */}
             {recommendations.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Gợi ý cho bạn</Text>
+                <Text style={[styles.sectionTitle, { color: textPrimary }]}>Gợi ý cho bạn</Text>
                 {recommendations.map((rec, _index) => (
                   <View
                     key={rec.id}
-                    style={styles.recCard}
+                    style={[styles.recCard, { backgroundColor: surfaceColor, borderColor }]}
                   >
                     {/* Header: Icon + Title + Priority */}
                     <View style={styles.recCardHeader}>
@@ -215,7 +222,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
                       </View>
                       
                       <View style={styles.recTitleSection}>
-                        <Text style={styles.recTitle}>{rec.title}</Text>
+                        <Text style={[styles.recTitle, { color: textPrimary }]}>{rec.title}</Text>
                         <View style={getPriorityBadgeStyle(rec.priority)}>
                           <MaterialCommunityIcons 
                             name={getPriorityIcon(rec.priority)}
@@ -231,11 +238,11 @@ export default function AIRecommendationScreen({ navigation }: Props) {
                     </View>
 
                     {/* Body: Lý do + Gợi ý + Tags */}
-                    <View style={styles.recCardBody}>
+                    <View style={[styles.recCardBody, { borderTopColor: borderColor }]}>
                       {/* Reason section - Ngắn gọn */}
                       <View style={styles.reasonSection}>
-                        <Text style={styles.sectionLabel}>Chi tiết</Text>
-                        <Text style={styles.reasonText}>{rec.description}</Text>
+                        <Text style={[styles.sectionLabel, { color: textSecondary }]}>Chi tiết</Text>
+                        <Text style={[styles.reasonText, { color: textSecondary }]}>{rec.description}</Text>
                       </View>
 
                       {/* Footer: Category tag */}
@@ -271,9 +278,9 @@ export default function AIRecommendationScreen({ navigation }: Props) {
               onPress={() => navigation.navigate("AIChat")}
               activeOpacity={0.85}
             >
-              <MaterialCommunityIcons name="chart-line" size={22} color="#FFFFFF" />
+              <MaterialCommunityIcons name="chart-line" size={18} color="#FFFFFF" />
               <Text style={styles.askAIText}>Xem phân tích AI</Text>
-              <MaterialCommunityIcons name="chevron-right" size={20} color="#FFFFFF" style={styles.askAIChevron} />
+              <MaterialCommunityIcons name="chevron-right" size={16} color="#FFFFFF" style={styles.askAIChevron} />
             </TouchableOpacity>
           </Animated.View>
           </>
@@ -285,7 +292,7 @@ export default function AIRecommendationScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  container: { flex: 1 },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -294,7 +301,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 15,
-    color: "#6B7280",
     fontWeight: "600",
   },
   errorContainer: {
@@ -306,7 +312,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: "#EF4444",
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 24,
@@ -330,8 +335,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-    backgroundColor: "#FFFFFF",
   },
   backButton: {
     width: 40,
@@ -342,26 +345,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: "#111827" },
-  headerSubtitle: { fontSize: 13, color: "rgba(0,0,0,0.6)", marginTop: 4, fontWeight: "500" },
-  filterButton: { 
-    width: 40, 
-    height: 40, 
-    alignItems: "center", 
-    justifyContent: "center",
-    backgroundColor: "#06B6D4",
-    borderRadius: 12,
-  },
+  headerTitle: { fontSize: 20, fontWeight: "800" },
+  headerSubtitle: { fontSize: 13, marginTop: 4, fontWeight: "500" },
   content: { padding: 16, paddingBottom: 32 },
 
   // ===== HERO BANNER =====
   heroBanner: {
-    backgroundColor: "#F0FDF4",
     borderRadius: 20,
     padding: 24,
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: "#D1FAE5",
   },
   heroTop: {
     flexDirection: "row",
@@ -376,7 +369,6 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 15,
-    color: "#4B5563",
     lineHeight: 24,
     marginBottom: 20,
   },
@@ -401,7 +393,6 @@ const styles = StyleSheet.create({
   },
   heroStatLabel: {
     fontSize: 12,
-    color: "#6B7280",
     fontWeight: "600",
     marginTop: 4,
   },
@@ -417,19 +408,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#1F2937",
     marginBottom: 16,
     paddingHorizontal: 4,
   },
 
   // ===== REC CARD (NEW MODERN STYLE) =====
   recCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 18,
     padding: 0,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -464,7 +452,6 @@ const styles = StyleSheet.create({
   recTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#1F2937",
     marginBottom: 10,
     lineHeight: 24,
   },
@@ -474,7 +461,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
   },
   reasonSection: {
     marginBottom: 16,
@@ -482,14 +468,12 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#6B7280",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 8,
   },
   reasonText: {
     fontSize: 14,
-    color: "#4B5563",
     lineHeight: 22,
   },
 

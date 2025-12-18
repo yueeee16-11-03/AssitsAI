@@ -8,6 +8,7 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -20,6 +21,8 @@ export default function MemberDetailScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const [selectedTab, setSelectedTab] = useState<"finance" | "habits" | "goals">("finance");
+  const theme = useTheme();
+  const styles = getStyles(theme);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -74,7 +77,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết thành viên</Text>
         <TouchableOpacity style={styles.editButton}>
-          <Icon name="pencil" size={20} color="#00796B" />
+          <Icon name="pencil" size={20} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -96,7 +99,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
               onPress={() => setSelectedTab("finance")}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="currency-usd" size={16} color={selectedTab === "finance" ? "#00796B" : "#666"} style={{ marginRight: 6 }} />
+                <Icon name="currency-usd" size={16} color={selectedTab === "finance" ? theme.colors.secondary : "#666"} style={{ marginRight: 6 }} />
                 <Text style={[styles.tabText, selectedTab === "finance" && styles.tabTextActive]}>
                   Tài chính
                 </Text>
@@ -107,7 +110,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
               onPress={() => setSelectedTab("habits")}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="check-circle" size={16} color={selectedTab === "habits" ? "#00796B" : "#666"} style={{ marginRight: 6 }} />
+                <Icon name="check-circle" size={16} color={selectedTab === "habits" ? theme.colors.secondary : "#666"} style={{ marginRight: 6 }} />
                 <Text style={[styles.tabText, selectedTab === "habits" && styles.tabTextActive]}>
                   Thói quen
                 </Text>
@@ -118,7 +121,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
               onPress={() => setSelectedTab("goals")}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="target" size={16} color={selectedTab === "goals" ? "#00796B" : "#666"} style={{ marginRight: 6 }} />
+                <Icon name="target" size={16} color={selectedTab === "goals" ? theme.colors.secondary : "#666"} style={{ marginRight: 6 }} />
                 <Text style={[styles.tabText, selectedTab === "goals" && styles.tabTextActive]}>
                   Mục tiêu
                 </Text>
@@ -133,19 +136,19 @@ export default function MemberDetailScreen({ navigation }: Props) {
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Thu nhập</Text>
-                    <Text style={[styles.summaryValue, { color: "#10B981" }]}>
+                    <Text style={[styles.summaryValue, { color: theme.colors.secondary }]}>
                       ₫{(financeData.income / 1000000).toFixed(1)}M
                     </Text>
                   </View>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Chi tiêu</Text>
-                    <Text style={[styles.summaryValue, { color: "#EF4444" }]}>
+                    <Text style={[styles.summaryValue, { color: theme.colors.onSurfaceVariant }]}>
                       ₫{(financeData.expense / 1000000).toFixed(1)}M
                     </Text>
                   </View>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Tiết kiệm</Text>
-                    <Text style={[styles.summaryValue, { color: "#6366F1" }]}>
+                    <Text style={[styles.summaryValue, { color: theme.colors.primary }]}>
                       ₫{(financeData.saving / 1000000).toFixed(1)}M
                     </Text>
                   </View>
@@ -174,12 +177,12 @@ export default function MemberDetailScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
                 {financeData.recentTransactions.map((trans) => (
                   <View key={trans.id} style={styles.transactionCard}>
-                    <Icon name={trans.icon as any} size={20} color={trans.type === "income" ? "#10B981" : "#EF4444"} />
+                    <Icon name={trans.icon as any} size={20} color={trans.type === "income" ? theme.colors.secondary : theme.colors.onSurfaceVariant} />
                     <View style={styles.transInfo}>
                       <Text style={styles.transCategory}>{trans.category}</Text>
                       <Text style={styles.transDate}>{trans.date}</Text>
                     </View>
-                    <Text style={[styles.transAmount, { color: trans.type === "income" ? "#10B981" : "#EF4444" }]}>
+                    <Text style={[styles.transAmount, { color: trans.type === "income" ? theme.colors.secondary : theme.colors.onSurfaceVariant }]}>
                       {trans.type === "income" ? "+" : "-"}₫{(trans.amount / 1000).toFixed(0)}K
                     </Text>
                   </View>
@@ -195,11 +198,11 @@ export default function MemberDetailScreen({ navigation }: Props) {
               {habitsData.map((habit) => (
                 <View key={habit.id} style={styles.habitCard}>
                   <View style={styles.habitHeader}>
-                    <Icon name={habit.icon as any} size={20} color="#6366F1" />
+                    <Icon name={habit.icon as any} size={20} color={theme.colors.secondary} />
                     <View style={styles.habitInfo}>
                       <Text style={styles.habitName}>{habit.name}</Text>
                       <Text style={styles.habitMeta}>
-                        {habit.completed}/{habit.total} ngày • <Icon name="fire" size={12} color="#F59E0B" /> {habit.streak}
+                        {habit.completed}/{habit.total} ngày • <Icon name="fire" size={12} color={theme.colors.secondary} /> {habit.streak}
                       </Text>
                     </View>
                     <Text style={styles.habitPercent}>{habit.progress}%</Text>
@@ -221,7 +224,7 @@ export default function MemberDetailScreen({ navigation }: Props) {
                 return (
                   <View key={goal.id} style={styles.goalCard}>
                     <View style={styles.goalHeader}>
-                      <Icon name={goal.icon as any} size={20} color="#00796B" />
+                      <Icon name={goal.icon as any} size={20} color={theme.colors.primary} />
                       <View style={styles.goalInfo}>
                         <Text style={styles.goalName}>{goal.name}</Text>
                         <Text style={styles.goalDeadline}><Icon name="calendar" size={12} color="#999" /> {goal.deadline}</Text>
@@ -247,23 +250,23 @@ export default function MemberDetailScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: "#E0F2F1" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00897B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
+  backIcon: { fontSize: 20, color: theme.colors.primary },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary },
   editButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   editIcon: { fontSize: 20 },
   content: { padding: 16 },
   profileCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderTopWidth: 4 },
   avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   avatarText: { fontSize: 48 },
-  memberName: { fontSize: 24, fontWeight: "900", color: "#00796B", marginBottom: 4 },
+  memberName: { fontSize: 24, fontWeight: "900", color: theme.colors.primary, marginBottom: 4 },
   memberRole: { fontSize: 14, color: "rgba(255,255,255,0.6)" },
   tabSelector: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 4, marginBottom: 20 },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
-  tabActive: { backgroundColor: "#00897B" },
+  tabActive: { backgroundColor: theme.colors.primary },
   tabText: { fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: "700" },
   tabTextActive: { color: "#FFFFFF" },
   summaryCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 20, marginBottom: 20 },
@@ -272,17 +275,17 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginBottom: 4 },
   summaryValue: { fontSize: 18, fontWeight: "800" },
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary, marginBottom: 12 },
   categoryCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 12, marginBottom: 8 },
   categoryHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  categoryName: { fontSize: 14, fontWeight: "700", color: "#00796B" },
+  categoryName: { fontSize: 14, fontWeight: "700", color: theme.colors.primary },
   categoryAmount: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.8)" },
   categoryProgress: { height: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" },
   categoryFill: { height: "100%", borderRadius: 3 },
   transactionCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 12, marginBottom: 8 },
   transIcon: { fontSize: 24, marginRight: 12 },
   transInfo: { flex: 1 },
-  transCategory: { fontSize: 14, fontWeight: "700", color: "#00796B", marginBottom: 2 },
+  transCategory: { fontSize: 14, fontWeight: "700", color: theme.colors.primary, marginBottom: 2 },
   transDate: { fontSize: 12, color: "rgba(255,255,255,0.6)" },
   transAmount: { fontSize: 15, fontWeight: "800" },
   habitCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 16, marginBottom: 12 },
@@ -291,19 +294,19 @@ const styles = StyleSheet.create({
   habitInfo: { flex: 1 },
   habitName: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 4 },
   habitMeta: { fontSize: 12, color: "rgba(255,255,255,0.6)" },
-  habitPercent: { fontSize: 18, fontWeight: "800", color: "#6366F1" },
+  habitPercent: { fontSize: 18, fontWeight: "800", color: theme.colors.secondary },
   habitProgress: { height: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" },
-  habitFill: { height: "100%", backgroundColor: "#6366F1", borderRadius: 3 },
+  habitFill: { height: "100%", backgroundColor: theme.colors.secondary, borderRadius: 3 },
   goalCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 16, marginBottom: 12 },
   goalHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   goalIcon: { fontSize: 32, marginRight: 12 },
   goalInfo: { flex: 1 },
-  goalName: { fontSize: 16, fontWeight: "800", color: "#00796B", marginBottom: 4 },
+  goalName: { fontSize: 16, fontWeight: "800", color: theme.colors.primary, marginBottom: 4 },
   goalDeadline: { fontSize: 12, color: "rgba(255,255,255,0.6)" },
   goalAmounts: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  goalCurrent: { fontSize: 20, fontWeight: "900", color: "#6366F1" },
+  goalCurrent: { fontSize: 20, fontWeight: "900", color: theme.colors.secondary },
   goalTarget: { fontSize: 14, color: "rgba(255,255,255,0.6)", marginLeft: 4 },
   goalProgress: { height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
-  goalFill: { height: "100%", backgroundColor: "#6366F1", borderRadius: 4 },
+  goalFill: { height: "100%", backgroundColor: theme.colors.secondary, borderRadius: 4 },
   goalPercent: { fontSize: 13, color: "rgba(255,255,255,0.7)", textAlign: "right" },
 });

@@ -15,6 +15,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { registerAndCreateProfile, onGoogleButtonPress } from "../../services/AuthService";
 import GoogleLoginButton from "../../components/GoogleLoginButton";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,6 +25,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Register">;
 export default function RegisterScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -159,7 +162,7 @@ export default function RegisterScreen({ navigation }: Props) {
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Icon name="account" size={20} color="#8B5CF6" style={styles.inputIcon} />
+                <Icon name="account" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Họ và tên"
                   placeholderTextColor="#999"
@@ -178,7 +181,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Icon name="email-outline" size={20} color="#8B5CF6" style={styles.inputIcon} />
+                <Icon name="email-outline" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Email của bạn"
                   placeholderTextColor="#999"
@@ -199,7 +202,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Icon name="lock-outline" size={20} color="#8B5CF6" style={styles.inputIcon} />
+                <Icon name="lock-outline" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Mật khẩu"
                   placeholderTextColor="#999"
@@ -219,7 +222,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
-                <Icon name="lock-check-outline" size={20} color="#8B5CF6" style={styles.inputIcon} />
+                <Icon name="lock-check-outline" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Xác nhận mật khẩu"
                   placeholderTextColor="#999"
@@ -285,7 +288,7 @@ export default function RegisterScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E0F2F1",
@@ -354,7 +357,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#00796B",
+    color: theme.colors.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -399,7 +402,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   registerButton: {
-    backgroundColor: "#8B5CF6",
+    backgroundColor: theme.colors.secondary,
     padding: 18,
     borderRadius: 16,
     alignItems: "center",
@@ -407,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: 8,
     marginBottom: 24,
-    shadowColor: "#8B5CF6",
+    shadowColor: theme.colors.secondary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -469,7 +472,7 @@ const styles = StyleSheet.create({
     color: "#4285F4",
   },
   googleButtonText: {
-    color: "#00796B",
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: "600",
   },

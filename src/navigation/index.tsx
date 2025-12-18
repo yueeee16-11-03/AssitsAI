@@ -25,10 +25,6 @@ import EditHabitScreen from "../screens/Habbit/EditHabitScreen";
 import DailyCheckInScreen from "../screens/Habbit/DailyCheckInScreen";
 import AIHabitCoachScreen from "../screens/Habbit/AIHabitCoachScreen";
 import HabitReportScreen from "../screens/Habbit/HabitReportScreen";
-import FamilyOverviewScreen from "../screens/Family/FamilyOverviewScreen";
-import MemberDetailScreen from "../screens/Family/MemberDetailScreen";
-import SharedGoalScreen from "../screens/Family/SharedGoalScreen";
-import FamilyChatScreen from "../screens/Family/FamilyChatScreen";
 import ProfileScreen from "../screens/Setting/ProfileScreen";
 import SettingsScreen from "../screens/Setting/SettingsScreen";
 import NotificationScreen from "../screens/Setting/NotificationScreen";
@@ -40,14 +36,18 @@ import RecurringTransactionsScreen from "../screens/Finance/RecurringTransaction
 import SecuritySettingsScreen from "../screens/Setting/SecuritySettingsScreen";
 import SetupPinScreen from "../screens/Setting/SetupPinScreen";
 import UnlockAppScreen from "../screens/Core/UnlockAppScreen";
-import InviteMemberScreen from "../screens/Family/InviteMemberScreen";
-import FamilyPermissionsScreen from "../screens/Family/FamilyPermissionsScreen";
 import ReportScreen from "../screens/Finance/ReportScreen";
 import CategoryTransactionsScreen from "../screens/Finance/CategoryTransactionsScreen";
 import EditTransactionScreen from "../screens/Finance/EditTransactionScreen";
 import TransactionHistoryScreen from "../screens/Finance/TransactionHistoryScreen";
 import AIProcessingOverlay from "../screens/Finance/AIProcessingOverlay";
-import GeminiTestScreen from "../screens/Core/GeminiTestScreen";
+import FamilyOverviewScreen from "../screens/Family/FamilyOverviewScreen";
+import FamilyChatScreen from "../screens/Family/FamilyChatScreen";
+import FamilyPermissionsScreen from "../screens/Family/FamilyPermissionsScreen";
+import MemberDetailScreen from "../screens/Family/MemberDetailScreen";
+import SharedGoalScreen from "../screens/Family/SharedGoalScreen";
+import InviteMemberScreen from "../screens/Family/InviteMemberScreen";
+
 import BottomTabs from "./BottomTabs";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -55,10 +55,32 @@ const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export default function AppNavigation() {
   const [currentRouteName, setCurrentRouteName] = React.useState<string | undefined>(undefined);
+  const theme = require('react-native-paper').useTheme();
+
+  const navTheme = {
+    dark: theme.dark,
+    colors: {
+      primary: theme.colors.primary,
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.onSurface,
+      border: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      notification: theme.colors.primary,
+    },
+    // Ensure fonts exist for react-navigation header code (fallback to system if missing)
+    fonts: {
+      regular: (theme as any).fonts?.regular ?? { fontFamily: 'System' },
+      medium: (theme as any).fonts?.medium ?? { fontFamily: 'System' },
+      heavy: (theme as any).fonts?.heavy ?? (theme as any).fonts?.medium ?? { fontFamily: 'System' },
+      light: (theme as any).fonts?.light ?? { fontFamily: 'System' },
+      thin: (theme as any).fonts?.thin ?? { fontFamily: 'System' },
+    }
+  };
 
   return (
     <NavigationContainer
       ref={navigationRef}
+      theme={navTheme}
       onReady={() => setCurrentRouteName(navigationRef.getCurrentRoute()?.name)}
       onStateChange={(state) => setCurrentRouteName(state?.routes[state.index]?.name)}
     >
@@ -85,10 +107,6 @@ export default function AppNavigation() {
         <Stack.Screen name="DailyCheckIn" component={DailyCheckInScreen} />
         <Stack.Screen name="AIHabitCoach" component={AIHabitCoachScreen} />
         <Stack.Screen name="HabitReport" component={HabitReportScreen} />
-        <Stack.Screen name="FamilyOverview" component={FamilyOverviewScreen} />
-        <Stack.Screen name="MemberDetail" component={MemberDetailScreen} />
-        <Stack.Screen name="SharedGoal" component={SharedGoalScreen} />
-        <Stack.Screen name="FamilyChat" component={FamilyChatScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Notification" component={NotificationScreen} />
@@ -100,14 +118,18 @@ export default function AppNavigation() {
         <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />
         <Stack.Screen name="SetupPin" component={SetupPinScreen} />
         <Stack.Screen name="UnlockApp" component={UnlockAppScreen} />
-        <Stack.Screen name="InviteMember" component={InviteMemberScreen} />
-        <Stack.Screen name="FamilyPermissions" component={FamilyPermissionsScreen} />
+
         <Stack.Screen name="Report" component={ReportScreen} />
         <Stack.Screen name="CategoryTransactions" component={CategoryTransactionsScreen} />
         <Stack.Screen name="EditTransaction" component={EditTransactionScreen} />
         <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
         <Stack.Screen name="AIProcessingOverlay" component={AIProcessingOverlay} />
-        <Stack.Screen name="GeminiTest" component={GeminiTestScreen} />
+        <Stack.Screen name="FamilyOverview" component={FamilyOverviewScreen} />
+        <Stack.Screen name="FamilyChat" component={FamilyChatScreen} />
+        <Stack.Screen name="FamilyPermissions" component={FamilyPermissionsScreen} />
+        <Stack.Screen name="MemberDetail" component={MemberDetailScreen} />
+        <Stack.Screen name="SharedGoal" component={SharedGoalScreen} />
+        <Stack.Screen name="InviteMember" component={InviteMemberScreen} />
       </Stack.Navigator>
       {/* Global bottom tabs - visible across all stack screens */}
       <BottomTabs navigationRef={navigationRef} currentRouteName={currentRouteName} />

@@ -15,6 +15,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, "SetupProfile">;
@@ -22,6 +23,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "SetupProfile">;
 export default function SetupProfileScreen({ navigation: _navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -150,7 +153,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
           <View style={styles.header}>
             <View style={styles.avatarContainer}>
                 <View style={styles.avatarPlaceholder}>
-                <Icon name="account-circle" size={50} color="#EC4899" />
+                <Icon name="account-circle" size={50} color={theme.colors.secondary} />
               </View>
               <View style={styles.avatarRing} />
               <TouchableOpacity style={styles.cameraButton} activeOpacity={0.8}>
@@ -167,7 +170,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
                 Họ và tên <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputWrapper}>
-                <Icon name="account" size={20} color="#EC4899" style={styles.inputIcon} />
+                <Icon name="account" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Nguyễn Văn A"
                   placeholderTextColor="#999"
@@ -189,7 +192,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
                 Số điện thoại <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputWrapper}>
-                <Icon name="phone" size={20} color="#EC4899" style={styles.inputIcon} />
+                <Icon name="phone" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="0912345678"
                   placeholderTextColor="#999"
@@ -211,7 +214,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
                 Ngày sinh <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputWrapper}>
-                <Icon name="calendar" size={20} color="#EC4899" style={styles.inputIcon} />
+                <Icon name="calendar" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="DD/MM/YYYY"
                   placeholderTextColor="#999"
@@ -231,7 +234,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Địa chỉ (tùy chọn)</Text>
               <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
-                <Icon name="map-marker" size={20} color="#EC4899" style={styles.inputIcon} />
+                <Icon name="map-marker" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="123 Đường ABC, Quận XYZ"
                   placeholderTextColor="#999"
@@ -278,7 +281,7 @@ export default function SetupProfileScreen({ navigation: _navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E0F2F1",
@@ -352,12 +355,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#EC4899",
+    backgroundColor: theme.colors.secondary,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
     borderColor: "#0A0E27",
-    shadowColor: "#EC4899",
+    shadowColor: theme.colors.secondary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
@@ -369,7 +372,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#00796B",
+    color: theme.colors.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -387,12 +390,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#00796B",
+    color: theme.colors.primary,
     marginBottom: 8,
     marginLeft: 4,
   },
   required: {
-    color: "#EC4899",
+    color: theme.colors.secondary,
   },
   inputWrapper: {
     flexDirection: "row",
@@ -432,7 +435,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   submitButton: {
-    backgroundColor: "#EC4899",
+    backgroundColor: theme.colors.secondary,
     padding: 18,
     borderRadius: 16,
     alignItems: "center",
@@ -440,7 +443,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: 8,
     marginBottom: 16,
-    shadowColor: "#EC4899",
+    shadowColor: theme.colors.secondary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -470,7 +473,7 @@ const styles = StyleSheet.create({
     borderColor: "#00897B",
   },
   skipButtonText: {
-    color: "#00796B",
+    color: theme.colors.primary,
     fontSize: 15,
     fontWeight: "600",
   },

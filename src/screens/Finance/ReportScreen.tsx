@@ -17,6 +17,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { LineChart } from 'react-native-chart-kit';
 import { useReportStore } from '../../store/reportStore';
 import { useReportData } from '../../hooks/useReportData';
@@ -90,6 +91,13 @@ export default function ReportScreen({ navigation }: Props) {
 
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const [showExportModal, setShowExportModal] = React.useState(false);
+  const theme = useTheme();
+  const styles = getStyles(theme);
+  const surface = theme.colors.surface;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || 'rgba(0,0,0,0.06)';
+  const isDark = !!theme.dark;
+  const bgAlpha = isDark ? 0.08 : 0.04;
   const [expandedCategory, setExpandedCategory] = React.useState<string | null>(null);
   const [categoryPeriod, setCategoryPeriod] = React.useState<string>('month');
   const [customStart, setCustomStart] = React.useState<Date>(() => { const d = new Date(); d.setDate(d.getDate()-30); return d; });
@@ -116,7 +124,6 @@ export default function ReportScreen({ navigation }: Props) {
   const [showPeriodDropdown, setShowPeriodDropdown] = React.useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = React.useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = React.useState(false);
-  const [monthTableWidth, setMonthTableWidth] = React.useState(0);
 
   // Chart tooltips
   const [trendTooltip, setTrendTooltip] = React.useState<{visible:boolean; label:string; value:number; x:number; y:number}>({visible:false, label:'', value:0, x:0, y:0});
@@ -379,7 +386,7 @@ export default function ReportScreen({ navigation }: Props) {
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}><Icon name="format-list-bulleted" size={16} color="#0F1724" />  Chi tiết theo danh mục</Text>
+          <Text style={styles.sectionTitle}><Icon name="format-list-bulleted" size={16} color={onSurface} />  Chi tiết theo danh mục</Text>
         </View>
         {/* Period buttons specific to category detail */}
         <View style={[styles.periodSelectorLight]} onLayout={(e) => setCategoryContainerWidth(e.nativeEvent.layout.width)}>
@@ -451,7 +458,7 @@ export default function ReportScreen({ navigation }: Props) {
             {(() => {
               const expandedColor = mapCategoryToColor(expandedCategory || '');
               return categoryTxMap[expandedCategory].map(tx => (
-                <View key={tx.id} style={[styles.categoryTransactionItem, styles.transactionItemColoredBase, { backgroundColor: hexToRgba(expandedColor, 0.04), borderBottomColor: hexToRgba(expandedColor, 0.08), borderLeftColor: expandedColor }]}>
+                <View key={tx.id} style={[styles.categoryTransactionItem, styles.transactionItemColoredBase, { backgroundColor: hexToRgba(expandedColor, bgAlpha), borderBottomColor: hexToRgba(expandedColor, Math.min(1, bgAlpha * 2)), borderLeftColor: expandedColor }]}>
                 <View style={styles.categoryTransactionLeft}>
                   <Text style={styles.categoryTransactionDesc}>{tx.description}</Text>
                   <Text style={styles.categoryTransactionDate}>{(tx.date?.toDate ? tx.date.toDate() : new Date(tx.date)).toLocaleDateString('vi-VN')}</Text>
@@ -470,7 +477,7 @@ export default function ReportScreen({ navigation }: Props) {
 
   const renderEmptyChart = (message: string) => (
     <View style={styles.emptyChart}>
-      <Icon name="chart-box-outline" size={36} color="#9CA3AF" />
+      <Icon name="chart-box-outline" size={36} color={onSurfaceVariant} />
       <Text style={styles.emptyChartText}>{message}</Text>
     </View>
   );
@@ -481,34 +488,8 @@ export default function ReportScreen({ navigation }: Props) {
     if (!transactions || transactions.length === 0) return null;
 
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
 
-    // Calculate previous month
-    const prevDate = new Date(currentYear, currentMonth - 1, 1);
-    const prevMonth = prevDate.getMonth();
-    const prevYear = prevDate.getFullYear();
-
-    // Current month range
-    const currentMonthStart = new Date(currentYear, currentMonth, 1);
-    const currentMonthEnd = new Date(currentYear, currentMonth + 1, 0);
-
-    // Previous month range
-    const prevMonthStart = new Date(prevYear, prevMonth, 1);
-    const prevMonthEnd = new Date(prevYear, prevMonth + 1, 0);
-
-    // Filter transactions by date ONLY (không apply filterType, filterCategory)
-    const currentMonthTx = transactions.filter(tx => {
-      const txDate = tx.date?.toDate?.() || new Date(tx.date);
-      return txDate >= currentMonthStart && txDate <= currentMonthEnd;
-    });
-
-    const prevMonthTx = transactions.filter(tx => {
-      const txDate = tx.date?.toDate?.() || new Date(tx.date);
-      return txDate >= prevMonthStart && txDate <= prevMonthEnd;
-    });
-
-    // Calculate totals (transactions + recurring transactions if nextDue/lastPaid falls within range)
+    // Calculate totals helper functions (used for the yearly grid below)
     const sumList = (list: any[], type: 'income' | 'expense' | 'all') =>
       list.reduce((sum, tx) => {
         if (type === 'all') return sum + (tx.amount || 0);
@@ -519,7 +500,6 @@ export default function ReportScreen({ navigation }: Props) {
       if (!recs || recs.length === 0) return 0;
       return recs.reduce((sum, rec) => {
         if (type !== 'all' && rec.type !== type) return sum;
-        // Không filter category - so sánh toàn bộ
         // Count recurring if nextDue or lastPaid falls in range
         const nextDueDate = rec.nextDue ? new Date(rec.nextDue) : null;
         const lastPaidDate = rec.lastPaid ? new Date(rec.lastPaid) : null;
@@ -530,129 +510,55 @@ export default function ReportScreen({ navigation }: Props) {
       }, 0);
     };
 
-    const currentIncome = sumList(currentMonthTx, 'income') + sumRecurringInRange(recurringTransactions, currentMonthStart, currentMonthEnd, 'income');
-    const currentExpense = sumList(currentMonthTx, 'expense') + sumRecurringInRange(recurringTransactions, currentMonthStart, currentMonthEnd, 'expense');
-    const currentBalance = currentIncome - currentExpense;
+    // (monthly grid replaces the single month comparison; previous-delta vars removed)
 
-    const prevIncome = sumList(prevMonthTx, 'income') + sumRecurringInRange(recurringTransactions, prevMonthStart, prevMonthEnd, 'income');
-    const prevExpense = sumList(prevMonthTx, 'expense') + sumRecurringInRange(recurringTransactions, prevMonthStart, prevMonthEnd, 'expense');
-    const prevBalance = prevIncome - prevExpense;
-
-    // Calculate changes
-    const incomeChange = currentIncome - prevIncome;
-    const expenseChange = currentExpense - prevExpense;
-    const balanceChange = currentBalance - prevBalance;
-
-    const incomeChangePercent = prevIncome !== 0 ? ((incomeChange / prevIncome) * 100).toFixed(1) : 0;
-    const expenseChangePercent = prevExpense !== 0 ? ((expenseChange / prevExpense) * 100).toFixed(1) : 0;
-
-    const monthNames = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+    // Labels use full 'Tháng N' format (e.g., 'Tháng 12 2025') for clarity.
 
     // tableInnerWidth moved to component state 'monthTableWidth'.
     // Column flex ratios mirror styles colFlexMoney (1.6) and colFlexPercent (0.6)
-    const totalColFlex = 1.6 + 1.6 + 0.6;
-    const col1Ratio = 1.6 / totalColFlex;
-    const col2Ratio = (1.6 + 1.6) / totalColFlex;
-    const colSeparatorShift = -6; // shift separators slightly left for visual gap
+    // Show previous two months and current month only (real-time aware)
+    const currentMonthIdx = now.getMonth(); // 0-based
+    const monthsToShowRaw = [currentMonthIdx - 2, currentMonthIdx - 1, currentMonthIdx];
+    const monthsData = monthsToShowRaw.map(raw => {
+      const m = ((raw % 12) + 12) % 12; // normalized month
+      const yearOffset = Math.floor(raw / 12);
+      const y = now.getFullYear() + yearOffset;
+      const start = new Date(y, m, 1, 0, 0, 0, 0);
+      const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
+      const monthTx = transactions.filter(tx => {
+        const txDate = tx.date?.toDate?.() || new Date(tx.date);
+        return txDate >= start && txDate <= end;
+      });
+      const income = sumList(monthTx, 'income') + sumRecurringInRange(recurringTransactions, start, end, 'income');
+      const expense = sumList(monthTx, 'expense') + sumRecurringInRange(recurringTransactions, start, end, 'expense');
+      const balance = income - expense;
+      const label = `Tháng ${m + 1} ${y}`;
+      return { month: m, year: y, label, income, expense, balance, count: monthTx.length, start, end };
+    });
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}><Icon name="trending-up" size={16} color="#0F1724" />  So sánh tháng</Text>
+        <Text style={styles.sectionTitle}><Icon name="trending-up" size={16} color={onSurface} />  So sánh tháng</Text>
 
-        {/* Month Headers - single outer frame around three cells */}
-        <View style={[styles.tableContainer, styles.monthTable]} onLayout={(e) => setMonthTableWidth(e.nativeEvent.layout.width)}>
-          {/* Vertical separators: render two lines between our 3 columns */}
-          {monthTableWidth > 0 && (
-            <>
-              <View style={[styles.verticalSeparator, { left: monthTableWidth * col1Ratio + colSeparatorShift - 0.5 }]} />
-              <View style={[styles.verticalSeparator, { left: monthTableWidth * col2Ratio + colSeparatorShift - 0.5 }]} />
-            </>
-          )}
-          <View style={styles.monthHeaderFrame}>
-          <View style={styles.monthComparisonRow}>
-            <View style={[styles.colFlexMoney, styles.monthHeaderCell, styles.tableCell, styles.monthHeaderDivider]}>
-              <View style={styles.monthHeaderContainer}>
-                <Text style={[styles.monthHeaderTitle, styles.monthHeaderTitlePrevious]}>{monthNames[prevMonth]} {prevYear}</Text>
-                <Text style={styles.monthHeaderSubtitle}>Tháng trước</Text>
+        <View style={styles.monthList}>
+          {monthsData.map(m => (
+            <TouchableOpacity
+              key={`${m.month}-${m.year}`}
+              style={[styles.monthRow, m.month === currentMonthIdx && m.year === now.getFullYear() ? styles.monthRowActive : {}]}
+              onPress={() => navigation.navigate('CategoryTransactions', { category: '', startDate: m.start.toISOString(), endDate: m.end.toISOString() })}
+            >
+              <View style={styles.monthRowLeft}>
+                <Text style={styles.monthRowTitle}>{m.label}</Text>
+                <Text style={styles.monthRowCount}>{m.count} giao dịch</Text>
               </View>
-            </View>
-            <View style={[styles.colFlexMoney, styles.monthHeaderCell, styles.tableCell, styles.monthHeaderDivider]}>
-              <View style={styles.monthHeaderContainer}>
-                <Text style={[styles.monthHeaderTitle, styles.monthHeaderTitleCurrent]}>{monthNames[currentMonth]} {currentYear}</Text>
-                <Text style={styles.monthHeaderSubtitle}>Tháng này</Text>
-              </View>
-            </View>
-            <View style={[styles.colFlexPercent, styles.monthHeaderCell, styles.tableCellNoRight]}>
-              <View style={styles.monthHeaderContainer}>
-                <Text style={[styles.monthHeaderTitle, styles.monthHeaderTitleCurrent]}>Thay đổi</Text>
-                <Text style={styles.monthHeaderSubtitle}>%</Text>
-              </View>
-            </View>
-          </View>
-        </View>
 
-        {/* Income */}
-        <View style={[styles.monthComparisonItem, styles.tableRow, styles.monthComparisonIncomeItem]}> 
-          <Text style={styles.monthComparisonItemLabel}>Thu nhập</Text>
-          <View style={styles.monthComparisonRow}>
-            <View style={[styles.colFlexMoney, styles.tableCell]}>
-              <Text style={styles.monthComparisonSmallValuePrevious}>{formatVND(prevIncome)}</Text>
-            </View>
-            <View style={[styles.colFlexMoney, styles.tableCell]}>
-              <Text style={styles.monthComparisonSmallValueCurrent}>{formatVND(currentIncome)}</Text>
-            </View>
-            <View style={[styles.colFlexPercent, styles.monthComparisonRightGroup, styles.tableCellNoRight]}>              
-              <View style={[styles.percentBadgeSmall, prevIncome === 0 ? styles.percentBadgeNeutral : (incomeChange >= 0 ? styles.percentBadgePositive : styles.percentBadgeNegative)]}>              
-                <Icon name={incomeChange >= 0 ? 'arrow-up' : 'arrow-down'} size={10} color={incomeChange >= 0 ? '#10B981' : '#EF4444'} />
-                <Text style={[styles.percentBadgeTextSmall, prevIncome === 0 ? {} : (incomeChange >= 0 ? styles.changePositive : styles.changeNegative)]}>              
-                  {prevIncome !== 0 ? `${Math.abs(Number(incomeChangePercent))}%` : 'N/A'}
-                </Text>
+              <View style={styles.monthRowRight}>
+                <Text style={[styles.monthRowValue, styles.incomeText]}>Thu: {formatVNDShort(m.income)}</Text>
+                <Text style={[styles.monthRowValue, styles.expenseText]}>Chi: {formatVNDShort(m.expense)}</Text>
+                <Text style={[styles.monthRowValue, m.balance >= 0 ? styles.balancePositive : styles.balanceNegative]}>Dư: {formatVNDShort(m.balance)}</Text>
               </View>
-            </View> 
-          </View>
-        </View>
-
-        {/* Expense */}
-        <View style={[styles.monthComparisonItem, styles.tableRow, styles.monthComparisonExpenseItem]}> 
-          <Text style={styles.monthComparisonItemLabel}>Chi tiêu</Text>
-          <View style={styles.monthComparisonRow}>
-            <View style={[styles.colFlexMoney, styles.tableCell]}>
-              <Text style={styles.monthComparisonSmallValuePrevious}>{formatVND(prevExpense)}</Text>
-            </View>
-            <View style={[styles.colFlexMoney, styles.tableCell]}>
-              <Text style={styles.monthComparisonSmallValueCurrent}>{formatVND(currentExpense)}</Text>
-            </View>
-            <View style={[styles.colFlexPercent, styles.monthComparisonRightGroup, styles.tableCellNoRight]}>              
-              <View style={[styles.percentBadgeSmall, prevExpense === 0 ? styles.percentBadgeNeutral : (expenseChange >= 0 ? styles.percentBadgeNegative : styles.percentBadgePositive)]}>              
-                <Icon name={expenseChange >= 0 ? 'arrow-up' : 'arrow-down'} size={10} color={expenseChange >= 0 ? '#EF4444' : '#10B981'} />
-                <Text style={[styles.percentBadgeTextSmall, prevExpense === 0 ? {} : (expenseChange >= 0 ? styles.changeNegative : styles.changePositive)]}>              
-                  {prevExpense !== 0 ? `${Math.abs(Number(expenseChangePercent))}%` : 'N/A'}
-                </Text>
-              </View>
-            </View> 
-          </View>
-        </View>
-
-        {/* Balance */}
-        <View style={[styles.monthComparisonItem, styles.monthComparisonBalanceItem, styles.tableRow]}> 
-          <Text style={styles.monthComparisonItemLabel}>Dư/Thiếu</Text>
-          <View style={styles.monthComparisonRow}>
-            <View style={[styles.colFlexMoney, styles.tableCell]}>
-              <Text style={[styles.monthComparisonSmallValuePrevious, prevBalance >= 0 ? styles.balancePositive : styles.balanceNegative]}>{formatVND(prevBalance)}</Text>
-            </View>
-            <View style={[styles.colFlexMoney, styles.tableCell]}>
-              <Text style={[styles.monthComparisonSmallValueCurrent, currentBalance >= 0 ? styles.balancePositive : styles.balanceNegative]}>{formatVND(currentBalance)}</Text>
-            </View>
-            <View style={[styles.colFlexPercent, styles.monthComparisonRightGroup, styles.tableCellNoRight]}>              
-              <View style={[styles.percentBadgeSmall, prevBalance === 0 ? styles.percentBadgeNeutral : (balanceChange >= 0 ? styles.percentBadgePositive : styles.percentBadgeNegative)]}>              
-                <Icon name={balanceChange >= 0 ? 'arrow-up' : 'arrow-down'} size={10} color={balanceChange >= 0 ? '#10B981' : '#EF4444'} />
-                <Text style={[styles.percentBadgeTextSmall, prevBalance === 0 ? {} : (balanceChange >= 0 ? styles.changePositive : styles.changeNegative)]}>              
-                  {prevBalance !== 0 ? `${Math.abs(Number(((balanceChange / Math.abs(prevBalance)) * 100).toFixed(1)))}%` : 'N/A'}
-                </Text>
-              </View>
-            </View> 
-          </View>
-        </View>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
     );
@@ -715,29 +621,36 @@ export default function ReportScreen({ navigation }: Props) {
     const totalExpensePeriod = expenseValsRaw.reduce((s, v) => s + v, 0);
     const totalNetPeriod = totalIncomePeriod - totalExpensePeriod;
 
+    const INCOME_HEX = '#4CAF50';
+    const EXPENSE_HEX = '#F44336';
+
     const chartData = {
       labels: labels.slice(-7), // Last 7 entries
+      // Draw expense first so income renders on top when overlapping
       datasets: [
         {
-          data: incomeVals.slice(-7),
-          color: (opacity = 1) => `rgba(16,185,129,${opacity})`,
-          strokeWidth: 2,
+          data: expenseVals.slice(-7),
+          // Explicit red
+          color: () => hexToRgba(EXPENSE_HEX, 1),
+          strokeWidth: 3.5,
         },
         {
-          data: expenseVals.slice(-7),
-          color: (opacity = 1) => `rgba(239,68,68,${opacity})`,
-          strokeWidth: 2,
+          data: incomeVals.slice(-7),
+          // Explicit green
+          color: () => hexToRgba(INCOME_HEX, 1),
+          strokeWidth: 3.5,
         },
       ],
-    };
+    }; 
 
     const screenWidth = Dimensions.get('window').width;
-    const chartWidth = Math.max(280, screenWidth - 48);
+    // Constrain width to available content inside container (account for paddingHorizontal: 16)
+    const chartWidth = Math.max(280, screenWidth - 32);
     const chartHeight = 180; // Reduced height for clearer labels
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}><Icon name="chart-line" size={16} color="#0F1724" />  Xu hướng thu chi theo tuần</Text>
+        <Text style={styles.sectionTitle}><Icon name="chart-line" size={16} color={onSurface} />  Xu hướng thu chi theo tuần</Text>
         
 
         <View style={styles.cashSummaryRow}>
@@ -762,24 +675,36 @@ export default function ReportScreen({ navigation }: Props) {
               width={chartWidth}
               height={chartHeight}
               yAxisLabel={""}
-              yAxisSuffix={`${scale.suffix ? scale.suffix + ' ' : ''}VNĐ`}
+              // Use compact suffix (k/M) only and remove VNĐ unit for cleaner axis
+              yAxisSuffix={`${scale.suffix ? scale.suffix : ''}`}
               chartConfig={{
-                backgroundColor: '#FFFFFF',
-                backgroundGradientFrom: '#FFFFFF',
-                backgroundGradientTo: '#FFFFFF',
-                color: (opacity = 1) => `rgba(31,41,55,${opacity})`,
-                labelColor: (opacity = 1) => `rgba(15,23,36,${opacity})`,
+                backgroundColor: surface,
+                backgroundGradientFrom: surface,
+                backgroundGradientTo: surface,
+                color: (opacity = 1) => hexToRgba(onSurface, opacity),
+                // axis labels should be neutral text color
+                labelColor: (opacity = 1) => hexToRgba(onSurface, opacity),
                 fillShadowGradient: 'rgba(0,0,0,0)',
                 fillShadowGradientOpacity: 0,
-                decimalPlaces: 1,
+                // show integer ticks (no decimal) for clarity
+                decimalPlaces: 0,
                 strokeWidth: 2,
                 propsForLabels: {
                   fontSize: 10,
-                  fill: '#0F1724',
+                  fill: onSurface,
                 },
-              }}
+                // make dots visible with white stroke
+                propsForDots: {
+                  r: '4',
+                  strokeWidth: '2',
+                  stroke: '#FFFFFF',
+                },
+              }} 
               style={styles.chart}
-              bezier
+              // disable smoothing for clarity
+              bezier={false}
+              withShadow={false}
+              withDots={true}
               verticalLabelRotation={0}
               formatXLabel={label => String(label).length > 6 ? String(label).slice(0,6) + '...' : String(label)}
               onDataPointClick={(d) => {
@@ -827,7 +752,7 @@ export default function ReportScreen({ navigation }: Props) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
       d.setHours(0, 0, 0, 0);
-      const key = `${d.getDate()}/${d.getMonth() + 1}`;
+      const key = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
       dayLabels.push(key);
       incomeValsRaw.push(0);
       expenseValsRaw.push(0);
@@ -843,8 +768,6 @@ export default function ReportScreen({ navigation }: Props) {
       }
     });
 
-    const netValsRaw = incomeValsRaw.map((v, i) => v - expenseValsRaw[i]);
-
     const scaleCF = (vals: number[]) => {
       const max = Math.max(...vals.map(Math.abs), 0);
       if (max >= 1_000_000) return { factor: 1_000_000, suffix: 'M' };
@@ -852,34 +775,32 @@ export default function ReportScreen({ navigation }: Props) {
       return { factor: 1, suffix: '' };
     };
 
-    const cfScale = scaleCF([...incomeValsRaw, ...expenseValsRaw, ...netValsRaw]);
+    const cfScale = scaleCF([...incomeValsRaw, ...expenseValsRaw]);
     const incomeData = incomeValsRaw.map(v => +(v / cfScale.factor).toFixed(1));
     const expenseData = expenseValsRaw.map(v => +(v / cfScale.factor).toFixed(1));
-    const netData = netValsRaw.map(v => +(v / cfScale.factor).toFixed(1));
+
+    const INCOME_HEX = '#4CAF50';
+    const EXPENSE_HEX = '#F44336';
 
     const chartData = {
       labels: dayLabels,
       datasets: [
         {
-          data: incomeData,
-          color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-          strokeWidth: 2,
-        },
-        {
           data: expenseData,
-          color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
-          strokeWidth: 2,
+          color: () => hexToRgba(EXPENSE_HEX, 1),
+          strokeWidth: 3.5,
         },
         {
-          data: netData,
-          color: (opacity = 1) => `rgba(31, 41, 55, ${opacity})`,
-          strokeWidth: 3,
+          data: incomeData,
+          color: () => hexToRgba(INCOME_HEX, 1),
+          strokeWidth: 3.5,
         },
       ],
-    };
+    }; 
 
     const screenWidth = Dimensions.get('window').width;
-    const chartWidth = Math.max(280, screenWidth - 48);
+    // Constrain width to available content inside container (account for paddingHorizontal: 16)
+    const chartWidth = Math.max(280, screenWidth - 32);
     const chartHeight = 160; // Slightly smaller for daily chart clarity
 
     const totalIncomePeriod = incomeValsRaw.reduce((s, v) => s + v, 0);
@@ -888,7 +809,7 @@ export default function ReportScreen({ navigation }: Props) {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}><Icon name="calendar-today" size={16} color="#0F1724" />  Xu hướng chi/thu theo ngày</Text>
+        <Text style={styles.sectionTitle}><Icon name="calendar-today" size={16} color={onSurface} />  Xu hướng chi/thu theo ngày</Text>
 
         <View style={styles.cashSummaryRow}>
           <View style={[styles.summaryCard, styles.smallSummaryCard]}> 
@@ -911,29 +832,35 @@ export default function ReportScreen({ navigation }: Props) {
             width={chartWidth}
             height={chartHeight}
               yAxisLabel={""}
-              yAxisSuffix={`${cfScale.suffix ? cfScale.suffix + ' ' : ''}VNĐ`}
+              // Compact suffix only
+              yAxisSuffix={`${cfScale.suffix ? cfScale.suffix : ''}`}
             chartConfig={{
-              backgroundColor: '#FFFFFF',
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
-              color: (opacity = 1, datasetIndex = 0) => {
-                return datasetIndex === 0 
-                  ? `rgba(16, 185, 129, ${opacity})` // Green for income
-                  : `rgba(239, 68, 68, ${opacity})`; // Red for expense
-              },
-                fillShadowGradient: 'rgba(0,0,0,0)',
-                fillShadowGradientOpacity: 0,
-              labelColor: (opacity = 1) => `rgba(15,23,36,${opacity})`,
+              backgroundColor: surface,
+              backgroundGradientFrom: surface,
+              backgroundGradientTo: surface,
+              color: (opacity = 1) => hexToRgba(onSurface, opacity),
+              fillShadowGradient: 'rgba(0,0,0,0)',
+              fillShadowGradientOpacity: 0,
+              // axis labels neutral
+              labelColor: (opacity = 1) => hexToRgba(onSurface, opacity),
               strokeWidth: 2,
-              decimalPlaces: 1,
+              // integer ticks
+              decimalPlaces: 0,
               propsForLabels: {
                 fontSize: 10,
-                fill: '#0F1724',
+                fill: onSurface,
+              },
+              propsForDots: {
+                r: '4',
+                strokeWidth: '2',
+                stroke: '#FFFFFF',
               },
             }}
             style={styles.chart}
-            bezier
-            verticalLabelRotation={-45}
+            bezier={false}
+            withShadow={false}
+            withDots={true}
+            verticalLabelRotation={0}
               onDataPointClick={(d) => {
                 const label = chartData.labels?.[d.index] ?? '';
                 const rawValue = d.value * (cfScale.factor || 1);
@@ -959,10 +886,7 @@ export default function ReportScreen({ navigation }: Props) {
             <View style={styles.legendColorExpense} />
             <Text style={styles.legendText}>Chi tiêu</Text>
           </View>
-          <View style={styles.legendItem}>
-            <View style={styles.legendColorNet} />
-            <Text style={styles.legendText}>Dòng tiền ròng</Text>
-          </View>
+
         </View>
       </View>
     );
@@ -1028,7 +952,7 @@ export default function ReportScreen({ navigation }: Props) {
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}><Icon name="receipt" size={16} color="#0F1724" />  Chi tiết giao dịch</Text>
+          <Text style={styles.sectionTitle}><Icon name="receipt" size={16} color={onSurface} />  Chi tiết giao dịch</Text>
           <Text style={styles.transactionCount}>{filteredTransactions.length} giao dịch</Text>
         </View>
 
@@ -1039,13 +963,13 @@ export default function ReportScreen({ navigation }: Props) {
           renderItem={({ item }) => {
             const txColor = mapCategoryToColor(item.category || '');
             return (
-            <View style={[styles.transactionItem, styles.transactionItemColoredBase, { backgroundColor: hexToRgba(txColor, 0.04), borderColor: hexToRgba(txColor, 0.12), borderLeftColor: txColor }]}>
+            <View style={[styles.transactionItem, styles.transactionItemColoredBase, { backgroundColor: hexToRgba(txColor, bgAlpha), borderColor: hexToRgba(txColor, Math.min(1, bgAlpha * 3)), borderLeftColor: txColor }]}>
               <View style={styles.transactionLeft}>
                 <View style={styles.transactionCategoryRow}>
                   <View style={[styles.categoryIconSmall, { backgroundColor: mapCategoryToColor(item.category || '') }]}> 
                     <Icon name={mapCategoryToIcon(item.category || '')} size={14} color="#FFFFFF" />
                   </View>
-                  <Text style={styles.transactionCategory}>{(item.category || '').toString().replace(/\p{Extended_Pictographic}/gu, '').trim() || item.category}</Text>
+                  <Text style={[styles.transactionCategory, { color: mapCategoryToColor(item.category || '') }]}>{(item.category || '').toString().replace(/\p{Extended_Pictographic}/gu, '').trim() || item.category}</Text>
                 </View>
                 <Text style={styles.transactionDescription}>{item.description}</Text>
                 <Text style={styles.transactionDate}>{(item.date?.toDate ? item.date.toDate() : new Date(item.date)).toLocaleDateString('vi-VN')}</Text>
@@ -1080,14 +1004,14 @@ export default function ReportScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={18} color="#0F1724" style={styles.backButton} />
+          <Icon name="arrow-left" size={18} color={onSurface} style={styles.backButton} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}><Icon name="file-chart-outline" size={16} color="#0F1724" />  Báo cáo chi thu</Text>
+        <Text style={styles.headerTitle}><Icon name="file-chart-outline" size={16} color={onSurface} />  Báo cáo chi thu</Text>
         <TouchableOpacity 
           style={[styles.exportMainButton, styles.exportMainButtonOutline]}
           onPress={() => setShowExportModal(true)}
         >
-          <Icon name="file-export-outline" size={16} color="#0F1724" style={styles.exportIcon} />
+          <Icon name="file-export-outline" size={16} color={onSurface} style={styles.exportIcon} />
           <Text style={styles.exportMainButtonTextSmall}>Xuất</Text>
         </TouchableOpacity>
       </View>
@@ -1119,20 +1043,20 @@ export default function ReportScreen({ navigation }: Props) {
           {/* New layout: balance top, income/expense below */}
           <View style={styles.balanceTopContainer}>
             <View style={[styles.summaryCard, styles.balanceLarge]}> 
-              <Text style={styles.summaryLabel}>Số dư</Text>
-              <Text style={styles.balanceAmountText}>{formatVND(displayBalance)}</Text>
+              <Text style={[styles.summaryLabel, styles.balanceLabel]}>Số dư</Text>
+              <Text style={[styles.balanceAmountText, styles.balanceAmountTextOnPrimary]}>{formatVND(displayBalance)}</Text>
             </View>
 
             <View style={styles.incomeExpenseRow}>
               <View style={[styles.summaryCard, styles.incomeSmallCard]}>
-                <Text style={styles.summaryLabel}>Thu nhập</Text>
+                <Text style={[styles.summaryLabel, styles.incomeLabel]}>Thu nhập</Text>
                   <Text style={[styles.summaryAmountSmall, styles.summaryAmountSmallBlack]} numberOfLines={1} ellipsizeMode="middle"> 
                     {formatVNDShort(displayTotalIncome)}
                   </Text>
               </View>
 
               <View style={[styles.summaryCard, styles.expenseSmallCard]}>
-                <Text style={styles.summaryLabel}>Chi tiêu</Text>
+                <Text style={[styles.summaryLabel, styles.expenseLabel]}>Chi tiêu</Text>
                   <Text style={[styles.summaryAmountSmall, styles.summaryAmountSmallBlack]} numberOfLines={1} ellipsizeMode="middle"> 
                     {formatVNDShort(displayTotalExpense)}
                   </Text>
@@ -1159,7 +1083,7 @@ export default function ReportScreen({ navigation }: Props) {
           {/* Period Selection & Filters: 3 dropdowns inline (UI only) */}
           <View style={styles.section}>
             <View style={styles.searchHeaderBox}>
-              <Icon name="magnify" size={16} color="#0F1724" />
+              <Icon name="magnify" size={16} color={onSurface} />
               <Text style={styles.searchHeaderText}>Tìm kiếm giao dịch chi tiết</Text>
             </View>
             <View style={styles.dropdownRow}>
@@ -1203,7 +1127,7 @@ export default function ReportScreen({ navigation }: Props) {
               {/* Category dropdown */}
               <View style={styles.dropdownWrapper}>
                 <TouchableOpacity style={styles.dropdownButton} onPress={() => { setShowCategoryDropdown(!showCategoryDropdown); setShowTypeDropdown(false); setShowPeriodDropdown(false); }}>
-                  <Text style={styles.dropdownButtonText}>{txListFilterCategory || 'Tất cả'}</Text>
+                  <Text style={[styles.dropdownButtonText, txListFilterCategory ? { color: mapCategoryToColor(txListFilterCategory) } : {}]}>{txListFilterCategory || 'Tất cả'}</Text>
                 </TouchableOpacity>
                 {showCategoryDropdown && (
                   <View style={styles.dropdownMenuLarge}>
@@ -1212,8 +1136,12 @@ export default function ReportScreen({ navigation }: Props) {
                         <Text style={styles.dropdownItemText}>Tất cả</Text>
                       </TouchableOpacity>
                       {visibleCategories.map(cat => (
-                        <TouchableOpacity key={cat.name} style={styles.dropdownItem} onPress={() => { setTxListFilterCategory(txListFilterCategory === cat.name ? null : cat.name); setShowCategoryDropdown(false); fetchReportData(transactions); }}>
-                          <Text style={styles.dropdownItemText}>{cat.name}</Text>
+                        <TouchableOpacity
+                          key={cat.name}
+                          style={[styles.dropdownItem, txListFilterCategory === cat.name ? { backgroundColor: hexToRgba(mapCategoryToColor(cat.name), bgAlpha) } : undefined]}
+                          onPress={() => { setTxListFilterCategory(txListFilterCategory === cat.name ? null : cat.name); setShowCategoryDropdown(false); fetchReportData(transactions); }}
+                        >
+                          <Text style={[styles.dropdownItemText, txListFilterCategory === cat.name ? [styles.dropdownItemTextActive, { color: mapCategoryToColor(cat.name) }] : undefined]}>{cat.name}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -1310,7 +1238,7 @@ export default function ReportScreen({ navigation }: Props) {
                     onPress={() => setReportType(rt.id)}
                     disabled={isExporting}
                   >
-                    <Icon name={rt.icon} size={26} color={reportType === rt.id ? '#0F1724' : 'rgba(15,23,36,0.6)'} style={styles.reportTypeIcon} />
+                    <Icon name={rt.icon} size={26} color={reportType === rt.id ? onSurface : onSurfaceVariant} style={styles.reportTypeIcon} />
                     <Text
                       style={[
                         styles.reportTypeLabel,
@@ -1343,7 +1271,7 @@ export default function ReportScreen({ navigation }: Props) {
                     disabled={isExporting}
                   >
                     <View style={styles.exportOptionContent}>
-                      <Icon name={format.icon} size={24} color={exportFormat === format.id ? '#0F1724' : 'rgba(15,23,36,0.6)'} style={styles.exportOptionIcon} />
+                      <Icon name={format.icon} size={24} color={exportFormat === format.id ? onSurface : onSurfaceVariant} style={styles.exportOptionIcon} />
                       <View>
                         <Text style={styles.exportOptionTitle}>{format.label}</Text>
                         <Text style={styles.exportOptionDesc}>{format.desc}</Text>
@@ -1371,7 +1299,7 @@ export default function ReportScreen({ navigation }: Props) {
                 disabled={isExporting}
               >
                 {isExporting ? (
-                  <ActivityIndicator color="#0F1724" size="small" />
+                  <ActivityIndicator color={onSurface} size="small" />
                 ) : (
                   <Text style={styles.confirmButtonText}>
                     Xuất {exportFormat.toUpperCase()}
@@ -1386,7 +1314,29 @@ export default function ReportScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => {
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || 'rgba(0,0,0,0.06)';
+  const surface = theme.colors.surface;
+  const background = theme.colors.background;
+
+  const onPrimary = theme.colors.onPrimary || '#FFFFFF';
+  const primary = theme.colors.primary;
+  const errorColor = theme.colors.error || '#EF4444';
+  const successColor = '#10B981';
+  const isDark = !!theme.dark;
+  const bgAlpha = isDark ? 0.08 : 0.04;
+  const activeAlpha = isDark ? 0.14 : 0.06;
+  const noteAlpha = isDark ? 0.12 : 0.06;
+  const hexToRgba = (hex: string, alpha = 1) => {
+    const c = hex.replace('#','');
+    const r = parseInt(c.substring(0,2),16) || 0;
+    const g = parseInt(c.substring(2,4),16) || 0;
+    const b = parseInt(c.substring(4,6),16) || 0;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }; 
+
+  return StyleSheet.create({
   // Balance + Income/Expense layout
   balanceTopContainer: {
     marginBottom: 16,
@@ -1396,19 +1346,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 16,
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
-    borderColor: 'rgba(15,23,36,0.06)',
-    borderWidth: 1,
+    backgroundColor: primary,
+    borderColor: primary,
+    borderWidth: 1.5,
+    shadowColor: primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  balanceLabel: {
+    fontSize: 13,
+    color: onPrimary,
+    fontWeight: '800',
+    marginBottom: 6,
   },
   balanceAmountText: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#111827',
+    color: onPrimary,
   },
-  incomeExpenseRow: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
+  balanceAmountTextOnPrimary: {
+    color: onPrimary,
   },
   incomeSmallCard: {
     flex: 1,
@@ -1420,17 +1379,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
   },
+  incomeLabel: {
+    color: '#064e3b',
+    fontWeight: '800',
+  },
+  expenseLabel: {
+    color: '#7f1d1d',
+    fontWeight: '800',
+  },
+  incomeExpenseRow: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+
   summaryAmountSmall: {
     fontSize: 14,
     fontWeight: '800',
   },
   summaryAmountSmallBlack: {
-    color: '#111827',
+    color: onSurface,
   },
 
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: background,
   },
   header: {
     flexDirection: 'row',
@@ -1439,9 +1412,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 6,
     paddingBottom: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(15,23,36,0.06)',
+    borderBottomColor: onSurfaceVariant,
   },
   backButton: {
     paddingVertical: 4,
@@ -1451,7 +1424,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0F1724',
+    color: onSurface,
     flex: 1,
     textAlign: 'center',
     marginTop: -2,
@@ -1477,12 +1450,12 @@ const styles = StyleSheet.create({
     marginTop: -3,
   },
   exportMainButtonText: {
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
     fontSize: 14,
   },
   exportMainButtonTextSmall: {
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
     fontSize: 11,
     marginTop: -2,
@@ -1498,7 +1471,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: onSurface,
     marginBottom: 16,
     letterSpacing: 0.3,
   },
@@ -1508,15 +1481,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: 'rgba(16,185,129,0.06)',
+    backgroundColor: hexToRgba(onSurface, noteAlpha),
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.12)',
+    borderColor: hexToRgba(onSurface, Math.min(1, noteAlpha + 0.04)),
     marginBottom: 12,
   },
   searchHeaderText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0F1724',
+    color: onSurface,
     marginLeft: 8,
   },
   sectionHeader: {
@@ -1537,15 +1510,15 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
   },
   summaryCardGray: {
-    backgroundColor: '#F3F4F6',
-    borderColor: 'rgba(15,23,36,0.06)'
+    backgroundColor: surface,
+    borderColor: onSurfaceVariant
   },
   summaryLabel: {
     fontSize: 12,
@@ -1560,16 +1533,16 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   incomeText: {
-    color: '#10B981',
+    color: successColor,
   },
   expenseText: {
-    color: '#EF4444',
+    color: errorColor,
   },
   balancePositive: {
-    color: '#10B981',
+    color: successColor,
   },
   balanceNegative: {
-    color: '#EF4444',
+    color: errorColor,
   },
   changePositive: {
     color: '#10B981',
@@ -1618,11 +1591,11 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     fontSize: 13,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   periodButtonTextActive: {
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   // Light variants used for moved filter controls (white bg, black text, black border)
@@ -1630,9 +1603,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#0F1724',
+    borderColor: onSurface,
   },
   periodButtonActiveLight: {
     backgroundColor: 'transparent',
@@ -1640,13 +1613,13 @@ const styles = StyleSheet.create({
   },
   periodButtonTextLight: {
     fontSize: 13,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
     textAlign: 'center',
   },
   periodButtonTextActiveLightOnBlue: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: onPrimary,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -1665,12 +1638,12 @@ const styles = StyleSheet.create({
   },
   periodSelectorLight: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderRadius: 12,
     padding: 0,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
     overflow: 'hidden',
   },
   dropdownRow: {
@@ -1688,15 +1661,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dropdownButtonText: {
     fontSize: 13,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   dropdownMenu: {
@@ -1704,9 +1677,9 @@ const styles = StyleSheet.create({
     top: 48,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
     borderRadius: 8,
     paddingVertical: 6,
     zIndex: 100,
@@ -1717,9 +1690,9 @@ const styles = StyleSheet.create({
     top: 48,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
     borderRadius: 8,
     paddingVertical: 6,
     zIndex: 100,
@@ -1735,14 +1708,17 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 13,
-    color: '#111827',
+    color: onSurface,
+  },
+  dropdownItemTextActive: {
+    fontWeight: '800',
   },
   periodIndicatorLight: {
     position: 'absolute',
     top: 2,
     bottom: 2,
     left: 0,
-    backgroundColor: '#06B6D4',
+    backgroundColor: primary,
     borderRadius: 8,
     zIndex: 0,
   },
@@ -1752,7 +1728,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F1724',
+    color: onSurface,
     marginBottom: 10,
   },
   filterButtons: {
@@ -1765,37 +1741,37 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(15,23,36,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
   },
   filterButtonActive: {
     backgroundColor: 'rgba(15,23,36,0.04)',
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
   },
   filterButtonText: {
     fontSize: 13,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   filterButtonTextActive: {
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   filterButtonLight: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   filterButtonActiveLight: {
-    backgroundColor: '#E6F6EE',
-    borderColor: '#10B981',
+    backgroundColor: hexToRgba(successColor,0.06),
+    borderColor: successColor,
     borderWidth: 2,
   },
   filterButtonTextLight: {
     fontSize: 13,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   categoryFilter: {
@@ -1807,44 +1783,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: hexToRgba(onSurface, bgAlpha),
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: onSurfaceVariant,
+    zIndex: 1,
   },
   categoryFilterButtonActive: {
-    backgroundColor: 'rgba(15,23,36,0.04)',
-    borderColor: 'rgba(15,23,36,0.06)',
+    backgroundColor: hexToRgba(successColor, 0.06),
+    borderColor: successColor,
+    borderWidth: 2,
+    zIndex: 6,
+    elevation: 4,
   },
   categoryFilterText: {
     fontSize: 12,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   categoryFilterTextActive: {
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   categoryFilterButtonLight: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: onSurfaceVariant,
   },
   categoryFilterButtonActiveLight: {
-    backgroundColor: '#E6F6EE',
-    borderColor: '#10B981',
+    backgroundColor: hexToRgba(successColor, 0.06),
+    borderColor: successColor,
     borderWidth: 2,
   },
   categoryFilterTextLight: {
     fontSize: 12,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   categoryFilterTextActiveLight: {
     fontSize: 12,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '800',
   },
   categoryRow: {
@@ -1876,7 +1856,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#10B981',
+    backgroundColor: successColor,
     borderRadius: 3,
   },
   categoryAmount: {
@@ -1888,12 +1868,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: hexToRgba(onSurface, bgAlpha),
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.12)',
+    borderColor: hexToRgba(onSurfaceVariant, Math.min(1, bgAlpha + 0.02)),
   },
   transactionLeft: {
     flex: 1,
@@ -1901,30 +1881,30 @@ const styles = StyleSheet.create({
   transactionCategory: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: onSurface,
     marginBottom: 4,
   },
   transactionDescription: {
     fontSize: 12,
-    color: 'rgba(15,23,36,0.6)',
+    color: onSurfaceVariant,
     marginBottom: 4,
   },
   transactionDate: {
     fontSize: 11,
-    color: 'rgba(15,23,36,0.45)',
+    color: onSurfaceVariant,
   },
   transactionAmount: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F1724',
+    color: onSurface,
     textAlign: 'right',
     minWidth: 96,
   },
   incomeAmount: {
-    color: '#10B981',
+    color: successColor,
   },
   expenseAmount: {
-    color: '#EF4444',
+    color: errorColor,
   },
   emptyContainer: {
     paddingVertical: 40,
@@ -2004,16 +1984,16 @@ const styles = StyleSheet.create({
   exportOptionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F1724',
+    color: onSurface,
     marginBottom: 4,
   },
   exportOptionDesc: {
     fontSize: 12,
-    color: '#0F1724',
+    color: onSurface,
   },
   checkmark: {
     fontSize: 20,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '800',
   },
   modalFooter: {
@@ -2090,12 +2070,12 @@ const styles = StyleSheet.create({
   },
   reportTypeLabel: {
     fontSize: 12,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
     textAlign: 'center',
   },
   reportTypeLabelActive: {
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '800',
   },
   exportFormatSection: {
@@ -2103,15 +2083,23 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     marginVertical: 16,
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
+    marginHorizontal: 0,
+    paddingHorizontal: 12,
+    backgroundColor: surface,
     borderRadius: 12,
     paddingVertical: 12,
+    paddingBottom: 20,
+    borderWidth: 1,
+    borderColor: onSurfaceVariant,
+    zIndex: 1,
+    elevation: 1,
+    alignSelf: 'stretch',
+    overflow: 'hidden',
   },
   chart: {
     marginVertical: 8,
     borderRadius: 12,
+    alignSelf: 'center',
   },
   categoryListContainer: {
     marginTop: 16,
@@ -2120,16 +2108,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(15,23,36,0.04)',
+    backgroundColor: surface,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
+    borderColor: onSurfaceVariant,
   },
   categoryDetailHeaderActive: {
-    backgroundColor: 'rgba(16,185,129,0.06)',
-    borderColor: 'rgba(16,185,129,0.15)',
+    backgroundColor: hexToRgba(successColor, activeAlpha),
+    borderColor: hexToRgba(successColor, Math.min(1, activeAlpha + 0.08)),
   },
   categoryDetailTitle: {
     flex: 1,
@@ -2144,12 +2132,12 @@ const styles = StyleSheet.create({
   categoryDetailName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: onSurface,
     marginBottom: 4,
   },
   categoryDetailCount: {
     fontSize: 12,
-    color: 'rgba(15,23,36,0.6)',
+    color: onSurfaceVariant,
     fontWeight: '600',
   },
   categoryDetailRight: {
@@ -2160,7 +2148,7 @@ const styles = StyleSheet.create({
   categoryDetailAmount: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
+    color: onSurface,
     minWidth: 96,
     textAlign: 'right',
   },
@@ -2168,17 +2156,17 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   categoryTransactionList: {
-    backgroundColor: 'rgba(16,185,129,0.04)',
+    backgroundColor: hexToRgba(successColor, bgAlpha),
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.12)',
+    borderColor: hexToRgba(successColor, Math.min(1, bgAlpha * 3)),
   },
   categoryTransactionTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0F1724',
+    color: onSurface,
     marginBottom: 12,
   },
   categoryTransactionItem: {
@@ -2187,7 +2175,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(16,185,129,0.1)',
+    borderBottomColor: hexToRgba(successColor, Math.min(1, bgAlpha * 2)),
   },
   transactionItemColoredBase: {
     borderLeftWidth: 6,
@@ -2221,12 +2209,12 @@ const styles = StyleSheet.create({
   categoryTransactionDesc: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: onSurface,
     marginBottom: 3,
   },
   categoryTransactionDate: {
     fontSize: 11,
-    color: 'rgba(15,23,36,0.45)',
+    color: onSurfaceVariant,
   },
   categoryTransactionAmount: {
     fontSize: 13,
@@ -2352,26 +2340,26 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '600',
   },
   legendColorIncome: {
     width: 12,
     height: 12,
     borderRadius: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: successColor,
   },
   legendColorExpense: {
     width: 12,
     height: 12,
     borderRadius: 3,
-    backgroundColor: '#EF4444',
+    backgroundColor: errorColor,
   },
   legendColorNet: {
     width: 12,
     height: 12,
     borderRadius: 3,
-    backgroundColor: '#1F2937',
+    backgroundColor: onSurface,
   },
   // Chart Legend Styles
   sectionCaption: {
@@ -2391,30 +2379,30 @@ const styles = StyleSheet.create({
   chartLegend: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 18,
-    marginTop: 12,
-    paddingVertical: 8,
+    gap: 14,
+    marginTop: 10,
+    paddingVertical: 6,
   },
   chartLegendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   chartLegendColorIncome: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: '#4CAF50',
   },
   chartLegendColorExpense: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    backgroundColor: '#EF4444',
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: '#F44336',
   },
   chartLegendLabel: {
-    fontSize: 12,
-    color: '#0F1724',
+    fontSize: 11,
+    color: onSurface,
     fontWeight: '600',
   },
   monthComparisonSmallValue: {
@@ -2425,7 +2413,7 @@ const styles = StyleSheet.create({
   },
   monthComparisonSmallValueCurrent: {
     fontSize: 13,
-    color: '#0F1724',
+    color: primary,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -2458,6 +2446,9 @@ const styles = StyleSheet.create({
   },
   chartWrapper: {
     position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 12,
+    paddingBottom: 2,
   },
   chartTooltip: {
     position: 'absolute',
@@ -2486,26 +2477,35 @@ const styles = StyleSheet.create({
   },
   smallSummaryCard: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.04)'
+    borderColor: onSurfaceVariant,
+    zIndex: 4,
+    elevation: 4,
   },
   summaryLabelSmall: {
-    fontSize: 11,
-    color: 'rgba(15,23,36,0.7)',
+    fontSize: 10,
+    color: onSurfaceVariant,
     marginBottom: 6,
     fontWeight: '700'
   },
   chartScaleNote: {
     fontSize: 11,
-    color: 'rgba(15,23,36,0.6)',
-    marginTop: 6,
+    color: onSurfaceVariant,
+    marginTop: 10,
     marginLeft: 6,
+    marginBottom: 8,
     alignSelf: 'stretch',
     textAlign: 'left',
+    zIndex: 8,
+    elevation: 8,
+    backgroundColor: surface,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
   // Custom date range UI
   customRangeRow: {
@@ -2596,6 +2596,100 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 0,
     backgroundColor: '#FFFFFF',
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  monthCell: {
+    width: '32%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,36,0.06)',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  monthCellTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F1724',
+    marginBottom: 8,
+  },
+  monthCellValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  monthCellCount: {
+    fontSize: 11,
+    color: 'rgba(15,23,36,0.6)',
+    marginTop: 6,
+    fontWeight: '700',
+  },
+  monthCellActive: {
+    borderColor: '#06B6D4',
+    borderWidth: 2,
+    backgroundColor: 'rgba(6,182,212,0.04)'
+  },
+  monthList: {
+    marginTop: 8,
+  },
+  monthRow: {
+    width: '100%',
+    backgroundColor: surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: onSurfaceVariant,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  monthRowActive: {
+    borderColor: primary,
+    borderWidth: 1.5,
+    backgroundColor: hexToRgba(primary, 0.08),
+    zIndex: 2,
+    elevation: 0,
+    shadowColor: 'transparent',
+  },
+  monthRowLeft: {
+    flex: 1,
+  },
+  monthRowTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: onSurface,
+  },
+  monthRowTitleActive: {
+    color: primary,
+  },
+  monthRowCount: {
+    fontSize: 13,
+    color: onSurfaceVariant,
+    marginTop: 4,
+    fontWeight: '700',
+  },
+  monthRowRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  monthRowValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: onSurface,
+    marginBottom: 2,
+    textAlign: 'right',
   },
   monthHeaderCell: {
     flex: 1,
@@ -2725,17 +2819,17 @@ const styles = StyleSheet.create({
   tableHeaderText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F1724',
+    color: onSurface,
   },
   tableMetricText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F1724',
+    color: onSurface,
   },
   tableValueText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F1724',
+    color: onSurface,
   },
   periodButtonTextActiveLight: {
     color: '#0F1724',
@@ -2743,8 +2837,9 @@ const styles = StyleSheet.create({
   },
   filterButtonTextActiveLight: {
     fontSize: 13,
-    color: '#0F1724',
+    color: onSurface,
     fontWeight: '700',
   },
   
-});
+  });
+};

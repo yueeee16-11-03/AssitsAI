@@ -10,6 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
@@ -48,6 +49,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
   const [settings, setSettings] = useState<SecuritySettings>({
     appLockEnabled: false,
     lockMethod: 'pin',
@@ -60,6 +62,8 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
     clearDataOnLogout: false,
     twoFactorEnabled: false,
   });
+
+  const statusColor = settings.appLockEnabled ? '#10B981' : '#F59E0B';
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -209,7 +213,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
         value={value}
         onValueChange={onToggle}
         disabled={disabled}
-        trackColor={{ false: '#374151', true: '#6366F1' }}
+        trackColor={{ false: '#374151', true: theme.colors.primary }} 
         thumbColor={value ? '#00897B' : '#9CA3AF'}
       />
     </View>
@@ -318,7 +322,7 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
             <Text style={styles.statusTitle}>Trạng thái bảo mật</Text>
             <Text style={[
               styles.statusLevel,
-              { color: settings.appLockEnabled ? '#10B981' : '#F59E0B' }
+              { color: statusColor }
             ]}>
               {settings.appLockEnabled ? 'Đã bảo vệ' : 'Cần cải thiện'}
             </Text>
@@ -453,10 +457,10 @@ export default function SecuritySettingsScreen({ navigation }: Props) {
       </ScrollView>
 
       {/* Security Tips */}
-      <View style={styles.tipsCard}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Icon name="lightbulb" size={18} color="#6366F1" />
-          <Text style={styles.tipsTitle}>Mẹo bảo mật</Text>
+      <View style={[styles.tipsCard, { backgroundColor: `${theme.colors.primary}10`, borderColor: `${theme.colors.primary}20` }]}>
+          <View style={styles.rowWithGap}>
+          <Icon name="lightbulb" size={18} color={theme.colors.primary} />
+          <Text style={[styles.tipsTitle, { color: theme.colors.primary }]}>Mẹo bảo mật</Text>
         </View>
         <Text style={styles.tipsText}>
           Kích hoạt khóa ứng dụng và 2FA để bảo vệ tối đa tài chính của bạn
@@ -646,7 +650,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   lockMethodOptionSelected: {
-    borderColor: '#6366F1',
     backgroundColor: 'rgba(99, 102, 241, 0.1)',
   },
   lockMethodOptionDisabled: {
@@ -691,7 +694,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   timeoutOptionSelected: {
-    borderColor: '#6366F1',
     backgroundColor: 'rgba(99, 102, 241, 0.1)',
   },
   timeoutOptionDisabled: {
@@ -714,7 +716,6 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6366F1',
     marginBottom: 4,
   },
   tipsText: {
@@ -722,6 +723,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: 16,
   },
+  rowWithGap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   bottomSpace: {
     height: 100,
   },
@@ -733,7 +735,6 @@ const styles = StyleSheet.create({
   decorativeCircle1: {
     width: 200,
     height: 200,
-    backgroundColor: '#6366F1',
     top: -100,
     right: -100,
   },

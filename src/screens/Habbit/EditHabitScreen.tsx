@@ -15,7 +15,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { useHabitStore } from "../../store/habitStore";
 import NotificationService from '../../services/NotificationService';
 import { useFocusEffect } from "@react-navigation/native";
@@ -36,6 +37,12 @@ export default function EditHabitScreen({ navigation, route }: Props) {
   const TAB_BAR_HEIGHT = 70;
   const { habitId } = route.params as { habitId: string };
 
+  const theme = useTheme();
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#6B7280';
+  const styles = getStyles(theme);
+
   const habits = useHabitStore((state) => state.habits);
   const updateHabit = useHabitStore((state) => state.updateHabit);
   const deleteHabit = useHabitStore((state) => state.deleteHabit);
@@ -46,7 +53,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
   const [target, setTarget] = useState("");
   const [unit, setUnit] = useState("");
   const [selectedIcon, setSelectedIcon] = useState("star");
-  const [selectedColor, setSelectedColor] = useState("#6366F1");
+  const [selectedColor, setSelectedColor] = useState(primary);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [isDaily, setIsDaily] = useState(false);
@@ -67,7 +74,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
         setTarget(foundHabit.target?.toString() || "");
         setUnit(foundHabit.unit || "");
         setSelectedIcon(foundHabit.icon || "⭐");
-        setSelectedColor(foundHabit.color || "#6366F1");
+        setSelectedColor(foundHabit.color || primary);
         setSelectedCategory(foundHabit.category || "");
         // Only keep the first schedule entry (app uses single-schedule mode)
         setSchedule(foundHabit.schedule && foundHabit.schedule.length > 0 ? [foundHabit.schedule[0]] : []);
@@ -79,7 +86,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
           setDailyReminderTime(firstSchedule.time || "08:00");
         }
       }
-    }, [habitId, habits])
+    }, [habitId, habits, primary])
   );
 
   const icons = [
@@ -96,7 +103,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
     "run",
     "brain",
   ];
-  const colors = ["#6366F1", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444"];
+  const colors = [primary, "#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444"];
   const categories = [
     { id: "health", name: "Sức khỏe", icon: "arm-flex" },
     { id: "productivity", name: "Năng suất", icon: "bullseye" },
@@ -217,7 +224,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
       <View style={styles.container}>
         <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Icon name="chevron-left" size={20} color="#111827" />
+              <Icon name="chevron-left" size={20} color={onSurface} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Sửa thói quen</Text>
           <View style={styles.deleteHeaderButton} />
@@ -236,14 +243,14 @@ export default function EditHabitScreen({ navigation, route }: Props) {
     >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-left" size={20} color="#111827" />
+          <Icon name="chevron-left" size={20} color={onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Sửa thói quen</Text>
           <TouchableOpacity
           style={styles.deleteHeaderButton}
           onPress={() => setShowDeleteConfirm(true)}
         >
-          <Icon name="trash-can-outline" size={18} color="#111827" />
+          <Icon name="trash-can-outline" size={18} color={onSurface} />
         </TouchableOpacity>
       </View>
 
@@ -262,7 +269,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                   style={[styles.iconButton, selectedIcon === ic && styles.iconButtonActive]}
                   onPress={() => setSelectedIcon(ic)}
                 >
-                  <Icon name={ic} size={28} color={selectedIcon === ic ? "#FFFFFF" : "#111827"} />
+                  <Icon name={ic} size={28} color={selectedIcon === ic ? "#FFFFFF" : onSurface} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -336,7 +343,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                   ]}
                   onPress={() => setSelectedCategory(category.id)}
                 >
-                  <Icon name={category.icon} size={20} color={selectedCategory === category.id ? selectedColor : "#111827"} style={styles.iconMarginRight} />
+                  <Icon name={category.icon} size={20} color={selectedCategory === category.id ? selectedColor : onSurface} style={styles.iconMarginRight} />
                   <Text
                     style={[
                       styles.categoryName,
@@ -366,7 +373,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                   // Không cần xóa schedule vì edit có thể giữ lại dữ liệu cũ
                 }}
               >
-                <Icon name="calendar-today" size={16} color={isDaily ? "#10B981" : "#999999"} style={styles.iconMarginRight} />
+                <Icon name="calendar-today" size={16} color={isDaily ? "#10B981" : onSurfaceVariant} style={styles.iconMarginRight} />
                 <Text style={[
                   styles.frequencyButtonText,
                   isDaily && styles.frequencyButtonTextActive,
@@ -392,7 +399,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                   }
                 }}
               >
-                <Icon name="calendar-check" size={16} color={!isDaily ? "#10B981" : "#999999"} style={styles.iconMarginRight} />
+                <Icon name="calendar-check" size={16} color={!isDaily ? "#10B981" : onSurfaceVariant} style={styles.iconMarginRight} />
                 <Text style={[
                   styles.frequencyButtonText,
                   !isDaily && styles.frequencyButtonTextActive,
@@ -478,7 +485,7 @@ export default function EditHabitScreen({ navigation, route }: Props) {
                         <Icon
                           name={item.daysOfWeek.includes(dayIndex) ? "check-circle" : "circle-outline"}
                           size={12}
-                          color={item.daysOfWeek.includes(dayIndex) ? "#FFFFFF" : "#D1D5DB"}
+                          color={item.daysOfWeek.includes(dayIndex) ? "#FFFFFF" : onSurfaceVariant}
                           style={styles.dayIcon}
                         />
                         <Text
@@ -649,99 +656,99 @@ export default function EditHabitScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.surface },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.outline || 'rgba(0,0,0,0.06)' },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#111827" },
+  backIcon: { fontSize: 20, color: theme.colors.onSurface },
   deleteHeaderButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
   deleteHeaderIcon: { fontSize: 20 },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827", flex: 1, textAlign: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.onSurface, flex: 1, textAlign: "center" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { color: "#6B7280", fontSize: 16 },
-  content: { padding: 16, backgroundColor: "#FFFFFF" },
+  loadingText: { color: theme.colors.onSurfaceVariant || '#6B7280', fontSize: 16 },
+  content: { padding: 16, backgroundColor: theme.colors.surface },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#111827", marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 16 },
   inputContainer: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 8 },
-  input: { backgroundColor: "#F3F4F6", borderRadius: 12, padding: 16, color: "#111827", fontSize: 16, borderWidth: 1, borderColor: "#E5E7EB" },
+  label: { fontSize: 14, fontWeight: "700", color: theme.colors.onSurface, marginBottom: 8 },
+  input: { backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 12, padding: 16, color: theme.colors.onSurface, fontSize: 16, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   row: { flexDirection: "row", gap: 12 },
   iconsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  iconButton: { width: 56, height: 56, borderRadius: 12, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "transparent" },
-  iconButtonActive: { borderColor: "#6366F1", backgroundColor: "#6366F1" },
+  iconButton: { width: 56, height: 56, borderRadius: 12, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "transparent" },
+  iconButtonActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary },
   iconText: { fontSize: 28 },
   colorsGrid: { flexDirection: "row", gap: 12, justifyContent: "center", flexWrap: "wrap" },
   colorButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: "transparent" },
   colorButtonActive: { borderColor: "#10B981" },
   categoriesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  categoryButton: { flex: 1, minWidth: "45%", flexDirection: "row", alignItems: "center", backgroundColor: "#F3F4F6", borderRadius: 12, padding: 12, borderWidth: 2, borderColor: "transparent" },
-  categoryButtonActive: { borderColor: "#6366F1", backgroundColor: "#EEF2FF" },
+  categoryButton: { flex: 1, minWidth: "45%", flexDirection: "row", alignItems: "center", backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 12, padding: 12, borderWidth: 2, borderColor: "transparent" },
+  categoryButtonActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surfaceVariant || '#EEF2FF' },
   categoryIcon: { fontSize: 24, marginRight: 8 },
-  categoryName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  categoryNameActive: { color: "#111827" },
-  frequencyToggle: { flexDirection: "row", gap: 8, backgroundColor: "#F3F4F6", borderRadius: 10, padding: 4, marginBottom: 12 },
+  categoryName: { fontSize: 14, fontWeight: "700", color: theme.colors.onSurface },
+  categoryNameActive: { color: theme.colors.onSurface },
+  frequencyToggle: { flexDirection: "row", gap: 8, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 10, padding: 4, marginBottom: 12 },
   frequencyButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: "transparent", alignItems: "center", justifyContent: "center", flexDirection: "row" },
-  frequencyButtonActive: { backgroundColor: "#FFFFFF", borderWidth: 2, borderColor: "#10B981" },
-  frequencyButtonText: { fontSize: 13, fontWeight: "700", color: "#999999" },
-  frequencyButtonTextActive: { color: "#10B981" },
-  dailyScheduleInfo: { flexDirection: "row", alignItems: "center", backgroundColor: "#F0F9FF", borderRadius: 12, padding: 16, borderLeftWidth: 4, borderLeftColor: "#10B981", marginBottom: 12 },
-  dailyScheduleText: { fontSize: 14, fontWeight: "600", color: "#10B981" },
+  frequencyButtonActive: { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: '#10B981' },
+  frequencyButtonText: { fontSize: 13, fontWeight: "700", color: theme.colors.onSurfaceVariant || '#999999' },
+  frequencyButtonTextActive: { color: '#10B981' },
+  dailyScheduleInfo: { flexDirection: "row", alignItems: "center", backgroundColor: '#F0F9FF', borderRadius: 12, padding: 16, borderLeftWidth: 4, borderLeftColor: '#10B981', marginBottom: 12 },
+  dailyScheduleText: { fontSize: 14, fontWeight: "600", color: '#10B981' },
   scheduleHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 12 },
-  addScheduleButton: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: "#6366F1", borderRadius: 10, flexDirection: "row", alignItems: "center" },
+  addScheduleButton: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: theme.colors.primary, borderRadius: 10, flexDirection: "row", alignItems: "center" },
   addScheduleText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  scheduleSubtitle: { fontSize: 12, color: "#666666", marginTop: 4, fontStyle: "italic" },
-  emptyText: { color: "#6B7280", fontSize: 13, fontStyle: "italic" },
-  scheduleCard: { backgroundColor: "#F9FAFB", borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "#E5E7EB" },
+  scheduleSubtitle: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#666666', marginTop: 4, fontStyle: "italic" },
+  emptyText: { color: theme.colors.onSurfaceVariant || '#6B7280', fontSize: 13, fontStyle: "italic" },
+  scheduleCard: { backgroundColor: theme.colors.surfaceVariant || '#F9FAFB', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   scheduleTimeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  timeDisplay: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: "#EEF2FF", borderRadius: 8 },
-  timeText: { color: "#111827", fontWeight: "700", fontSize: 14 },
+  timeDisplay: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: theme.colors.surfaceVariant || '#EEF2FF', borderRadius: 8 },
+  timeText: { color: theme.colors.onSurface, fontWeight: "700", fontSize: 14 },
   deleteScheduleButton: { paddingHorizontal: 12, paddingVertical: 8 },
   deleteScheduleText: { fontSize: 18 },
   daysGrid: { flexDirection: "row", gap: 4, marginBottom: 12 },
-  daysSelectionContainer: { backgroundColor: "#F9FAFB", borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#E5E7EB" },
-  daysLabel: { fontSize: 13, fontWeight: "700", color: "#333333", marginBottom: 10 },
-  dayButton: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, backgroundColor: "#FFFFFF", borderRadius: 8, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "#E5E7EB" },
-  dayButtonActive: { backgroundColor: "#6366F1", borderColor: "#6366F1" },
-  dayText: { color: "#666666", fontWeight: "600", fontSize: 10 },
+  daysSelectionContainer: { backgroundColor: theme.colors.surfaceVariant || '#F9FAFB', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  daysLabel: { fontSize: 13, fontWeight: "700", color: theme.colors.onSurfaceVariant || '#333333', marginBottom: 10 },
+  dayButton: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, backgroundColor: theme.colors.surface, borderRadius: 8, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: theme.colors.outline || '#E5E7EB' },
+  dayButtonActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  dayText: { color: theme.colors.onSurfaceVariant || '#666666', fontWeight: "600", fontSize: 10 },
   dayTextActive: { color: "#FFFFFF" },
   dayIcon: { marginBottom: 1 },
-  reminderToggle: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "#ECFDF5", borderRadius: 8, alignItems: "center" },
-  reminderText: { color: "#10B981", fontWeight: "700", fontSize: 13 },
-  statsSection: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "#E5E7EB" },
-  statsTitle: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 16 },
+  reminderToggle: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#ECFDF5', borderRadius: 8, alignItems: "center" },
+  reminderText: { color: '#10B981', fontWeight: "700", fontSize: 13 },
+  statsSection: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  statsTitle: { fontSize: 14, fontWeight: "700", color: theme.colors.onSurface, marginBottom: 16 },
   statsGrid: { flexDirection: "row", gap: 12 },
-  statCard: { flex: 1, backgroundColor: "#EEF2FF", borderRadius: 12, padding: 16, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
-  statNumber: { fontSize: 24, fontWeight: "800", color: "#6366F1", marginBottom: 4 },
-  statLabel: { fontSize: 12, color: "#6B7280", fontWeight: "700" },
+  statCard: { flex: 1, backgroundColor: theme.colors.surfaceVariant || '#EEF2FF', borderRadius: 12, padding: 16, alignItems: "center", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  statNumber: { fontSize: 24, fontWeight: "800", color: theme.colors.primary, marginBottom: 4 },
+  statLabel: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#6B7280', fontWeight: "700" },
   buttonGroup: { gap: 12, marginBottom: 24 },
   saveButton: { paddingVertical: 16, borderRadius: 12, alignItems: "center", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 2 },
   saveButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  deleteButton: { paddingVertical: 16, backgroundColor: "#FFF1F2", borderRadius: 12, alignItems: "center", borderWidth: 1, borderColor: "#FEE2E2" },
-  deleteButtonText: { color: "#EF4444", fontSize: 16, fontWeight: "700" },
+  deleteButton: { paddingVertical: 16, backgroundColor: '#FFF1F2', borderRadius: 12, alignItems: "center", borderWidth: 1, borderColor: '#FEE2E2' },
+  deleteButtonText: { color: '#EF4444', fontSize: 16, fontWeight: "700" },
 
   // Modal styles
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "center", alignItems: "center" },
-  modalContent: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24, width: "80%", maxWidth: 300, borderWidth: 1, borderColor: "#E5E7EB" },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111827", marginBottom: 20, textAlign: "center" },
+  modalContent: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 24, width: "80%", maxWidth: 300, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 20, textAlign: "center" },
   timePickerContainer: { flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 8, marginBottom: 24 },
   timeInput: { alignItems: "center" },
-  timeLabel: { fontSize: 12, color: "#6B7280", marginBottom: 6, fontWeight: "700" },
-  timeInputField: { width: 60, height: 50, backgroundColor: "#F3F4F6", borderRadius: 8, borderWidth: 1, borderColor: "#E5E7EB", color: "#111827", fontSize: 20, fontWeight: "700", textAlign: "center" },
-  timeSeparator: { fontSize: 24, color: "#111827", fontWeight: "700", marginBottom: 8 },
+  timeLabel: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#6B7280', marginBottom: 6, fontWeight: "700" },
+  timeInputField: { width: 60, height: 50, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB', color: theme.colors.onSurface, fontSize: 20, fontWeight: "700", textAlign: "center" },
+  timeSeparator: { fontSize: 24, color: theme.colors.onSurface, fontWeight: "700", marginBottom: 8 },
   modalButtons: { flexDirection: "row", gap: 12 },
-  modalButtonCancel: { flex: 1, paddingVertical: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" },
-  modalButtonSave: { flex: 1, paddingVertical: 12, backgroundColor: "#6366F1", borderRadius: 8, alignItems: "center" },
-  modalButtonText: { color: "#111827", fontWeight: "700", fontSize: 14 },
+  modalButtonCancel: { flex: 1, paddingVertical: 12, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 8, alignItems: "center" },
+  modalButtonSave: { flex: 1, paddingVertical: 12, backgroundColor: theme.colors.primary, borderRadius: 8, alignItems: "center" },
+  modalButtonText: { color: theme.colors.onSurface, fontWeight: "700", fontSize: 14 },
   modalButtonTextWhite: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
 
   // Confirm modal
-  confirmModal: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24, width: "85%", maxWidth: 320, borderWidth: 1, borderColor: "#E5E7EB" },
-  confirmTitle: { fontSize: 18, fontWeight: "800", color: "#111827", marginBottom: 12 },
-  confirmMessage: { fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 20 },
+  confirmModal: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 24, width: "85%", maxWidth: 320, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  confirmTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 12 },
+  confirmMessage: { fontSize: 14, color: theme.colors.onSurfaceVariant || '#6B7280', marginBottom: 24, lineHeight: 20 },
   confirmButtons: { flexDirection: "row", gap: 12 },
-  confirmCancel: { flex: 1, paddingVertical: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" },
-  confirmDelete: { flex: 1, paddingVertical: 12, backgroundColor: "#EF4444", borderRadius: 8, alignItems: "center" },
-  confirmCancelText: { color: "#111827", fontWeight: "700", fontSize: 14 },
+  confirmCancel: { flex: 1, paddingVertical: 12, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 8, alignItems: "center" },
+  confirmDelete: { flex: 1, paddingVertical: 12, backgroundColor: '#EF4444', borderRadius: 8, alignItems: "center" },
+  confirmCancelText: { color: theme.colors.onSurface, fontWeight: "700", fontSize: 14 },
   confirmDeleteText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
   iconMarginRight: { marginRight: 8 },
   flexRow: { flexDirection: "row", alignItems: "center" },

@@ -12,6 +12,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import { useHabitStore } from "../../store/habitStore";
 import { useCheckInStore } from "../../store/checkInStore";
 import { useFocusEffect } from "@react-navigation/native";
@@ -37,6 +38,12 @@ export default function DailyCheckInScreen({ navigation }: Props) {
 
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isTogglingHabit, setIsTogglingHabit] = useState<{ [key: string]: boolean }>({});
+
+  const theme = useTheme();
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+
+  const styles = getStyles(theme);
   // debug helper to force re-render when store update seems not reflected
   const [, setDebugVersion] = useState(0);
   // Local overrides to reflect immediate UI changes after toggle
@@ -234,7 +241,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
     } else if (completionRate > 0) {
       return { message: "Bắt đầu tốt rồi! Mỗi bước nhỏ đều quan trọng. Hãy tiếp tục!", color: "#8B5CF6", iconName: "leaf" };
     }
-    return { message: "Hãy bắt đầu ngày mới với những thói quen tích cực! Bạn làm được!", color: "#EC4899", iconName: "bullseye" };
+    return { message: "Hãy bắt đầu ngày mới với những thói quen tích cực! Bạn làm được!", color: onSurface, iconName: "bullseye" };
   };
 
   const motivation = getAIMotivation();
@@ -252,7 +259,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
       case "#EC4899": // pink
         return { cardBg: "#FFF1F2", textColor: "#9F1239" };
       default:
-        return { cardBg: "#FFFFFF", textColor: "#111827" };
+        return { cardBg: theme.colors.surface, textColor: onSurface }; 
     }
   };
 
@@ -275,7 +282,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
       '#8B5CF6', // purple
       '#EC4899', // pink
       '#F97316', // orange
-      '#6366F1', // indigo
+      theme.colors.primary, // indigo
     ];
     const key = (habit && (habit.id || habit.name)) || Math.random().toString();
     let hash = 0;
@@ -311,7 +318,7 @@ export default function DailyCheckInScreen({ navigation }: Props) {
   if ((habitsLoading || checkInLoading) && habits.length === 0) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={primary} />
         <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
       </View>
     );
@@ -377,10 +384,10 @@ export default function DailyCheckInScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
         <View style={styles.headerInner}>
-          <Icon name="chevron-left" size={20} color="#111827" />
-          <Text style={styles.headerTitle}>Check-in hôm nay</Text>
+          <Icon name="chevron-left" size={20} color={onSurface} />
+          <Text style={[styles.headerTitle, { color: onSurface }]}>Check-in hôm nay</Text>
           <View style={styles.pointsBadgeInline}>
-            <Icon name="bullseye" size={20} color="#111827" />
+            <Icon name="bullseye" size={20} color={onSurface} />
             <Text style={[styles.pointsText, styles.pointsTextMargin]}> {totalPointsToday}</Text>
           </View>
         </View>
@@ -536,80 +543,80 @@ export default function DailyCheckInScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)", backgroundColor: '#FFFFFF' },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.surface },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.outline || 'rgba(0,0,0,0.06)', backgroundColor: theme.colors.surface },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#000000" },
-  headerButton: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' },
+  backIcon: { fontSize: 20, color: theme.colors.onSurface },
+  headerButton: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.outline || 'rgba(0,0,0,0.06)' },
   headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827", flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.onSurface, flex: 1, textAlign: 'center' },
   pointsBadge: { backgroundColor: "transparent", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
   pointsBadgeInline: { backgroundColor: 'transparent', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' },
-  pointsText: { fontSize: 15, fontWeight: "800", color: "#111827" },
+  pointsText: { fontSize: 15, fontWeight: "800", color: theme.colors.onSurface },
   pointsTextMargin: { marginLeft: 8 },
   content: { padding: 16 },
-  progressCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
-  progressLabel: { fontSize: 14, color: "#333333", marginBottom: 16 },
-  progressCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", marginBottom: 16, borderWidth: 3, borderColor: "#E5E7EB" },
-  progressValue: { fontSize: 32, fontWeight: "900", color: "#333333" },
-  progressSubtext: { fontSize: 12, color: "#333333" },
-  progressBar: { width: "100%", height: 8, backgroundColor: "#F3F4F6", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
-  progressFill: { height: "100%", backgroundColor: "#6366F1", borderRadius: 4 },
-  progressPercentage: { fontSize: 13, color: "#333333" },
-  motivationCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: "#FCD34D", overflow: 'hidden', shadowColor: 'transparent', shadowOpacity: 0, elevation: 0 },
+  progressCard: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 24, marginBottom: 20, alignItems: "center", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  progressLabel: { fontSize: 14, color: theme.colors.onSurfaceVariant || '#333333', marginBottom: 16 },
+  progressCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: theme.colors.surface, alignItems: "center", justifyContent: "center", marginBottom: 16, borderWidth: 3, borderColor: theme.colors.outline || '#E5E7EB' },
+  progressValue: { fontSize: 32, fontWeight: "900", color: theme.colors.onSurface },
+  progressSubtext: { fontSize: 12, color: theme.colors.onSurface },
+  progressBar: { width: "100%", height: 8, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', borderRadius: 4, overflow: "hidden", marginBottom: 8 },
+  progressFill: { height: "100%", borderRadius: 4 },
+  progressPercentage: { fontSize: 13, color: theme.colors.onSurface },
+  motivationCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#FCD34D', overflow: 'hidden', shadowColor: 'transparent', shadowOpacity: 0, elevation: 0 },
   motivationCardBorder: { borderColor: '#F59E0B' },
-  motivationCardBg: { backgroundColor: '#FFFFFF' },
+  motivationCardBg: { backgroundColor: theme.colors.surface },
   motivationHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   motivationIconMargin: { marginRight: 8 },
-  motivationTitle: { fontSize: 16, fontWeight: "800", color: "#000000" },
-  motivationText: { fontSize: 15, lineHeight: 22, fontWeight: "700", color: "#333333" },
+  motivationTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface },
+  motivationText: { fontSize: 15, lineHeight: 22, fontWeight: "700", color: theme.colors.onSurface },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 16 },
-  habitCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#E5E7EB" },
-  habitCardChecked: { backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "rgba(16,185,129,0.2)" },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 16 },
+  habitCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  habitCardChecked: { backgroundColor: theme.colors.surfaceVariant || '#F0FDF4', borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' },
   habitLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  checkbox: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  checkbox: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: theme.colors.outline || '#E5E7EB', alignItems: "center", justifyContent: "center", marginRight: 12 },
   checkboxChecked: { backgroundColor: "#10B981", borderColor: "#10B981" },
   checkmark: { fontSize: 16, fontWeight: "900", color: "#FFFFFF" },
-  habitIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  habitIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.surfaceVariant || '#F3F4F6', alignItems: "center", justifyContent: "center", marginRight: 12 },
   habitIcon: { fontSize: 20 },
   habitDetails: { flex: 1 },
-  habitName: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 4 },
-  habitNameChecked: { textDecorationLine: "line-through", color: "#000000" },
+  habitName: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 4 },
+  habitNameChecked: { textDecorationLine: "line-through", color: theme.colors.onSurface },
   habitMeta: { flexDirection: "row", gap: 12 },
-  habitPoints: { fontSize: 12, color: "#000000", fontWeight: "700" },
-  habitStreak: { fontSize: 12, color: "#000000", fontWeight: "700" },
-  habitTarget: { fontSize: 12, color: "#000000", fontWeight: "600" },
+  habitPoints: { fontSize: 12, color: theme.colors.onSurface, fontWeight: "700" },
+  habitStreak: { fontSize: 12, color: theme.colors.onSurface, fontWeight: "700" },
+  habitTarget: { fontSize: 12, color: theme.colors.onSurface, fontWeight: "600" },
   completedBadge: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
   completedText: { fontSize: 18, color: "#FFFFFF", fontWeight: "900" },
-  statsCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: "#E5E7EB" },
-  statsTitle: { fontSize: 16, fontWeight: "800", color: "#000000", marginBottom: 12, textAlign: "center" },
+  statsCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
+  statsTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.onSurface, marginBottom: 12, textAlign: "center" },
   statsGrid: { flexDirection: "row", justifyContent: "space-between", alignItems: 'center' },
   statItem: { alignItems: "center", flex: 1 },
   statIcon: { fontSize: 28, marginBottom: 6 },
-  statValue: { fontSize: 22, fontWeight: "900", color: "#000000", marginBottom: 4 },
-  statLabel: { fontSize: 12, color: "#333333" },
-  statDivider: { width: 1, height: 48, backgroundColor: "rgba(0,0,0,0.06)", marginHorizontal: 8, alignSelf: 'center' },
+  statValue: { fontSize: 22, fontWeight: "900", color: theme.colors.onSurface, marginBottom: 4 },
+  statLabel: { fontSize: 12, color: theme.colors.onSurfaceVariant || '#333333' },
+  statDivider: { width: 1, height: 48, backgroundColor: theme.colors.outline || 'rgba(0,0,0,0.06)', marginHorizontal: 8, alignSelf: 'center' },
   statColumn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   iconMarginBottom: { marginBottom: 8 },
   completeButtonInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  completeButton: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 18, alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB" },
+  completeButton: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 18, alignItems: "center", borderWidth: 1, borderColor: theme.colors.outline || '#E5E7EB' },
   completeButtonActive: { backgroundColor: "#10B981", shadowColor: "#10B981", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
-  completeButtonText: { color: "#000000", fontSize: 17, fontWeight: "800" },
-  motivationTextColor: { color: '#333333' },
-  motivationTextSecondary: { color: '#666666' },
+  completeButtonText: { color: theme.colors.onSurface, fontSize: 17, fontWeight: "800" },
+  motivationTextColor: { color: theme.colors.onSurface },
+  motivationTextSecondary: { color: theme.colors.onSurfaceVariant || '#666666' },
   completeButtonTextWhite: { color: '#FFFFFF' },
   motivationTextCustom: { fontSize: 15, lineHeight: 22, fontWeight: "700" },
   buttonContainer: { gap: 12, marginBottom: 8 },
-  checkInButton: { backgroundColor: "#E0F2FE", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "#CFFAFE" },
+  checkInButton: { backgroundColor: theme.colors.surfaceVariant || '#E0F2FE', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: theme.colors.outline || '#CFFAFE' },
   checkInButtonInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  checkInButtonText: { color: "#06B6D4", fontSize: 17, fontWeight: "800" },
+  checkInButtonText: { color: '#06B6D4', fontSize: 17, fontWeight: "800" },
   centerContent: { justifyContent: "center", alignItems: "center" },
-  loadingText: { color: "#333333", marginTop: 16, fontSize: 14 },
+  loadingText: { color: theme.colors.onSurface, marginTop: 16, fontSize: 14 },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyText: { fontSize: 18, color: "#333333", textAlign: "center", marginBottom: 20 },
-  addHabitButton: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: "#6366F1", borderRadius: 12 },
+  emptyText: { fontSize: 18, color: theme.colors.onSurface, textAlign: "center", marginBottom: 20 },
+  addHabitButton: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: theme.colors.primary, borderRadius: 12 },
   addHabitButtonText: { color: "#FFFFFF", fontWeight: "700" },
   iconMarginRight: { marginRight: 8 },
 });

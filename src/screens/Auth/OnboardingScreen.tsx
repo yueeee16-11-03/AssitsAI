@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { useTheme } from 'react-native-paper';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
@@ -17,27 +18,33 @@ const slides = [
     title: "Trí tuệ nhân tạo\nthế hệ mới",
     description: "Trải nghiệm công nghệ AI tiên tiến nhất, giúp bạn giải quyết mọi vấn đề nhanh chóng",
     icon: "🤖",
-    color: "#6366F1",
+    colorKey: "primary",
   },
   {
     id: 2,
     title: "Hỗ trợ 24/7\nmọi lúc mọi nơi",
     description: "Trợ lý AI luôn sẵn sàng phục vụ bạn bất cứ khi nào, bất cứ nơi đâu",
     icon: "💬",
-    color: "#8B5CF6",
+    colorKey: "secondary",
   },
   {
     id: 3,
     title: "Bảo mật tuyệt đối\nvà riêng tư",
     description: "Dữ liệu của bạn được mã hóa và bảo vệ với tiêu chuẩn cao nhất",
     icon: "🔒",
-    color: "#EC4899",
+    colorKey: "primary",
   },
 ];
 
 export default function OnboardingScreen({ navigation }: Props) {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(1));
+
+  const getSlideColor = (colorKey: string) => {
+    return colorKey === 'primary' ? theme.colors.primary : theme.colors.secondary;
+  };
 
   const handleNext = React.useCallback(() => {
     if (currentIndex < slides.length - 1) {
@@ -64,12 +71,13 @@ export default function OnboardingScreen({ navigation }: Props) {
   }, [navigation]);
 
   const currentSlide = slides[currentIndex];
+  const slideColor = getSlideColor(currentSlide.colorKey);
 
   return (
     <View style={styles.container}>
       <View style={styles.gradientBackground}>
-        <View style={[styles.circle, { backgroundColor: `${currentSlide.color}33` }]} />
-        <View style={[styles.circleSmall, { backgroundColor: `${currentSlide.color}22` }]} />
+        <View style={[styles.circle, { backgroundColor: `${slideColor}33` }]} />
+        <View style={[styles.circleSmall, { backgroundColor: `${slideColor}22` }]} />
       </View>
 
       <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
@@ -78,7 +86,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <View style={styles.iconContainer}>
-          <View style={[styles.iconCircle, { backgroundColor: `${currentSlide.color}22` }]}>
+          <View style={[styles.iconCircle, { backgroundColor: `${slideColor}22` }]}>
             <Text style={styles.icon}>{currentSlide.icon}</Text>
           </View>
         </View>
@@ -95,7 +103,7 @@ export default function OnboardingScreen({ navigation }: Props) {
               style={[
                 styles.dot,
                 index === currentIndex && styles.dotActive,
-                index === currentIndex && { backgroundColor: currentSlide.color },
+                index === currentIndex && { backgroundColor: slideColor },
               ]}
             />
           ))}
@@ -103,7 +111,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: currentSlide.color }]}
+            style={[styles.nextButton, { backgroundColor: slideColor }]}
             onPress={handleNext}
             activeOpacity={0.9}
           >
@@ -128,7 +136,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E0F2F1",
@@ -162,7 +170,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   skipText: {
-    color: "#00796B",
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -188,7 +196,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: "900",
-    color: "#00796B",
+    color: theme.colors.primary,
     textAlign: "center",
     marginBottom: 20,
     lineHeight: 44,
@@ -258,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   registerButtonText: {
-    color: "#00796B",
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: "600",
   },

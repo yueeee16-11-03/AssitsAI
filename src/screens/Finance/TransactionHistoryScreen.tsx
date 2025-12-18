@@ -26,6 +26,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from "@react-navigation/native";
+import { useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
@@ -56,6 +57,8 @@ interface TransactionWithTitle extends Transaction {
 export default function TransactionHistoryScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -379,7 +382,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
             {/* ⭐ RECURRING BADGE */}
             {(item as any).isRecurring && (
               <View style={styles.recurringBadge}>
-                <MaterialCommunityIcons name="repeat" size={10} color="#6366F1" style={styles.recurringBadgeIcon} />
+                <MaterialCommunityIcons name="repeat" size={10} color={theme.colors.primary} style={styles.recurringBadgeIcon} />
                 <Text style={styles.recurringBadgeText}>Lặp lại</Text>
               </View>
             )}
@@ -525,7 +528,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={20} color={theme.colors.onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lịch sử giao dịch</Text>
         <View style={styles.placeholderButton} />
@@ -534,7 +537,7 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
       {/* Loading (Giữ nguyên) */}
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Đang tải...</Text>
         </View>
         
@@ -586,304 +589,307 @@ export default function TransactionHistoryScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 4,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-    backgroundColor: "#FFFFFF",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backIcon: { fontSize: 18, color: "#111827" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
-  placeholderButton: { width: 40, height: 40 },
-
-  /* Center Container (Loading/Empty) */
-  centerContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  loadingText: {
-    color: "#00796B",
-    marginTop: 12,
-    fontSize: 13,
-  },
-  emptyIcon: { fontSize: 64, marginBottom: 16 },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 24,
-  },
-  addButton: {
-    backgroundColor: "#00897B",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-
-  /* List Layout */
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 120,
-    paddingTop: 10,
-  },
-
-  /* Date Section */
-  dateSection: {
-    marginBottom: 24,
-  },
-  dateHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    paddingHorizontal: 8,
-  },
-  dateText: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  dateSubText: {
-    fontSize: 11,
-    color: "#111827",
-    fontWeight: "600",
-    opacity: 0.85,
-  },
-
-  /* Daily Summary */
-  dailySummary: {
-    alignItems: "flex-end",
-  },
-  summaryItem: {
-    alignItems: "flex-end",
-  },
-  summaryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  summaryIconMargin: {
-    marginRight: 8,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    color: "#111827",
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  summaryAmount: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#DC2626", // Red
-  },
-  summaryAmountIncome: {
-    color: "#00897B", // Teal
-  },
-
-  /* 🎨 [NEW] List Item kiểu NGÂN HÀNG - Sáng, tinh tế */
-  bankListItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#B2DFDB",
-    shadowColor: "rgba(0,150,136,0.1)",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+function getStyles(theme: any) {
+  const { surface, onSurface, onSurfaceVariant, outline, primary } = theme.colors;
   
-  /* 🎨 [NEW] Icon Box - Tròn, sáng, theo loại giao dịch */
-  bankIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-    overflow: "hidden",
-  },
-  bankIconExpense: {
-    backgroundColor: "#FFF0F0", // light red (expense)
-  },
-  bankIconIncome: {
-    backgroundColor: "#E6F9EE", // light green (income)
-  },
-  bankIconImage: {
-    width: "100%",
-    height: "100%",
-  },
-  bankIconEmoji: {
-    fontSize: 28,
-  },
-  
-  /* 🎨 [NEW] Info Container - Giữa (Tiêu đề + Ngày giờ) */
-  bankInfoContainer: {
-    flex: 1,
-    justifyContent: "center",
-    paddingRight: 10,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  recurringBadgeIcon: {
-    marginRight: 6,
-  },
-  bankItemTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 6,
-    letterSpacing: 0.2,
-  },
-  bankItemDateTime: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#111827",
-  },
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: surface },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingTop: 4,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: outline,
+      backgroundColor: surface,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    backIcon: { fontSize: 18, color: onSurface },
+    headerTitle: { fontSize: 18, fontWeight: "800", color: onSurface },
+    placeholderButton: { width: 40, height: 40 },
 
-  /* ⭐ [NEW] Recurring Badge */
-  recurringBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 6,
-  },
-  recurringBadgeText: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#6366F1',
-  },
-  
-  /* 🎨 [NEW] Amount Container - Bên phải (Số tiền) */
-  bankAmountContainer: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-  },
-  bankItemAmount: {
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  bankAmountExpense: {
-    color: "#DC2626",
-  },
-  bankAmountIncome: {
-    color: "#00897B",
-  },
+    /* Center Container (Loading/Empty) */
+    centerContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: surface,
+    },
+    loadingText: {
+      color: onSurface,
+      marginTop: 12,
+      fontSize: 13,
+    },
+    emptyIcon: { fontSize: 64, marginBottom: 16, color: onSurfaceVariant },
+    emptyText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: onSurface,
+      marginBottom: 8,
+    },
+    emptySubText: {
+      fontSize: 12,
+      color: onSurfaceVariant,
+      marginBottom: 24,
+    },
+    addButton: {
+      backgroundColor: primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    addButtonText: { color: surface, fontWeight: "700", fontSize: 13 },
 
-  /* 🎨 [NEW] List Container */
-  listContainer: {
-  },
+    /* List Layout */
+    listContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 120,
+      paddingTop: 10,
+    },
 
-  /* Floating Button (Giữ nguyên) */
-  floatingButton: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#00897B",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  floatingButtonText: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "700",
-    lineHeight: 28,
-  },
+    /* Date Section */
+    dateSection: {
+      marginBottom: 24,
+    },
+    dateHeader: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      marginBottom: 12,
+      paddingHorizontal: 8,
+    },
+    dateText: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: onSurface,
+      marginBottom: 4,
+    },
+    dateSubText: {
+      fontSize: 11,
+      color: onSurface,
+      fontWeight: "600",
+      opacity: 0.85,
+    },
 
-  /* 🎨 [NEW] Summary Stats Header */
-  fullContainer: {
-    flex: 1,
-  },
-  summaryStatsHeader: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: "rgba(0, 137, 123, 0.06)",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 137, 123, 0.1)",
-  },
-  statBox: {
-    flex: 1,
-    minWidth: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0, 137, 123, 0.15)",
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#666666",
-    marginBottom: 6,
-  },
-  statValue: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#00796B",
-  },
-  statValueIncome: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#10B981",
-  },
-  statValueExpense: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#EF4444",
-  },
-  statValuePercent: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#F59E0B",
-  },
-  statValueGreen: {
-    color: "#10B981",
-  },
-  statValueRed: {
-    color: "#EF4444",
-  },
-});
+    /* Daily Summary */
+    dailySummary: {
+      alignItems: "flex-end",
+    },
+    summaryItem: {
+      alignItems: "flex-end",
+    },
+    summaryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    summaryIconMargin: {
+      marginRight: 8,
+    },
+    summaryLabel: {
+      fontSize: 10,
+      color: onSurface,
+      fontWeight: "600",
+      marginBottom: 2,
+    },
+    summaryAmount: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: "#DC2626", // Red
+    },
+    summaryAmountIncome: {
+      color: "#00897B", // Teal
+    },
+
+    /* 🎨 [NEW] List Item kiểu NGÂN HÀNG - Sáng, tinh tế */
+    bankListItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: surface,
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 14,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: outline,
+      shadowColor: "rgba(0,150,136,0.1)",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    
+    /* 🎨 [NEW] Icon Box - Tròn, sáng, theo loại giao dịch */
+    bankIconBox: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 14,
+      overflow: "hidden",
+    },
+    bankIconExpense: {
+      backgroundColor: "#FFF0F0", // light red (expense)
+    },
+    bankIconIncome: {
+      backgroundColor: "#E6F9EE", // light green (income)
+    },
+    bankIconImage: {
+      width: "100%",
+      height: "100%",
+    },
+    bankIconEmoji: {
+      fontSize: 28,
+    },
+    
+    /* 🎨 [NEW] Info Container - Giữa (Tiêu đề + Ngày giờ) */
+    bankInfoContainer: {
+      flex: 1,
+      justifyContent: "center",
+      paddingRight: 10,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    recurringBadgeIcon: {
+      marginRight: 6,
+    },
+    bankItemTitle: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: onSurface,
+      marginBottom: 6,
+      letterSpacing: 0.2,
+    },
+    bankItemDateTime: {
+      fontSize: 11,
+      fontWeight: "500",
+      color: onSurface,
+    },
+
+    /* ⭐ [NEW] Recurring Badge */
+    recurringBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      marginLeft: 6,
+    },
+    recurringBadgeText: {
+      fontSize: 9,
+      fontWeight: '600',
+      color: '#6366F1',
+    },
+    
+    /* 🎨 [NEW] Amount Container - Bên phải (Số tiền) */
+    bankAmountContainer: {
+      alignItems: "flex-end",
+      justifyContent: "center",
+    },
+    bankItemAmount: {
+      fontSize: 14,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+    },
+    bankAmountExpense: {
+      color: "#DC2626",
+    },
+    bankAmountIncome: {
+      color: "#00897B",
+    },
+
+    /* 🎨 [NEW] List Container */
+    listContainer: {
+    },
+
+    /* Floating Button (Giữ nguyên) */
+    floatingButton: {
+      position: "absolute",
+      bottom: 24,
+      right: 24,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: primary,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+    floatingButtonText: {
+      color: "#fff",
+      fontSize: 28,
+      fontWeight: "700",
+      lineHeight: 28,
+    },
+
+    /* 🎨 [NEW] Summary Stats Header */
+    fullContainer: {
+      flex: 1,
+    },
+    summaryStatsHeader: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      backgroundColor: `${onSurface}08`,
+      borderBottomWidth: 1,
+      borderBottomColor: `${onSurface}14`,
+    },
+    statBox: {
+      flex: 1,
+      minWidth: "48%",
+      backgroundColor: surface,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    statLabel: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: onSurfaceVariant,
+      marginBottom: 6,
+    },
+    statValue: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: onSurface,
+    },
+    statValueIncome: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#10B981",
+    },
+    statValueExpense: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#EF4444",
+    },
+    statValuePercent: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#F59E0B",
+    },
+    statValueGreen: {
+      color: "#10B981",
+    },
+    statValueRed: {
+      color: "#EF4444",
+    },
+  });
+}

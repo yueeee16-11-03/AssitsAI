@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useTheme } from 'react-native-paper';
 // @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RootStackParamList } from '../../navigation/types';
@@ -46,6 +47,8 @@ export default function WalletManagementScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
+  const theme = useTheme();
+  const styles = getStyles(theme);
   // Use wallet store for data & actions
   const {
     wallets,
@@ -258,20 +261,20 @@ export default function WalletManagementScreen({ navigation }: Props) {
             style={[styles.actionButton, wallet.isHidden ? styles.actionButtonSuccess : styles.actionButtonSecondary]}
             onPress={() => wallet.id && handleToggleVisibility(wallet.id)}
           >
-            <Icon name={wallet.isHidden ? 'eye' : 'eye-off'} size={14} color="#111827" />
+            <Icon name={wallet.isHidden ? 'eye' : 'eye-off'} size={14} color={theme.colors.onSurface} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.actionButtonPrimary]}
             onPress={() => handleEditWallet(wallet)}
           >
-            <Icon name="pencil" size={14} color="#111827" />
+            <Icon name="pencil" size={14} color={theme.colors.onSurface} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.actionButtonDanger, deletingId === wallet.id && styles.actionButtonDeleting]}
             onPress={() => handleDeleteWallet(wallet)}
             disabled={deletingId === wallet.id}
           >
-            <Icon name="trash-can-outline" size={14} color="#111827" />
+            <Icon name="trash-can-outline" size={14} color={theme.colors.onSurface} />
           </TouchableOpacity>
         </View>
       </View>
@@ -321,7 +324,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                 value={walletName}
                 onChangeText={setWalletName}
                 placeholder="Ví dụ: Tiền mặt, Vietcombank..."
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={theme.colors.onSurfaceVariant}
               />
             </View>
 
@@ -337,7 +340,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setWalletType(type.key as any)}
                   >
-                    <Icon name={type.icon as any} size={20} color="#111827" style={styles.typeIconIcon} />
+                    <Icon name={type.icon as any} size={20} color={theme.colors.onSurface} style={styles.typeIconIcon} />
                     <Text style={styles.typeLabel}>{type.label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -353,7 +356,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     value={bankName}
                     onChangeText={setBankName}
                     placeholder="Ví dụ: Vietcombank, Techcombank..."
-                    placeholderTextColor="#6B7280"
+                    placeholderTextColor={theme.colors.onSurfaceVariant}
                   />
                 </View>
 
@@ -364,7 +367,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     value={accountNumber}
                     onChangeText={setAccountNumber}
                     placeholder="Ví dụ: **** 1234"
-                    placeholderTextColor="#6B7280"
+                    placeholderTextColor={theme.colors.onSurfaceVariant}
                   />
                 </View>
               </>
@@ -378,7 +381,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                 onChangeText={setWalletBalance}
                 placeholder="0"
                 keyboardType="numeric"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={theme.colors.onSurfaceVariant}
               />
             </View>
 
@@ -394,7 +397,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                     ]}
                     onPress={() => setWalletIcon(icon)}
                   >
-                    <Icon name={icon as any} size={20} color="#111827" style={styles.iconText} />
+                    <Icon name={icon as any} size={20} color={theme.colors.onSurface} style={styles.iconText} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -449,7 +452,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
       transparent={false}
       onRequestClose={() => setShowTransferModal(false)}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surface }}>
       <KeyboardAvoidingView
         style={styles.fullscreenModalContent}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -527,7 +530,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
                 onChangeText={setTransferAmount}
                 placeholder="Nhập số tiền cần chuyển"
                 keyboardType="numeric"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={theme.colors.onSurfaceVariant}
               />
             </View>
             <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
@@ -560,14 +563,14 @@ export default function WalletManagementScreen({ navigation }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-left" size={20} color="#111827" />
+          <Icon name="arrow-left" size={20} color={theme.colors.onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Quản lý ví</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowAddModal(true)}
         >
-          <Icon name="plus" size={20} color="#111827" />
+          <Icon name="plus" size={20} color={theme.colors.onSurface} />
         </TouchableOpacity>
       </View>
 
@@ -586,7 +589,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
           style={[styles.actionBtn, styles.actionBtnPrimary]}
           onPress={() => setShowAddModal(true)}
         >
-          <Icon name="plus" size={16} color="#111827" style={styles.actionBtnIcon} />
+          <Icon name="plus" size={16} color={theme.colors.onSurface} style={styles.actionBtnIcon} />
           <Text style={styles.actionBtnText}>Thêm ví</Text>
         </TouchableOpacity>
         
@@ -595,7 +598,7 @@ export default function WalletManagementScreen({ navigation }: Props) {
           onPress={() => setShowTransferModal(true)}
           disabled={wallets.length < 2}
         >
-          <Icon name="swap-horizontal" size={16} color="#111827" style={styles.actionBtnIcon} />
+          <Icon name="swap-horizontal" size={16} color={theme.colors.onSurface} style={styles.actionBtnIcon} />
           <Text style={styles.actionBtnText}>Chuyển tiền</Text>
         </TouchableOpacity>
       </View>
@@ -617,460 +620,464 @@ export default function WalletManagementScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    marginTop: 0,
-    borderRadius: 0,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonText: {
-    fontSize: 20,
-    color: '#111827',
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addButtonText: {
-    fontSize: 24,
-    color: '#111827',
-    fontWeight: 'bold',
-  },
-  summaryCard: {
-    margin: 20,
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  summaryAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  summarySubtext: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 12,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  actionBtnPrimary: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  actionBtnSecondary: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  actionBtnIcon: {
-    marginRight: 8,
-    color: '#111827',
-  },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  walletsList: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  walletCard: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderLeftWidth: 4,
-  },
-  walletHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  walletInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  walletIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  walletDetails: {
-    flex: 1,
-  },
-  walletName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  hiddenText: {
-    opacity: 0.5,
-  },
-  walletSubtitle: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  walletActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  actionButtonDeleting: {
-    opacity: 0.5,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    color: '#111827',
-  },
-  walletBalance: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  walletTypeContainer: {
-    alignSelf: 'flex-start',
-  },
-  walletType: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  bottomSpace: {
-    height: 100,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    flex: 1,
-    paddingTop: 24,
-    paddingBottom: 0,
-  },
+const getStyles = (theme: any) => {
+  const { surface, onSurface, onSurfaceVariant, outline, primary } = theme.colors;
 
-  fullscreenModalContent: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  modalClose: {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: surface,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 8,
+      marginTop: 0,
+      borderRadius: 0,
+      backgroundColor: surface,
+      borderBottomWidth: 1,
+      borderBottomColor: outline,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonText: {
+      fontSize: 20,
+      color: onSurface,
+      fontWeight: 'bold',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: onSurface,
+    },
+    addButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    addButtonText: {
       fontSize: 24,
-      color: 'rgba(0,0,0,0.6)',
-  },
-  modalBody: {
-    flex: 1,
-    padding: 20,
-  },
-  modalBodyScroll: {
-    paddingBottom: 220,
-  },
+      color: onSurface,
+      fontWeight: 'bold',
+    },
+    summaryCard: {
+      margin: 20,
+      padding: 24,
+      borderRadius: 16,
+      backgroundColor: surface,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    summaryLabel: {
+      fontSize: 14,
+      color: onSurfaceVariant,
+      marginBottom: 8,
+    },
+    summaryAmount: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: onSurface,
+      marginBottom: 4,
+    },
+    summarySubtext: {
+      fontSize: 12,
+      color: onSurfaceVariant,
+    },
+    actionButtonsContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      marginBottom: 20,
+      gap: 12,
+    },
+    actionBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      gap: 8,
+    },
+    actionBtnPrimary: {
+      backgroundColor: surface,
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    actionBtnSecondary: {
+      backgroundColor: surface,
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    actionBtnIcon: {
+      marginRight: 8,
+      color: onSurface,
+    },
+    actionBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: onSurface,
+    },
+    walletsList: {
+      flex: 1,
+      paddingHorizontal: 20,
+    },
+    walletCard: {
+      padding: 20,
+      borderRadius: 16,
+      backgroundColor: surface,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: outline,
+      borderLeftWidth: 4,
+    },
+    walletHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    walletInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    walletIcon: {
+      fontSize: 24,
+      marginRight: 12,
+    },
+    walletDetails: {
+      flex: 1,
+    },
+    walletName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: onSurface,
+      marginBottom: 2,
+    },
+    hiddenText: {
+      opacity: 0.5,
+    },
+    walletSubtitle: {
+      fontSize: 12,
+      color: onSurfaceVariant,
+    },
+    walletActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: surface,
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    actionButtonDeleting: {
+      opacity: 0.5,
+    },
+    actionButtonText: {
+      fontSize: 14,
+      color: onSurface,
+    },
+    walletBalance: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: onSurface,
+      marginBottom: 8,
+    },
+    walletTypeContainer: {
+      alignSelf: 'flex-start',
+    },
+    walletType: {
+      fontSize: 12,
+      color: 'rgba(255, 255, 255, 0.6)',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    bottomSpace: {
+      height: 100,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: surface,
+      flex: 1,
+      paddingTop: 24,
+      paddingBottom: 0,
+    },
 
-  modalBodyContent: {
-    paddingBottom: 40,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  formInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#111827',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  typeOption: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  typeOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-  },
-  typeIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  typeLabel: {
-    fontSize: 12,
-    color: '#111827',
-    textAlign: 'center',
-  },
-  iconSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  iconOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  iconOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-  },
-  iconText: {
-    fontSize: 20,
-  },
-  colorSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  colorOption: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  colorOptionSelected: {
-    borderColor: '#FFFFFF',
-  },
-  walletPicker: {
-    gap: 12,
-  },
-  walletPickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  walletPickerOptionSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-  },
-  walletPickerOptionDisabled: {
-    opacity: 0.5,
-  },
-  walletPickerIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  /* gray framed style used in transfer modal */
-  walletPickerOptionGray: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-  },
-  walletPickerOptionGraySelected: {
-    borderColor: '#6366F1',
-    backgroundColor: '#F8FAFF',
-  },
-  walletPickerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginBottom: 2,
-  },
-  walletPickerBalance: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-  },
+    fullscreenModalContent: {
+      flex: 1,
+      backgroundColor: surface,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: outline,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: onSurface,
+    },
+    modalClose: {
+        fontSize: 24,
+        color: 'rgba(0,0,0,0.6)',
+    },
+    modalBody: {
+      flex: 1,
+      padding: 20,
+    },
+    modalBodyScroll: {
+      paddingBottom: 220,
+    },
 
-  modalFooterFixed: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  modalFooterSticky: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-    backgroundColor: '#FFFFFF',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalButtonSecondary: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  modalButtonGray: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 0,
-  },
-  modalButtonTextGray: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  modalButtonPrimary: {
-    backgroundColor: '#111827',
-  },
-  modalButtonTextSecondary: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  modalButtonTextPrimary: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  decorativeCircle: {
-    position: 'absolute',
-    borderRadius: 100,
-    opacity: 0.1,
-  },
-  decorativeCircle1: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#6366F1',
-    top: -100,
-    right: -100,
-  },
-  actionButtonPrimary: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#6366F1',
-    borderWidth: 1,
-  },
-  actionButtonDanger: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#EF4444',
-    borderWidth: 1,
-  },
-  actionButtonSuccess: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#10B981',
-    borderWidth: 1,
-  },
-  actionButtonSecondary: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#6B7280',
-    borderWidth: 1,
-  },
-  typeIconIcon: {
-    marginBottom: 8,
-  },
-  decorativeCircle2: {
-    width: 150,
-    height: 150,
-    backgroundColor: '#EC4899',
-    bottom: -75,
-    left: -75,
-  },
-});
+    modalBodyContent: {
+      paddingBottom: 40,
+    },
+    formGroup: {
+      marginBottom: 20,
+    },
+    formLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: onSurface,
+      marginBottom: 8,
+    },
+    formInput: {
+      backgroundColor: surface,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: onSurface,
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    typeSelector: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    typeOption: {
+      flex: 1,
+      alignItems: 'center',
+      padding: 16,
+      borderRadius: 12,
+      backgroundColor: surface,
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    typeOptionSelected: {
+      borderColor: primary,
+      backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    },
+    typeIcon: {
+      fontSize: 24,
+      marginBottom: 8,
+    },
+    typeLabel: {
+      fontSize: 12,
+      color: onSurface,
+      textAlign: 'center',
+    },
+    iconSelector: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    iconOption: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: surface,
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    iconOptionSelected: {
+      borderColor: primary,
+      backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    },
+    iconText: {
+      fontSize: 20,
+    },
+    colorSelector: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    colorOption: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    colorOptionSelected: {
+      borderColor: '#FFFFFF',
+    },
+    walletPicker: {
+      gap: 12,
+    },
+    walletPickerOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    walletPickerOptionSelected: {
+      borderColor: primary,
+      backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    },
+    walletPickerOptionDisabled: {
+      opacity: 0.5,
+    },
+    walletPickerIcon: {
+      fontSize: 20,
+      marginRight: 12,
+    },
+    /* gray framed style used in transfer modal */
+    walletPickerOptionGray: {
+      backgroundColor: surface,
+      borderColor: outline,
+    },
+    walletPickerOptionGraySelected: {
+      borderColor: primary,
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    },
+    walletPickerName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: onSurface,
+      marginBottom: 2,
+    },
+    walletPickerBalance: {
+      fontSize: 12,
+      color: onSurfaceVariant,
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      padding: 20,
+      gap: 12,
+    },
+
+    modalFooterFixed: {
+      borderTopWidth: 1,
+      borderTopColor: outline,
+      backgroundColor: surface,
+    },
+    modalFooterSticky: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: 20,
+      paddingBottom: 28,
+      backgroundColor: surface,
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalButtonSecondary: {
+      backgroundColor: surface,
+      borderWidth: 1,
+      borderColor: outline,
+    },
+    modalButtonGray: {
+      backgroundColor: outline,
+      borderWidth: 0,
+    },
+    modalButtonTextGray: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: onSurface,
+    },
+    modalButtonPrimary: {
+      backgroundColor: onSurface,
+    },
+    modalButtonTextSecondary: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: onSurface,
+    },
+    modalButtonTextPrimary: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: surface,
+    },
+    decorativeCircle: {
+      position: 'absolute',
+      borderRadius: 100,
+      opacity: 0.1,
+    },
+    decorativeCircle1: {
+      width: 200,
+      height: 200,
+      backgroundColor: primary,
+      top: -100,
+      right: -100,
+    },
+    actionButtonPrimary: {
+      backgroundColor: surface,
+      borderColor: primary,
+      borderWidth: 1,
+    },
+    actionButtonDanger: {
+      backgroundColor: surface,
+      borderColor: '#EF4444',
+      borderWidth: 1,
+    },
+    actionButtonSuccess: {
+      backgroundColor: surface,
+      borderColor: '#10B981',
+      borderWidth: 1,
+    },
+    actionButtonSecondary: {
+      backgroundColor: surface,
+      borderColor: onSurfaceVariant,
+      borderWidth: 1,
+    },
+    typeIconIcon: {
+      marginBottom: 8,
+    },
+    decorativeCircle2: {
+      width: 150,
+      height: 150,
+      backgroundColor: '#EC4899',
+      bottom: -75,
+      left: -75,
+    },
+  });
+};

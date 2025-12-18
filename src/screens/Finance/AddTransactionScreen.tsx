@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import BottomTabs from '../../navigation/BottomTabs';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -35,6 +36,11 @@ type TransactionType = "expense" | "income";
 export default function AddTransactionScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const theme = useTheme();
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
+  const styles = getStyles(theme);
   // Note state
   const [note, setNote] = useState("");
   const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
@@ -230,7 +236,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="arrow-left" size={20} color="#111827" />
+          <MaterialCommunityIcons name="arrow-left" size={20} color={onSurface} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Thêm chi tiêu</Text>
@@ -279,7 +285,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
             {transcript && !isRecording && !isProcessing && (
               <View style={styles.transcriptPreview}>
                 <View style={styles.rowCenter}>
-                  <MaterialCommunityIcons name="file-document-outline" size={16} color="#1F2937" />
+                  <MaterialCommunityIcons name="file-document-outline" size={16} color={onSurface} />
                   <Text style={[styles.transcriptPreviewTitle, styles.transcriptTitleMargin]}>Kết quả phiên âm:</Text>
                 </View>
                 <Text style={styles.transcriptPreviewText}>{transcript}</Text>
@@ -299,7 +305,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
               <TextInput
                 style={[styles.fullScreenInput, getNoteInputStyle()]}
                 placeholder="Viết ghi chú ở đây..."
-                placeholderTextColor="#BBBBBB"
+                placeholderTextColor={onSurfaceVariant}
                 value={note}
                 onChangeText={setNote}
                 multiline
@@ -431,7 +437,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
         >
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowManualForm(false)}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#111827" />
+              <MaterialCommunityIcons name="arrow-left" size={24} color={onSurface} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Thêm Chi Tiêu</Text>
             <View style={styles.headerPlaceholder} />
@@ -481,7 +487,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
             {showTemplateForm && (
               <View style={styles.aiSuggestionsBox}>
                 <View style={styles.aiSuggestionsHeader}>
-                  <MaterialCommunityIcons name="clipboard-text" size={18} color="#6366F1" />
+                  <MaterialCommunityIcons name="clipboard-text" size={18} color={primary} />
                   <Text style={[styles.aiSuggestionsTitle, styles.templateTitle]}>Mẫu giao dịch</Text>
                   <MaterialCommunityIcons name="file" size={18} color="#10B981" />
                 </View>
@@ -706,6 +712,8 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
 
 // Camera Screen Component
 function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const { hasPermission, requestPermission } = useCameraPermission();
   const [cameraPosition, setCameraPosition] = React.useState<"back" | "front">("back");
   const device = useCameraDevice(cameraPosition);
@@ -927,9 +935,16 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
 }
 
 // ... (Toàn bộ styles giữ nguyên)
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+function getStyles(theme: any): any {
+  const surface = theme.colors.surface;
+  const primary = theme.colors.primary;
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
+  const outline = theme.colors.outline || 'rgba(0,0,0,0.06)';
+
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: surface },
+  safeArea: { flex: 1, backgroundColor: surface },
   
   header: {
     flexDirection: "row",
@@ -939,8 +954,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-    backgroundColor: "#FFFFFF",
+    borderBottomColor: outline,
+    backgroundColor: surface,
   },
   
   mainContent: {
@@ -955,7 +970,7 @@ const styles = StyleSheet.create({
   
   scrollContent: {
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
   },
   
   // Options Screen Styles
@@ -964,25 +979,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: surface,
   },
   optionsTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#00796B",
+    color: primary,
     marginBottom: 30,
     textAlign: "center",
   },
   optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,137,123,0.1)",
+    backgroundColor: `${primary}14`,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: "rgba(0,137,123,0.3)",
+    borderColor: `${primary}4D`,
     width: "100%",
   },
   optionButtonCancel: {
@@ -1000,16 +1015,16 @@ const styles = StyleSheet.create({
   optionButtonTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#00796B",
+    color: primary,
     marginBottom: 2,
   },
   optionButtonDesc: {
     fontSize: 12,
-    color: "rgba(0,0,0,0.6)",
+    color: onSurfaceVariant,
   },
   optionArrow: {
     fontSize: 20,
-    color: "#00897B",
+    color: primary,
     marginLeft: 10,
   },
   
@@ -1021,8 +1036,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#111827" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#111827" },
+  backIcon: { fontSize: 20, color: onSurface },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: onSurface },
   saveButtonHeader: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -1056,11 +1071,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
-    borderColor: "transparent",
+    borderColor: outline,
   },
   typeButtonExpense: {
     borderColor: "#EF4444",
@@ -1077,30 +1092,30 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#00796B",
+    color: primary,
     marginBottom: 12,
   },
   amountInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1.5,
-    borderColor: "#B2DFDB",
+    borderColor: outline,
     marginBottom: 16,
   },
   currencySymbol: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#00897B",
+    color: primary,
     marginRight: 8,
   },
   amountInput: {
     flex: 1,
     fontSize: 24,
     fontWeight: "800",
-    color: "#00897B",
+    color: primary,
     paddingVertical: 14,
   },
   amountWords: {
@@ -1132,17 +1147,17 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: "22%",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: surface,
     borderRadius: 16,
     padding: 12,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "transparent",
+    borderColor: outline,
     position: "relative",
   },
   categoryCardActive: {
-    borderColor: "#6366F1",
-    backgroundColor: "rgba(99,102,241,0.1)",
+    borderColor: primary,
+    backgroundColor: `${primary}1A`,
   },
   categoryIcon: { fontSize: 28, marginBottom: 6 },
   categoryName: { fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: "600", textAlign: "center" },
@@ -1153,19 +1168,19 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#6366F1",
+    backgroundColor: primary,
     alignItems: "center",
     justifyContent: "center",
   },
   checkMarkText: { color: "#fff", fontSize: 10, fontWeight: "700" },
   noteInput: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderRadius: 16,
     padding: 16,
-    color: "#111827",
+    color: onSurface,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: outline,
     textAlignVertical: "top",
     minHeight: 100,
   },
@@ -1176,8 +1191,8 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 18,
     lineHeight: 26,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
+    color: onSurface,
+    backgroundColor: surface,
     textAlignVertical: 'top',
     minHeight: 420,
   },
@@ -1196,19 +1211,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: surface,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#B2DFDB",
+    borderColor: outline,
   },
   fontButtonActive: {
-    backgroundColor: "#00897B",
-    borderColor: "#00897B",
+    backgroundColor: primary,
+    borderColor: primary,
   },
   fontButtonText: {
     fontWeight: "700",
-    color: "#00796B",
+    color: primary,
     fontSize: 12,
   },
   fontButtonTextActive: {
@@ -1545,8 +1560,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   saveButtonDefault: {
-    backgroundColor: "#00897B",
-    shadowColor: "#00897B",
+    backgroundColor: primary,
+    shadowColor: primary,
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -2537,4 +2552,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#1E40AF",
   },
-});
+  });
+}

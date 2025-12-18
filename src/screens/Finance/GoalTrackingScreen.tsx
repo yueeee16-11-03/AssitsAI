@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { useFocusEffect } from '@react-navigation/native';
@@ -45,7 +46,16 @@ export default function GoalTrackingScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const [fadeAnim] = useState(new Animated.Value(0));
-  
+  const theme = useTheme();
+  const styles = getStyles(theme);
+  const primary = theme.colors.primary;
+  const onPrimary = theme.colors.onPrimary || '#FFFFFF';
+  const onSurface = theme.colors.onSurface;
+  const errorColor = theme.colors.error;
+  // AI accent: use green for AI card (avoid purple). `aiGreen` used for borders and icon.
+  const aiGreen = '#10B981';
+  const aiGradientColors = theme.dark ? ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0)'] : ['rgba(16,185,129,0.06)', 'rgba(16,185,129,0.14)'];
+  const aiCardBg = theme.dark ? 'transparent' : '#FFFFFF';
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -392,18 +402,23 @@ export default function GoalTrackingScreen({ navigation }: Props) {
           </View>
 
           {/* AI Insight */}
-          <LinearGradient colors={["#0F1724","#0B1226"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.aiCard, styles.aiCardDark]}>
+          <LinearGradient
+            colors={aiGradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.aiCard, theme.dark && styles.aiCardDark, { borderColor: `${aiGreen}14`, backgroundColor: aiCardBg }]}
+          >
             <View style={styles.aiHeader}>
-              <Icon name="robot" size={24} color="#fff" style={styles.aiIcon} />
-              <Text style={[styles.aiTitle, styles.aiTitleDark]}>Phân tích AI</Text>
+              <Icon name="robot" size={24} color={aiGreen} style={styles.aiIcon} />
+              <Text style={[styles.aiTitle, theme.dark && styles.aiTitleDark]}>Phân tích AI</Text>
             </View>
             <View style={styles.aiBulletRow}>
               <Text style={styles.aiBulletIcon}>🐢</Text>
-              <Text style={[styles.aiText, styles.aiTextDark]}>Chậm: <Text style={styles.aiHighlightDark}>Mua xe hơi</Text> (Trễ 3 tháng)</Text>
+              <Text style={[styles.aiText, theme.dark && styles.aiTextDark]}>Chậm: <Text style={theme.dark ? styles.aiHighlightDark : styles.aiHighlight}>Mua xe hơi</Text> (Trễ 3 tháng)</Text>
             </View>
             <View style={styles.aiBulletRow}>
               <Text style={styles.aiBulletIcon}>💡</Text>
-              <Text style={[styles.aiText, styles.aiTextDark]}>Gợi ý: <Text style={styles.aiHighlightDark}>Nạp thêm 2M/tháng</Text></Text>
+              <Text style={[styles.aiText, theme.dark && styles.aiTextDark]}>Gợi ý: <Text style={theme.dark ? styles.aiHighlightDark : styles.aiHighlight}>Nạp thêm 2M/tháng</Text></Text>
             </View>
           </LinearGradient>
 
@@ -429,12 +444,12 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                   <View style={styles.goalHeaderLarge}>
                     <View style={styles.goalInfoLarge}>
                       <View style={[styles.iconContainerLarge, { backgroundColor: goal.color || '#10B981' }]}>
-                        <Icon name={goal.icon} size={48} color="#FFFFFF" style={styles.goalIconLarge} />
+                        <Icon name={goal.icon} size={48} color={onPrimary} style={styles.goalIconLarge} />
                       </View>
                       <View style={styles.goalTitleContainer}>
                         <Text style={styles.goalTitleLarge} numberOfLines={1} ellipsizeMode="tail">{goal.title}</Text>
                         <View style={styles.deadlineRow}>
-                          <Icon name="calendar-month" size={14} color="#6B7280" style={styles.deadlineIcon} />
+                          <Icon name="calendar-month" size={14} color={theme.colors.onSurfaceVariant} style={styles.deadlineIcon} />
                           <Text style={[styles.goalDeadlineLarge]}>
                             {formatDeadlineLabel(goal.deadline)}
                           </Text>
@@ -452,34 +467,34 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                           )
                         }
                       >
-                        <Icon name="alert-circle" size={18} color="#EF4444" />
+                        <Icon name="alert-circle" size={18} color={onPrimary} />
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.onTrackBadge}>
-                        <Icon name="check-circle" size={18} color="#10B981" />
+                        <Icon name="check-circle" size={18} color={onPrimary} />
                       </View>
                     )}
                   </View>
 
-                  <View style={styles.goalAmountsCompact}>
-                    <View style={styles.amountCompactLeft}>
+                  <View style={styles.goalAmountsStack}>
+                    <View style={styles.amountRow}>
                       <Text style={styles.amountLabelSmall}>Hiện tại</Text>
                       <Text style={styles.amountValueSmall} numberOfLines={1} ellipsizeMode="tail">
-                        {formatVNDCompact(currentOfGoal)}
+                        {formatVNDCompact(currentOfGoal, false)}
                       </Text>
                     </View>
 
-                    <View style={styles.amountCompactMiddle}>
+                    <View style={styles.amountRow}>
                       <Text style={styles.amountLabelSmall}>Mục tiêu</Text>
                       <Text style={styles.amountValueMuted} numberOfLines={1} ellipsizeMode="tail">
-                        {formatVNDCompact(goal.targetAmount)}
+                        {formatVNDCompact(goal.targetAmount, false)}
                       </Text>
                     </View>
 
-                    <View style={styles.amountCompactRight}>
+                    <View style={styles.amountRow}>
                       <Text style={styles.amountLabelSmall}>Còn lại</Text>
                       <Text style={[styles.amountValueRemainingLarge]} numberOfLines={1} ellipsizeMode="tail">
-                        {formatVNDCompact(goal.targetAmount - currentOfGoal)}
+                        {formatVNDCompact(goal.targetAmount - currentOfGoal, false)}
                       </Text>
                     </View>
                   </View>
@@ -494,12 +509,12 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                   {/* compact info area: if not on track show requiredMonthly prominently, otherwise show a subtle on-track row */}
                   {!isOnTrack ? (
                     <View style={styles.requiredRow}>
-                      <Icon name="chart-line" size={16} color="#EF4444" style={styles.iconRight} />
+                      <Icon name="chart-line" size={16} color={errorColor} style={styles.iconRight} />
                       <Text style={styles.requiredText}>Cần {formatVNDCompact(Math.round(requiredMonthly))}/tháng để kịp hạn</Text>
                     </View>
                   ) : (
                     <View style={styles.onTrackRow}>
-                      <Icon name="check-circle-outline" size={14} color="#10B981" style={styles.iconRight} />
+                      <Icon name="check-circle-outline" size={14} color={primary} style={styles.iconRight} />
                       <Text style={styles.onTrackText}>Đang đúng kế hoạch — {monthsLeft} tháng · {formatVNDCompact(goal.monthlyContribution)}/tháng</Text>
                     </View>
                   )}
@@ -588,7 +603,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowAddModal(false)}>
-              <Icon name="close" size={20} color="#111827" />
+              <Icon name="close" size={20} color={theme.colors.onSurface} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Tạo mục tiêu tiết kiệm</Text>
             <TouchableOpacity onPress={handleAddNewGoal}>
@@ -600,7 +615,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
             <View style={styles.formGroupRowBetween}>
               <Text style={styles.formLabel}>Gợi ý</Text>
               <TouchableOpacity
-                style={[styles.aiSuggestToggle, showAISuggestions && styles.aiSuggestToggleActive]}
+                style={[styles.aiSuggestToggle, showAISuggestions && styles.aiSuggestToggleActive, showAISuggestions && { backgroundColor: aiGreen, borderColor: aiGreen }]}
                 onPress={() => {
                   if (!showAISuggestions && !suggestionLoading) {
                     setShowAISuggestions(true);
@@ -612,11 +627,11 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                 disabled={suggestionLoading}
               >
                 {suggestionLoading ? (
-                  <ActivityIndicator size="small" color={showAISuggestions ? '#FFFFFF' : '#10B981'} style={styles.aiToggleIcon} />
+                  <ActivityIndicator size="small" color={showAISuggestions ? onPrimary : aiGreen} style={styles.aiToggleIcon} />
                 ) : (
-                  <Icon name="robot" size={14} color={showAISuggestions ? '#FFFFFF' : '#10B981'} style={styles.aiToggleIcon} />
+                  <Icon name="robot" size={14} color={showAISuggestions ? onPrimary : aiGreen} style={styles.aiToggleIcon} />
                 )}
-                <Text style={[styles.aiSuggestText, showAISuggestions && styles.aiSuggestTextActive]}>
+                <Text style={[styles.aiSuggestText, showAISuggestions && styles.aiSuggestTextActive, { color: showAISuggestions ? onPrimary : aiGreen }]}>
                   {suggestionLoading ? 'Đang tải...' : 'AI gợi ý'}
                 </Text>
               </TouchableOpacity>
@@ -639,28 +654,28 @@ export default function GoalTrackingScreen({ navigation }: Props) {
               </View>
             )}
               <Text style={styles.formLabel}>Tên mục tiêu</Text>
-              <TextInput style={styles.formInput} placeholder="Nhập tên mục tiêu..." placeholderTextColor="#6B7280" value={newTitle} onChangeText={setNewTitle} />
+              <TextInput style={styles.formInput} placeholder="Nhập tên mục tiêu..." placeholderTextColor={theme.colors.onSurfaceVariant} value={newTitle} onChangeText={setNewTitle} />
 
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Mô tả (tùy chọn)</Text>
-              <TextInput style={[styles.formInput, styles.textArea]} placeholder="Mô tả ngắn" placeholderTextColor="#6B7280" value={newDesc} onChangeText={setNewDesc} multiline />
+              <TextInput style={[styles.formInput, styles.textArea]} placeholder="Mô tả ngắn" placeholderTextColor={theme.colors.onSurfaceVariant} value={newDesc} onChangeText={setNewDesc} multiline />
             </View>
 
             <View style={styles.formRow}>
               <View style={[styles.formGroupHalf, styles.formGroupLeft]}> 
                 <Text style={styles.formLabel}>Số tiền mục tiêu (VNĐ)</Text>
-                <TextInput style={styles.formInput} placeholder="0" placeholderTextColor="#6B7280" keyboardType="numeric" value={newTarget} onChangeText={setNewTarget} />
+                <TextInput style={styles.formInput} placeholder="0" placeholderTextColor={theme.colors.onSurfaceVariant} keyboardType="numeric" value={newTarget} onChangeText={setNewTarget} />
               </View>
 
               <View style={[styles.formGroupHalf, styles.formGroupRight]}> 
                 <Text style={styles.formLabel}>Tiết kiệm/tháng (VNĐ)</Text>
-                <TextInput style={styles.formInput} placeholder="0" placeholderTextColor="#6B7280" keyboardType="numeric" value={newMonthly} onChangeText={setNewMonthly} />
+                <TextInput style={styles.formInput} placeholder="0" placeholderTextColor={theme.colors.onSurfaceVariant} keyboardType="numeric" value={newMonthly} onChangeText={setNewMonthly} />
               </View>
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Hạn chót (tháng/năm)</Text>
-              <TextInput style={styles.formInput} placeholder="MM/YYYY" placeholderTextColor="#6B7280" value={newDeadline} onChangeText={setNewDeadline} />
+              <TextInput style={styles.formInput} placeholder="MM/YYYY" placeholderTextColor={theme.colors.onSurfaceVariant} value={newDeadline} onChangeText={setNewDeadline} />
             </View>
 
             <View style={styles.formGroup}>
@@ -673,7 +688,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                   { key: 'education', label: 'Học phí', icon: 'school' },
                 ] as const).map(c => (
                   <TouchableOpacity key={c.key} style={[styles.categoryButton, newCategory === c.key && styles.categoryButtonActive]} onPress={() => setNewCategory(c.key)}>
-                    <Icon name={c.icon} size={20} color={newCategory === c.key ? '#0F1724' : '#10B981'} style={styles.categoryIcon} />
+                    <Icon name={c.icon} size={20} color={newCategory === c.key ? onSurface : primary} style={styles.categoryIcon} />
                     <Text style={[styles.categoryButtonLabel, newCategory === c.key && styles.categoryButtonLabelActive]}>{c.label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -701,7 +716,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowAddMoneyModal(false)}>
-              <Icon name="close" size={20} color="#111827" />
+              <Icon name="close" size={20} color={theme.colors.onSurface} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Thêm tiền</Text>
             <TouchableOpacity onPress={() => setShowAddMoneyModal(false)}>
@@ -721,7 +736,7 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                 <View>
                   <View style={styles.goalDetailHeader}>
                     <View style={[styles.iconContainer, { backgroundColor: `${g.color}22` }]}>
-                      <Icon name={g.icon} size={28} color="#6B7280" />
+                      <Icon name={g.icon} size={28} color={theme.colors.onSurfaceVariant} />
                     </View>
                     <View style={styles.detailHeaderRight}>
                       <Text style={styles.goalTitle}>{g.title}</Text>
@@ -771,12 +786,12 @@ export default function GoalTrackingScreen({ navigation }: Props) {
                       </View>
 
                       <Text style={[styles.formLabel, styles.formLabelSpacing]}>Số tiền (VNĐ)</Text>
-                      <TextInput value={addAmount} onChangeText={setAddAmount} placeholder="vd: 500000" keyboardType="numeric" style={styles.formInput} placeholderTextColor="#6B7280" />
+                      <TextInput value={addAmount} onChangeText={setAddAmount} placeholder="vd: 500000" keyboardType="numeric" style={styles.formInput} placeholderTextColor={theme.colors.onSurfaceVariant} />
                     </View>
 
                     <View style={styles.formGroup}>
                       <Text style={styles.formLabel}>Ghi chú (tùy chọn)</Text>
-                      <TextInput value={addNote} onChangeText={setAddNote} style={[styles.formInput, styles.textArea]} placeholder="Ghi chú giao dịch" placeholderTextColor="#6B7280" />
+                      <TextInput value={addNote} onChangeText={setAddNote} style={[styles.formInput, styles.textArea]} placeholder="Ghi chú giao dịch" placeholderTextColor={theme.colors.onSurfaceVariant} />
                     </View>
 
                     <View style={styles.detailActionsRow}>
@@ -831,8 +846,17 @@ export default function GoalTrackingScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+const getStyles = (theme: any) => {
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || 'rgba(0,0,0,0.06)';
+  const surface = theme.colors.surface;
+  const background = theme.colors.background;
+  const primary = theme.colors.primary;
+  const onPrimary = theme.colors.onPrimary || '#FFFFFF';
+  const error = theme.colors.error;
+
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -840,15 +864,15 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 16,
     paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: onSurfaceVariant,
   },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
-  backIcon: { fontSize: 20, color: '#111827' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  backIcon: { fontSize: 20, color: onSurface },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: onSurface },
   addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
-  addIcon: { fontSize: 24, color: '#111827', fontWeight: '700' },
+  addIcon: { fontSize: 24, color: onSurface, fontWeight: '700' },
   content: { padding: 16 },
   totalCard: {
     backgroundColor: "rgba(99,102,241,0.15)",
@@ -881,31 +905,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#06B6D4',
     borderColor: 'rgba(6,182,212,0.18)'
   },
-  totalLabelOnPlus: { color: '#FFFFFF' },
-  totalAmountSmallOnPlus: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', marginBottom: 12 },
-  totalPercentageOnPlus: { fontSize: 13, color: '#FFFFFF', textAlign: 'center' },
+  totalLabelOnPlus: { color: onPrimary },
+  totalAmountSmallOnPlus: { fontSize: 14, fontWeight: '700', color: onPrimary, marginBottom: 12 },
+  totalPercentageOnPlus: { fontSize: 13, color: onPrimary, textAlign: 'center' },
   aiCard: {
-    backgroundColor: "rgba(16,185,129,0.06)",
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(16,185,129,0.14)",
+    borderColor: `${primary}14`,
+    backgroundColor: theme.dark ? 'transparent' : `${primary}0F`,
   },
   aiCardDark: {
     padding: 20,
     borderRadius: 16,
     marginBottom: 20,
     borderWidth: 0,
+    backgroundColor: 'transparent',
   },
-  aiTitleDark: { color: '#FFFFFF' },
+  aiTitleDark: { color: onPrimary },
   aiTextDark: { color: '#E6EEF6', fontSize: 14 },
   aiHighlightDark: { color: '#FFD166', fontWeight: '900' },
   aiBulletRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   aiBulletIcon: { fontSize: 18, marginRight: 8 },
   aiHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  aiIcon: { fontSize: 24, marginRight: 8, color: '#10B981' },
-  aiTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
+  aiIcon: { fontSize: 24, marginRight: 8 },
+  aiTitle: { fontSize: 16, fontWeight: "800", color: onSurface },
   aiText: { fontSize: 14, color: "rgba(15,23,36,0.8)", lineHeight: 20, marginBottom: 8 },
   aiTextRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   aiTextIcon: { marginRight: 8 },
@@ -913,16 +938,16 @@ const styles = StyleSheet.create({
   deadlineIcon: { marginRight: 6 },
   aiHighlight: { color: "#34D399", fontWeight: "900" },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#111827", marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: onSurface, marginBottom: 16 },
   goalCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     minHeight: 128,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)'
+    borderColor: onSurfaceVariant
   },
   goalHeader: {
     flexDirection: "row",
@@ -941,13 +966,13 @@ const styles = StyleSheet.create({
   },
   goalIcon: { fontSize: 24 },
   goalTitleContainer: { flex: 1 },
-  goalTitle: { fontSize: 15, fontWeight: "800", color: "#111827", marginBottom: 2 },
-  goalDeadline: { fontSize: 12, color: "rgba(0,0,0,0.6)" },
+  goalTitle: { fontSize: 15, fontWeight: "800", color: onSurface, marginBottom: 2 },
+  goalDeadline: { fontSize: 12, color: onSurfaceVariant },
   warningBadge: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(239,68,68,0.2)",
+    backgroundColor: `${error}33`,
     alignItems: "center",
     justifyContent: "center",
     position: 'absolute',
@@ -955,7 +980,7 @@ const styles = StyleSheet.create({
     top: 12,
   },
   warningText: { fontSize: 16 },
-  onTrackBadge: { width: 32, height: 24, borderRadius: 12, backgroundColor: 'rgba(16,185,129,0.08)', alignItems: 'center', justifyContent: 'center', position: 'absolute', right: 12, top: 12 },
+  onTrackBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: `${primary}22`, alignItems: 'center', justifyContent: 'center', position: 'absolute', right: 12, top: 12 },
   goalAmounts: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -967,8 +992,8 @@ const styles = StyleSheet.create({
   amountColumnLeft: { alignItems: 'flex-start' },
   amountColumnCenter: { alignItems: 'center' },
   amountColumnRight: { alignItems: 'flex-end' },
-  amountLabel: { fontSize: 11, color: "rgba(15,23,36,0.5)", marginBottom: 4, textAlign: "center" },
-  amountValue: { fontSize: 14, fontWeight: "800", color: "#0F1724", textAlign: "center", flexShrink: 1, maxWidth: 120 },
+  amountLabel: { fontSize: 11, color: onSurfaceVariant, marginBottom: 4, textAlign: "center" },
+  amountValue: { fontSize: 14, fontWeight: "800", color: onSurface, textAlign: "center", flexShrink: 1, maxWidth: 120 },
   amountDivider: { width: 1, backgroundColor: "rgba(0,0,0,0.06)", height: 44, alignSelf: 'center', marginHorizontal: 8 },
   progressContainer: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
   progressBar: {
@@ -979,7 +1004,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   progressFill: { height: "100%", borderRadius: 4 },
-  progressText: { fontSize: 13, fontWeight: "700", color: "rgba(15,23,36,0.7)", minWidth: 40 },
+  progressText: { fontSize: 13, fontWeight: "700", color: onSurface, minWidth: 40 },
   goalStats: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 12 },
   statItem: {
     flexDirection: "row",
@@ -994,25 +1019,25 @@ const styles = StyleSheet.create({
   smallInlineStat: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, backgroundColor: 'transparent', paddingHorizontal: 0, paddingVertical: 0, maxWidth: 120, flexShrink: 1 },
   statIcon: { fontSize: 14, marginRight: 6 },
   statText: { fontSize: 12, color: "rgba(15,23,36,0.8)", fontWeight: "600" },
-  statTextDanger: { color: '#EF4444' },
+  statTextDanger: { color: error },
   goalDeadlineDark: { color: '#6B7280' },
   amountValueWarning: { color: '#F59E0B' },
   goalActions: { flexDirection: "row", gap: 8, marginTop: 8 },
   goalSecondaryActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  actionDanger: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#EF4444' },
-  actionTextDanger: { color: '#EF4444', fontWeight: '700' },
+  actionDanger: { backgroundColor: 'transparent', borderWidth: 1, borderColor: error },
+  actionTextDanger: { color: error, fontWeight: '700' },
   actionPrimary: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: primary,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)'
+    borderColor: primary
   },
   actionSecondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)'
+    borderColor: onSurfaceVariant
   },
-  actionTextPrimary: { color: '#0F1724', fontWeight: '700', fontSize: 13 },
-  actionTextSecondary: { color: '#6B7280', fontWeight: '700', fontSize: 13 },
+  actionTextPrimary: { color: onPrimary, fontWeight: '700', fontSize: 13 },
+  actionTextSecondary: { color: onSurfaceVariant, fontWeight: '700', fontSize: 13 },
   actionButton: {
     flex: 1,
     borderRadius: 8,
@@ -1026,22 +1051,22 @@ const styles = StyleSheet.create({
   goalInfoLarge: { flexDirection: 'row', alignItems: 'center' },
   iconContainerLarge: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center', marginRight: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 6 },
   goalIconLarge: { fontSize: 48 },
-  goalTitleLarge: { fontSize: 16, fontWeight: '900', color: '#111827' },
-  goalDeadlineLarge: { fontSize: 12, color: 'rgba(0,0,0,0.6)' },
+  goalTitleLarge: { fontSize: 16, fontWeight: '900', color: onSurface },
+  goalDeadlineLarge: { fontSize: 12, color: onSurfaceVariant },
   // Progress bar large
   progressContainerLargeInline: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  progressBarLargeInline: { flex: 1, height: 14, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 8, overflow: 'hidden' },
+  progressBarLargeInline: { flex: 1, height: 14, backgroundColor: onSurfaceVariant, borderRadius: 8, overflow: 'hidden' },
   progressFillLarge: { height: '100%', borderRadius: 8 },
   // FAB
   fab: { position: 'absolute', right: 20, bottom: 24, width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
-  fabButton: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#10B981' },
-  fabIcon: { fontSize: 28, color: '#FFFFFF' },
+  fabButton: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: primary },
+  fabIcon: { fontSize: 28, color: onPrimary },
   // Card elevated style
-  goalCardLarge: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 6 },
+  goalCardLarge: { backgroundColor: surface, borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 6 },
   goalButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: onSurfaceVariant,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -1067,113 +1092,117 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   statsCardButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: surface,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: onSurfaceVariant,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
-  statsTitle: { fontSize: 16, fontWeight: "800", color: "#111827", marginBottom: 16, textAlign: "center" },
-  /* compact goal amounts */
+  statsTitle: { fontSize: 16, fontWeight: "800", color: onSurface, marginBottom: 16, textAlign: "center" },
+  /* compact goal amounts (now also support stacked layout to avoid truncation) */
   goalAmountsCompact: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  goalAmountsStack: { flexDirection: 'column', alignItems: 'stretch', marginBottom: 10 },
+  // show label and value on the same row
+  amountRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 6 },
   amountCompactLeft: { flex: 1, alignItems: 'flex-start' },
   amountCompactMiddle: { flex: 1, alignItems: 'center' },
   amountCompactRight: { flex: 1, alignItems: 'flex-end' },
-  amountLabelSmall: { fontSize: 11, color: 'rgba(15,23,36,0.5)', marginBottom: 2 },
-  amountValueSmall: { fontSize: 13, fontWeight: '800', color: '#0F1724' },
-  amountValueMuted: { fontSize: 13, color: 'rgba(15,23,36,0.6)', fontWeight: '700' },
-  amountValueRemaining: { fontSize: 16, fontWeight: '900', color: '#EF4444' },
-  amountValueRemainingLarge: { fontSize: 18, fontWeight: '900', color: '#EF4444' },
+  amountLabelSmall: { fontSize: 12, color: onSurfaceVariant, marginBottom: 0, marginRight: 8 },
+  amountValueSmall: { fontSize: 15, fontWeight: '900', color: onSurface, textAlign: 'right', flexShrink: 1 },
+  amountValueMuted: { fontSize: 15, color: onSurfaceVariant, fontWeight: '700', textAlign: 'right' },
+  amountValueRemaining: { fontSize: 18, fontWeight: '900', color: error },
+  amountValueRemainingLarge: { fontSize: 20, fontWeight: '900', color: error },
   requiredRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  requiredText: { color: '#EF4444', fontWeight: '800', fontSize: 13 },
+  requiredText: { color: error, fontWeight: '800', fontSize: 13 },
   onTrackRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  onTrackText: { color: '#10B981', fontWeight: '700', fontSize: 13 },
+  onTrackText: { color: primary, fontWeight: '700', fontSize: 13 },
   statsRowContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statsTitleInline: { fontSize: 16, fontWeight: '800', color: '#111827', marginRight: 12 },
   statsInlineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 14 },
   statsInlineRowCentered: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 8 },
   statsInlineItem: { alignItems: 'center', minWidth: 80 },
-  statsInlineValue: { fontSize: 15, fontWeight: '900', color: '#0F1724' },
-  statsInlineLabel: { fontSize: 11, color: 'rgba(15,23,36,0.6)', marginTop: 4, textAlign: 'center' },
+  statsInlineValue: { fontSize: 15, fontWeight: '900', color: onSurface },
+  statsInlineLabel: { fontSize: 11, color: onSurface, marginTop: 4, textAlign: 'center' },
   iconRight: { marginRight: 8 },
   statsGrid: { flexDirection: "row", justifyContent: "space-between", alignItems: 'center' },
   statBox: { flex: 1, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', marginHorizontal: 6 },
-  statBoxPrimary: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
-  statBoxValue: { fontSize: 20, fontWeight: '900', color: '#0F1724', marginBottom: 6 },
+  statBoxPrimary: { backgroundColor: surface, borderWidth: 1, borderColor: onSurfaceVariant, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
+  statBoxValue: { fontSize: 20, fontWeight: '900', color: onSurface, marginBottom: 6 },
   statBoxLabel: { fontSize: 12, color: 'rgba(15,23,36,0.6)', textAlign: 'center' },
   statsItem: { alignItems: "center" },
   statsValue: { fontSize: 24, fontWeight: "900", color: "#6366F1", marginBottom: 4 },
   statsLabel: { fontSize: 11, color: "rgba(0,0,0,0.6)", textAlign: "center" },
   /* Modal / form styles */
-  modalContainer: { flex: 1, backgroundColor: '#FFFFFF' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  modalSaveText: { fontSize: 16, fontWeight: '600', color: '#10B981' },
+  modalContainer: { flex: 1, backgroundColor: background },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: onSurfaceVariant },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: onSurface },
+  modalSaveText: { fontSize: 16, fontWeight: '600', color: primary },
   modalBody: { flex: 1, paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 36 },
   formGroup: { marginBottom: 18 },
   formGroupHalf: { flex: 1 },
   formGroupLeft: { marginRight: 8 },
   formGroupRight: { marginLeft: 8 },
   
-  formLabel: { fontSize: 14, color: '#374151', fontWeight: '600', marginBottom: 8 },
-  formInput: { backgroundColor: '#F3F4F6', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E5E7EB', color: '#111827' },
+  formLabel: { fontSize: 14, color: onSurfaceVariant, fontWeight: '600', marginBottom: 8 },
+  formInput: { backgroundColor: surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: onSurfaceVariant, color: onSurface },
   textArea: { minHeight: 84, textAlignVertical: 'top' },
   formRow: { flexDirection: 'row' },
   formGroupRowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  aiSuggestToggle: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#10B981', backgroundColor: 'transparent' },
-  aiSuggestToggleActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  aiSuggestText: { color: '#10B981', fontWeight: '700', fontSize: 13 },
-  aiSuggestTextActive: { color: '#FFFFFF' },
+  aiSuggestToggle: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: primary, backgroundColor: 'transparent' },
+  aiSuggestToggleActive: { backgroundColor: primary, borderColor: primary },
+  aiSuggestText: { color: primary, fontWeight: '700', fontSize: 13 },
+  aiSuggestTextActive: { color: onPrimary },
   formLabelSpacing: { marginTop: 12 },
   aiToggleIcon: { marginRight: 8 },
   suggestionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   suggestionRowScroll: { paddingVertical: 6, paddingRight: 8 },
-  suggestionButton: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8, minWidth: 120 },
-  suggestionText: { color: '#111827', fontWeight: '800', fontSize: 13 },
-  suggestionSub: { color: '#6B7280', fontSize: 11, marginTop: 4 },
+  suggestionButton: { backgroundColor: surface, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: onSurfaceVariant, marginRight: 8, minWidth: 120 },
+  suggestionText: { color: onSurface, fontWeight: '800', fontSize: 13 },
+  suggestionSub: { color: onSurfaceVariant, fontSize: 11, marginTop: 4 },
   goalDetailHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   detailAmountsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' },
   detailAmountCol: { flex: 1, alignItems: 'center' },
   detailAmountColRight: { flex: 1, alignItems: 'center' },
-  detailAmountLabel: { fontSize: 12, color: 'rgba(0,0,0,0.6)' },
-  detailAmountValue: { fontSize: 16, fontWeight: '800', color: '#0F1724', marginTop: 6 },
+  detailAmountLabel: { fontSize: 12, color: onSurfaceVariant },
+  detailAmountValue: { fontSize: 16, fontWeight: '800', color: onSurface, marginTop: 6 },
   progressContainerLarge: { marginBottom: 12 },
-  progressBarLarge: { height: 12, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 8, overflow: 'hidden' },
-  notFoundText: { padding: 20, color: '#374151', fontWeight: '600' },
+  progressBarLarge: { height: 12, backgroundColor: onSurfaceVariant, borderRadius: 8, overflow: 'hidden' },
+  notFoundText: { padding: 20, color: onSurfaceVariant, fontWeight: '600' },
   detailHeaderRight: { flex: 1, marginLeft: 12 },
   detailActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   sectionSpaced: { marginTop: 16 },
   txListWrap: { marginTop: 16 },
-  emptyTxText: { color: 'rgba(0,0,0,0.5)', marginTop: 8 },
+  emptyTxText: { color: onSurfaceVariant, marginTop: 8 },
   txRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
   txRowLeft: { flexDirection: 'column' },
-  txAmount: { fontSize: 14, fontWeight: '800', color: '#0F1724' },
-  txDate: { fontSize: 12, color: 'rgba(0,0,0,0.5)', marginTop: 4 },
-  txNote: { fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 6 },
+  txAmount: { fontSize: 14, fontWeight: '800', color: onSurface },
+  txDate: { fontSize: 12, color: onSurfaceVariant, marginTop: 4 },
+  txNote: { fontSize: 13, color: onSurface, marginTop: 6 },
   categoryGridModal: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  categoryButton: { width: '48%', backgroundColor: '#F3F4F6', borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  categoryButtonActive: { backgroundColor: 'rgba(16,185,129,0.12)', borderColor: '#10B981' },
+  categoryButton: { width: '48%', backgroundColor: surface, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8, borderWidth: 1, borderColor: onSurfaceVariant },
+  categoryButtonActive: { backgroundColor: 'rgba(16,185,129,0.12)', borderColor: primary },
   categoryIcon: { marginBottom: 6 },
-  categoryButtonLabel: { fontSize: 13, color: '#10B981', fontWeight: '700' },
-  categoryButtonLabelActive: { color: '#0F1724' },
+  categoryButtonLabel: { fontSize: 13, color: primary, fontWeight: '700' },
+  categoryButtonLabelActive: { color: onSurface },
   priorityGroupModal: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  priorityButton: { flex: 1, paddingVertical: 12, borderWidth: 2, borderRadius: 12, alignItems: 'center', backgroundColor: '#F3F4F6' },
-  priorityButtonActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  priorityButtonLabel: { color: '#111827', fontWeight: '600', fontSize: 13 },
-  priorityButtonLabelActive: { color: '#FFFFFF' },
+  priorityButton: { flex: 1, paddingVertical: 12, borderWidth: 2, borderRadius: 12, alignItems: 'center', backgroundColor: surface },
+  priorityButtonActive: { backgroundColor: primary, borderColor: primary },
+  priorityButtonLabel: { color: onSurface, fontWeight: '600', fontSize: 13 },
+  priorityButtonLabelActive: { color: onPrimary },
   walletSelectorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  walletSelector: { width: '100%', backgroundColor: '#F3F4F6', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-  walletSelectorText: { fontSize: 14, fontWeight: '800', color: '#111827' },
-  walletSelectorSub: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  walletSelector: { width: '100%', backgroundColor: surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: onSurfaceVariant },
+  walletSelectorText: { fontSize: 14, fontWeight: '800', color: onSurface },
+  walletSelectorSub: { fontSize: 12, color: onSurfaceVariant, marginTop: 4 },
   walletListRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  walletChip: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8, marginBottom: 8 },
-  walletChipActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  walletChipText: { fontSize: 13, fontWeight: '800', color: '#111827' },
-  walletChipTextActive: { color: '#FFFFFF' },
-  walletChipSub: { fontSize: 11, color: '#6B7280', marginTop: 4 },
+  walletChip: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: surface, borderWidth: 1, borderColor: onSurfaceVariant, marginRight: 8, marginBottom: 8 },
+  walletChipActive: { backgroundColor: primary, borderColor: primary },
+  walletChipText: { fontSize: 13, fontWeight: '800', color: onSurface },
+  walletChipTextActive: { color: onPrimary },
+  walletChipSub: { fontSize: 11, color: onSurfaceVariant, marginTop: 4 },
   noSuggestionsText: { fontSize: 13, color: 'rgba(15,23,36,0.5)', textAlign: 'center', paddingVertical: 16 },
   spacer: { width: 40 },
-});
+  });
+};
