@@ -9,6 +9,7 @@ import React from "react";
 import { SafeAreaView, StatusBar, StyleSheet } from "react-native";
 import AppNavigation from "./src/navigation";
 import { ThemeProvider } from './src/context/ThemeProvider';
+import './src/i18n';
 import { configureGoogleSignIn } from './src/services/AuthService';
 import { useCheckInStore } from './src/store/checkInStore';
 import { useHabitStore } from './src/store/habitStore';

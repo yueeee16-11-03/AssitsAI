@@ -165,7 +165,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 <Icon name="account" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Họ và tên"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   value={fullName}
                   onChangeText={(text) => {
                     setFullName(text);
@@ -184,7 +184,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 <Icon name="email-outline" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Email của bạn"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   value={email}
                   onChangeText={(text) => {
                     setEmail(text);
@@ -205,7 +205,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 <Icon name="lock-outline" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Mật khẩu"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
@@ -225,7 +225,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 <Icon name="lock-check-outline" size={20} color={theme.colors.secondary} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Xác nhận mật khẩu"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   value={confirmPassword}
                   onChangeText={(text) => {
                     setConfirmPassword(text);
@@ -247,7 +247,7 @@ export default function RegisterScreen({ navigation }: Props) {
               activeOpacity={0.9}
             >
               {loading ? (
-                <ActivityIndicator color="#00897B" />
+                <ActivityIndicator color={theme.colors.primary} />
               ) : (
                 <>
                   <Text style={styles.registerButtonText}>Đăng ký</Text>
@@ -291,7 +291,7 @@ export default function RegisterScreen({ navigation }: Props) {
 const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: theme.colors.background,
   },
   gradientBackground: {
     position: "absolute",
@@ -305,7 +305,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "rgba(139, 92, 246, 0.15)",
+    backgroundColor: theme.colors.secondary,
+    opacity: 0.15,
   },
   circleBottom: {
     position: "absolute",
@@ -314,7 +315,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 400,
     height: 400,
     borderRadius: 200,
-    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    backgroundColor: theme.colors.secondary,
+    opacity: 0.10,
   },
   scrollContent: {
     flexGrow: 1,
@@ -328,7 +330,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 20,
   },
   backButtonText: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: theme.colors.onSurface,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -343,16 +345,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 20,
-    backgroundColor: "rgba(99, 102, 241, 0.2)",
+    backgroundColor: theme.colors.surface,
     borderWidth: 2,
-    borderColor: "rgba(99, 102, 241, 0.3)",
+    borderColor: theme.colors.outline || 'rgba(99, 102, 241, 0.3)',
     alignItems: "center",
     justifyContent: "center",
   },
   logoText: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#6366F1",
+    color: theme.colors.primary,
   },
   title: {
     fontSize: 28,
@@ -363,7 +365,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: "rgba(255, 255, 255, 0.6)",
+    color: theme.colors.onSurfaceVariant,
     textAlign: "center",
   },
   form: {
@@ -375,10 +377,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: theme.colors.outline || 'rgba(0,0,0,0.07)',
     paddingHorizontal: 16,
   },
   inputIcon: {
@@ -389,11 +391,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
-    color: "#333333",
+    color: theme.colors.onSurface,
   },
   inputError: {
-    borderColor: "#EF4444",
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderColor: theme.colors.error || '#EF4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
   },
   errorText: {
     color: "#EF4444",
@@ -417,16 +419,16 @@ const getStyles = (theme: any) => StyleSheet.create({
     elevation: 8,
   },
   registerButtonDisabled: {
-    backgroundColor: "rgba(139, 92, 246, 0.5)",
+    opacity: 0.5,
   },
   registerButtonText: {
-    color: "#FFFFFF",
+    color: theme.dark ? '#000' : '#FFFFFF',
     fontSize: 17,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
   registerButtonIcon: {
-    color: "#FFFFFF",
+    color: theme.dark ? '#000' : '#FFFFFF',
     fontSize: 20,
     fontWeight: "700",
     marginLeft: 8,
@@ -439,29 +441,29 @@ const getStyles = (theme: any) => StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#B2DFDB",
+    backgroundColor: theme.colors.onSurfaceVariant,
   },
   dividerText: {
     marginHorizontal: 16,
-    color: "#999999",
+    color: theme.colors.onSurfaceVariant,
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: "rgba(0, 137, 123, 0.1)",
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 16,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#00897B",
+    borderColor: theme.colors.primary,
     marginBottom: 24,
   },
   googleIconContainer: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -483,22 +485,22 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginBottom: 20,
   },
   footerText: {
-    color: "rgba(255, 255, 255, 0.6)",
+    color: theme.colors.onSurfaceVariant,
     fontSize: 15,
   },
   loginText: {
-    color: "#6366F1",
+    color: theme.colors.primary,
     fontSize: 15,
     fontWeight: "700",
   },
   terms: {
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.5)",
+    color: theme.colors.onSurfaceVariant,
     textAlign: "center",
     lineHeight: 18,
   },
   termsLink: {
-    color: "#6366F1",
+    color: theme.colors.primary,
     fontWeight: "600",
-  },
+  }
 });

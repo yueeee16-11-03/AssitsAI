@@ -104,12 +104,20 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Gia đình</Text>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => navigation.navigate("FamilyChat")}
-        >
-          <Icon name="message-text" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.headerActionButton}
+            onPress={() => navigation.navigate("InviteMember" as any, { familyId: "", inviteCode: "" })}
+          >
+            <Icon name="account-plus" size={22} color={(theme.colors as any).onSecondaryContainer ?? (theme.dark ? '#FFFFFF' : theme.colors.onSurface)} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => navigation.navigate("CreateFamily")}
+          >
+            <Icon name="plus" size={24} color={(theme.colors as any).onSecondaryContainer ?? (theme.dark ? '#FFFFFF' : theme.colors.onSurface)} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(16, insets.bottom + TAB_BAR_HEIGHT) }]} showsVerticalScrollIndicator={false}>
@@ -304,10 +312,67 @@ const getStyles = (theme: any) => StyleSheet.create({
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.08)', alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20, color: theme.colors.primary },
   headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    // use secondaryContainer if available
+    backgroundColor: (() => {
+      const container = (theme.colors as any).secondaryContainer;
+      if (container) return container;
+      const sec = theme.colors.secondary;
+      if (typeof sec === 'string' && sec.startsWith('#')) {
+        let c = sec.replace('#', '');
+        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.4)` : `rgba(${r}, ${g}, ${b}, 0.12)`;
+      }
+      return theme.dark ? 'rgba(99, 102, 241, 0.4)' : `${theme.colors.secondary}20`;
+    })(),
+    alignItems: "center",
+    justifyContent: "center",
+  },
   addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.colors.secondary, alignItems: "center", justifyContent: "center" },
   addIcon: { fontSize: 24, color: "#00897B", fontWeight: "700" },
   content: { padding: 16 },
-  summaryCard: { backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.15)' : `${theme.colors.secondary}26`, borderRadius: 20, padding: 24, marginBottom: 24, borderWidth: 1, borderColor: theme.dark ? 'rgba(99, 102, 241, 0.4)' : `${theme.colors.secondary}4D` },
+  summaryCard: {
+    // Use theme.secondaryContainer if available; else compute safe rgba fallback from secondary
+    backgroundColor: (() => {
+      const container = (theme.colors as any).secondaryContainer;
+      if (container) return container;
+      const sec = theme.colors.secondary;
+      if (typeof sec === 'string' && sec.startsWith('#')) {
+        let c = sec.replace('#', '');
+        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.15)` : `rgba(${r}, ${g}, ${b}, 0.16)`;
+      }
+      return theme.dark ? 'rgba(99, 102, 241, 0.15)' : `${theme.colors.secondary}26`;
+    })(),
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: (() => {
+      const container = (theme.colors as any).secondaryContainer;
+      if (container) return container;
+      const sec = theme.colors.secondary;
+      if (typeof sec === 'string' && sec.startsWith('#')) {
+        let c = sec.replace('#', '');
+        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.32)` : `rgba(${r}, ${g}, ${b}, 0.3)`;
+      }
+      return theme.dark ? 'rgba(99, 102, 241, 0.4)' : `${theme.colors.secondary}4D`;
+    })(),
+  },
   summaryTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary, marginBottom: 16, textAlign: "center" },
   summaryStats: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
   summaryItem: { alignItems: "center" },
@@ -349,7 +414,41 @@ const getStyles = (theme: any) => StyleSheet.create({
   actionBtnText: { color: theme.colors.primary, fontWeight: "700", fontSize: 13 },
   actionBtnPrimary: { backgroundColor: theme.colors.secondary },
   actionBtnTextPrimary: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  aiCard: { backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.12)' : `${theme.colors.secondary}19`, borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: theme.dark ? 'rgba(99, 102, 241, 0.3)' : `${theme.colors.secondary}4D` },
+  aiCard: {
+    // Use theme.secondaryContainer if available; else compute a safe rgba fallback from secondary
+    backgroundColor: (() => {
+      const container = (theme.colors as any).secondaryContainer;
+      if (container) return container;
+      const sec = theme.colors.secondary;
+      if (typeof sec === 'string' && sec.startsWith('#')) {
+        let c = sec.replace('#', '');
+        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.12)` : `rgba(${r}, ${g}, ${b}, 0.12)`;
+      }
+      return theme.dark ? 'rgba(99, 102, 241, 0.12)' : `${theme.colors.secondary}19`;
+    })(),
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: (() => {
+      const container = (theme.colors as any).secondaryContainer;
+      if (container) return container;
+      const sec = theme.colors.secondary;
+      if (typeof sec === 'string' && sec.startsWith('#')) {
+        let c = sec.replace('#', '');
+        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.26)` : `rgba(${r}, ${g}, ${b}, 0.3)`;
+      }
+      return theme.dark ? 'rgba(99, 102, 241, 0.3)' : `${theme.colors.secondary}4D`;
+    })(),
+  },
   aiHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   aiIcon: { fontSize: 24, marginRight: 8 },
   aiTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary },

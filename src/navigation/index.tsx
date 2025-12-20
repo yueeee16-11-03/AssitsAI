@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { Linking } from "react-native";
 import type { RootStackParamList } from "./types";
+import InviteService from "../services/InviteService";
 
 import SplashScreen from "../screens/Core/SplashScreen";
 import OnboardingScreen from "../screens/Auth/OnboardingScreen";
@@ -41,12 +43,15 @@ import CategoryTransactionsScreen from "../screens/Finance/CategoryTransactionsS
 import EditTransactionScreen from "../screens/Finance/EditTransactionScreen";
 import TransactionHistoryScreen from "../screens/Finance/TransactionHistoryScreen";
 import AIProcessingOverlay from "../screens/Finance/AIProcessingOverlay";
+import FamilyOnboardingScreen from "../screens/Family/FamilyOnboardingScreen";
 import FamilyOverviewScreen from "../screens/Family/FamilyOverviewScreen";
+import CreateFamilyScreen from "../screens/Family/CreateFamilyScreen";
 import FamilyChatScreen from "../screens/Family/FamilyChatScreen";
 import FamilyPermissionsScreen from "../screens/Family/FamilyPermissionsScreen";
 import MemberDetailScreen from "../screens/Family/MemberDetailScreen";
 import SharedGoalScreen from "../screens/Family/SharedGoalScreen";
 import InviteMemberScreen from "../screens/Family/InviteMemberScreen";
+import JoinFamilyScreen from "../screens/Family/JoinFamilyScreen";
 
 import BottomTabs from "./BottomTabs";
 
@@ -56,6 +61,39 @@ const navigationRef = createNavigationContainerRef<RootStackParamList>();
 export default function AppNavigation() {
   const [currentRouteName, setCurrentRouteName] = React.useState<string | undefined>(undefined);
   const theme = require('react-native-paper').useTheme();
+
+  // Handle deep links for family invitations
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      try {
+        const inviteCode = InviteService.parseInviteCodeFromURL(url);
+        if (inviteCode) {
+          navigationRef.navigate('JoinFamily', { code: inviteCode });
+        }
+      } catch (error) {
+        console.error('Error handling deep link:', error);
+      }
+    };
+
+    // Handle initial URL when app is launched from deep link
+    const getInitialURL = async () => {
+      const url = await Linking.getInitialURL();
+      if (url != null) {
+        handleDeepLink(url);
+      }
+    };
+
+    // Handle deep links when app is already open
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    getInitialURL();
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const navTheme = {
     dark: theme.dark,
@@ -71,6 +109,7 @@ export default function AppNavigation() {
     fonts: {
       regular: (theme as any).fonts?.regular ?? { fontFamily: 'System' },
       medium: (theme as any).fonts?.medium ?? { fontFamily: 'System' },
+      bold: (theme as any).fonts?.bold ?? { fontFamily: 'System' },
       heavy: (theme as any).fonts?.heavy ?? (theme as any).fonts?.medium ?? { fontFamily: 'System' },
       light: (theme as any).fonts?.light ?? { fontFamily: 'System' },
       thin: (theme as any).fonts?.thin ?? { fontFamily: 'System' },
@@ -124,12 +163,15 @@ export default function AppNavigation() {
         <Stack.Screen name="EditTransaction" component={EditTransactionScreen} />
         <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
         <Stack.Screen name="AIProcessingOverlay" component={AIProcessingOverlay} />
+        <Stack.Screen name="FamilyOnboarding" component={FamilyOnboardingScreen} />
         <Stack.Screen name="FamilyOverview" component={FamilyOverviewScreen} />
+        <Stack.Screen name="CreateFamily" component={CreateFamilyScreen} />
         <Stack.Screen name="FamilyChat" component={FamilyChatScreen} />
         <Stack.Screen name="FamilyPermissions" component={FamilyPermissionsScreen} />
         <Stack.Screen name="MemberDetail" component={MemberDetailScreen} />
         <Stack.Screen name="SharedGoal" component={SharedGoalScreen} />
         <Stack.Screen name="InviteMember" component={InviteMemberScreen} />
+        <Stack.Screen name="JoinFamily" component={JoinFamilyScreen} />
       </Stack.Navigator>
       {/* Global bottom tabs - visible across all stack screens */}
       <BottomTabs navigationRef={navigationRef} currentRouteName={currentRouteName} />

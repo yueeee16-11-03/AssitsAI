@@ -20,6 +20,8 @@ import type { RootStackParamList } from "../../navigation/types";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from 'react-native-paper';
 import { useUserStore } from '../../store/userStore';
+import { useFamilyStore } from '../../store/familyStore';
+import { useInviteStore } from '../../store/inviteStore';
 import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import { useTransactionData } from '../../hooks/useTransactionData';
 import { useHabitStore } from '../../store/habitStore';
@@ -81,7 +83,8 @@ export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const user = useUserStore((s: any) => s.user);
   const { unreadCount } = useUnreadNotificationCount();
-  const displayName = (user && (user.displayName || user.email || user.phoneNumber)) || 'Người dùng';
+  // Prefer Firestore 'name' (merged into userStore), then auth displayName, then email/phone, else fallback
+  const displayName = (user && (user.name || user.displayName || user.email || user.phoneNumber)) || 'Người dùng';
   
   const SCREEN_WIDTH = Dimensions.get('window').width;
   const POPOVER_MAX_WIDTH = 320;
@@ -230,7 +233,36 @@ export default function HomeScreen({ navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.familyButton}
-              onPress={() => navigation.navigate("FamilyOverview")}
+              onPress={async () => {
+                const is = useInviteStore.getState();
+                // Check if there's a pending invite code (from clipboard)
+                if (is.pendingInviteCode) {
+                  const code = is.pendingInviteCode;
+                  // Clear immediately to prevent re-triggering
+                  is.setPendingInviteCode(null);
+                  navigation.navigate('JoinFamily', { code });
+                } else {
+                  // No pending code, check existing families
+                  const fs = useFamilyStore.getState();
+                  if (!fs.families || fs.families.length === 0) {
+                    try {
+                      await fs.initialize();
+                    } catch (err) {
+                      console.warn('Failed to fetch families on press:', err);
+                    }
+                  }
+
+                  const updated = useFamilyStore.getState();
+                  if (updated.families && updated.families.length > 0) {
+                    if (!updated.currentFamily) {
+                      updated.setCurrentFamily(updated.families[0]);
+                    }
+                    navigation.navigate('FamilyOverview');
+                  } else {
+                    navigation.navigate('FamilyOnboarding');
+                  }
+                }
+              }}
             >
               <Icon name="account-group-outline" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>

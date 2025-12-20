@@ -1,0 +1,46 @@
+{
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "darkMode": "Dark Mode",
+    "darkModeDesc": "Dark theme is easier on the eyes",
+    "language": "Language",
+    "notifications": "Notifications",
+    "notificationDaily": "Daily habits",
+    "notificationBudget": "Budget reminders",
+    "notificationAI": "AI updates",
+    "enableNotifications": "Enable notifications",
+    "enableNotificationsDesc": "Receive reminders and updates",
+    "categories": "Categories",
+    "recurringTransactions": "Recurring transactions",
+    "autoBackup": "Auto backup",
+    "autoBackupDesc": "Backs up daily at 2AM",
+    "biometricAuth": "Biometric authentication",
+    "biometricDesc": "Face ID / Touch ID",
+    "walletManagement": "Wallet Management",
+    "walletManagementDesc": "Add, edit or remove wallets & accounts",
+    "version": "Version",
+    "clearCache": "Clear cache",
+    "clearCacheMessage": "Are you sure you want to clear the cache? This will free space but may slow the app on first use.",
+    "clearCacheSuccess": "Cleared 128MB",
+    "resetSettings": "Reset settings",
+    "resetSettingsMessage": "Are you sure you want to reset all settings to defaults?",
+    "resetSettingsSuccess": "Settings reset",
+    "exportData": "Export data",
+    "exportDataDesc": "Download CSV/JSON files",
+    "about": "About",
+    "aboutDesc": "Team, features, contact",
+    "helpCenter": "Help Center",
+    "helpCenterDesc": "FAQ & User guides",
+    "dataSecurity": "Data & Security",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
+  },
+  "profile": {
+    "title": "Profile"
+  },
+  "common": {
+    "edit": "Edit",
+    "save": "Save"
+  }
+}

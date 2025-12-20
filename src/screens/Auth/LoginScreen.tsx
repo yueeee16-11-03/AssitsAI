@@ -79,9 +79,16 @@ export default function LoginScreen({ navigation }: Props) {
       setShowSuccess(true);
       Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       setTimeout(() => {
-        Animated.timing(successAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
+        Animated.timing(successAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(async () => {
           setShowSuccess(false);
-          navigation.replace("Home");
+          const inviteStore = (await import('../../store/inviteStore')).useInviteStore;
+          const pending = inviteStore.getState().pendingInviteCode;
+          if (pending) {
+            inviteStore.getState().setPendingInviteCode(null);
+            navigation.replace('JoinFamily', { code: pending });
+          } else {
+            navigation.replace('Home');
+          }
         });
       }, 900);
     } catch (error) {
@@ -99,9 +106,16 @@ export default function LoginScreen({ navigation }: Props) {
       setShowSuccess(true);
       Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       setTimeout(() => {
-        Animated.timing(successAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
+        Animated.timing(successAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(async () => {
           setShowSuccess(false);
-          navigation.replace("Home");
+          const inviteStore = (await import('../../store/inviteStore')).useInviteStore;
+          const pending = inviteStore.getState().pendingInviteCode;
+          if (pending) {
+            inviteStore.getState().setPendingInviteCode(null);
+            navigation.replace('JoinFamily', { code: pending });
+          } else {
+            navigation.replace('Home');
+          }
         });
       }, 900);
     } catch (error) {
@@ -243,7 +257,7 @@ export default function LoginScreen({ navigation }: Props) {
 const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E0F2F1",
+    backgroundColor: theme.colors.background,
   },
   gradientBackground: {
     position: "absolute",
@@ -257,7 +271,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "rgba(99, 102, 241, 0.15)",
+    backgroundColor: theme.colors.secondary,
+    opacity: 0.15,
   },
   circleBottom: {
     position: "absolute",
@@ -266,7 +281,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     width: 400,
     height: 400,
     borderRadius: 200,
-    backgroundColor: "rgba(139, 92, 246, 0.1)",
+    backgroundColor: theme.colors.secondary,
+    opacity: 0.10,
   },
   scrollContent: {
     flexGrow: 1,
@@ -297,7 +313,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   logoText: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#6366F1",
+    color: theme.colors.primary,
   },
   title: {
     fontSize: 32,
@@ -320,10 +336,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0, 137, 123, 0.08)",
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(0, 137, 123, 0.2)",
+    borderColor: theme.colors.outline || 'rgba(0,0,0,0.07)',
     paddingHorizontal: 16,
   },
   inputIcon: {
@@ -334,7 +350,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
-    color: "#333333",
+    color: theme.colors.onSurface,
   },
   inputError: {
     borderColor: "#EF4444",
@@ -352,26 +368,26 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginTop: 4,
   },
   forgotPasswordText: {
-    color: "#6366F1",
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: "600",
   },
   loginButton: {
-    backgroundColor: "#00897B",
+    backgroundColor: theme.colors.primary,
     padding: 18,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     marginBottom: 24,
-    shadowColor: "#00897B",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
     elevation: 8,
   },
   loginButtonDisabled: {
-    backgroundColor: "rgba(99, 102, 241, 0.5)",
+    opacity: 0.5,
   },
   loginButtonText: {
     color: "#FFFFFF",
@@ -393,29 +409,29 @@ const getStyles = (theme: any) => StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#B2DFDB",
+    backgroundColor: theme.colors.onSurfaceVariant,
   },
   dividerText: {
     marginHorizontal: 16,
-    color: "#999999",
+    color: theme.colors.onSurfaceVariant,
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: "rgba(0, 137, 123, 0.1)",
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 16,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#00897B",
+    borderColor: theme.colors.primary,
     marginBottom: 32,
   },
   googleIconContainer: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -436,11 +452,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
   },
   footerText: {
-    color: "#999999",
+    color: theme.colors.onSurfaceVariant,
     fontSize: 15,
   },
   registerText: {
-    color: "#6366F1",
+    color: theme.colors.primary,
     fontSize: 15,
     fontWeight: "700",
   },

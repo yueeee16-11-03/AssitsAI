@@ -104,11 +104,14 @@ export type RootStackParamList = {
   };
   
   // Family Module Screens
+  FamilyOnboarding: undefined;
   FamilyOverview: undefined;
+  CreateFamily: undefined;
   FamilyChat: undefined;
   FamilyPermissions: undefined;
   MemberDetail: undefined;
   SharedGoal: undefined;
-  InviteMember: undefined;
+  InviteMember: { familyId: string; inviteCode: string };
+  JoinFamily: { code?: string };
 
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import auth from '@react-native-firebase/auth';
 import {
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -23,8 +24,11 @@ export default function SplashScreen({ navigation }: Props) {
   const [logoRotate] = useState(new Animated.Value(0));
   const [textFade] = useState(new Animated.Value(0));
   const [progressWidth] = useState(new Animated.Value(0));
+  const clipboardCheckedRef = useRef(false);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     // Logo animation
     Animated.parallel([
       Animated.spring(logoScale, {
@@ -56,23 +60,77 @@ export default function SplashScreen({ navigation }: Props) {
       useNativeDriver: false,
     }).start();
 
+    // Check clipboard for pending invite code (user may have copied code from landing page before installing)
+    // Only check once on first app startup
+    if (!clipboardCheckedRef.current) {
+      clipboardCheckedRef.current = true;
+      (async () => {
+        try {
+          const Clipboard = (await import('@react-native-clipboard/clipboard')).default;
+          const InviteApi = (await import('../../api/inviteApi')).default;
+          const resp = await InviteApi.parseInviteCodeFromClipboard();
+          if (resp.success && resp.code) {
+            const code = resp.code;
+            // Clear clipboard after detecting code to prevent re-detection
+            await Clipboard.setString('');
+            const current = auth().currentUser;
+            if (current) {
+              // user logged in: save pending code to use when clicking family icon
+              const inviteStore = (await import('../../store/inviteStore')).useInviteStore;
+              inviteStore.getState().setPendingInviteCode(code);
+              // proceed to home, family icon will handle the join
+            } else {
+              // user not logged in: offer to save and go to login/onboarding
+              Alert.alert('Mã mời phát hiện', `Tìm thấy mã mời ${code} trong clipboard. Lưu mã để sử dụng sau khi đăng nhập?`, [
+                { text: 'Bỏ qua', style: 'cancel' },
+                { text: 'Lưu & Đăng nhập', onPress: async () => {
+                  const inviteStore = (await import('../../store/inviteStore')).useInviteStore;
+                  inviteStore.getState().setPendingInviteCode(code);
+                  navigation.replace('Onboarding');
+                } },
+              ]);
+            }
+          }
+        } catch (err) {
+          // ignore clipboard parse errors
+          console.warn('Clipboard check failed', err);
+        }
+      })();
+    }
+
     // Navigate after animation — if user already authenticated, go Home
-    const timer = setTimeout(() => {
+    timer = setTimeout(() => {
       const current = auth().currentUser;
       if (current) {
-        navigation.replace("Home");
+        navigation.replace('Home');
       } else {
-        navigation.replace("Onboarding");
+        navigation.replace('Onboarding');
       }
     }, 3000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [navigation, logoScale, logoRotate, textFade, progressWidth]);
 
   const spin = logoRotate.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "360deg"],
   });
+
+  // Computed styles extracted to avoid inline style lint warnings
+  const logoStyle = {
+    backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)',
+    borderColor: theme.dark ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.4)',
+  } as const;
+
+  const logoRingStyle = {
+    borderColor: theme.dark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.3)'
+  } as const;
+
+  const logoRingOuterStyle = {
+    borderColor: theme.dark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)'
+  } as const; 
 
   return (
     <View style={styles.container}>
@@ -91,11 +149,11 @@ export default function SplashScreen({ navigation }: Props) {
             },
           ]}
         >
-          <View style={[styles.logo, { backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)', borderColor: theme.dark ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.4)' }]}>
+          <View style={[styles.logo, logoStyle]}>
             <Icon name="robot-outline" size={60} color={theme.colors.primary} />
           </View>
-          <View style={[styles.logoRing, { borderColor: theme.dark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.3)' }]} />
-          <View style={[styles.logoRingOuter, { borderColor: theme.dark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)' }]} />
+          <View style={[styles.logoRing, logoRingStyle]} />
+          <View style={[styles.logoRingOuter, logoRingOuterStyle]} />
         </Animated.View>
 
         <Animated.View style={[styles.textContainer, { opacity: textFade }]}>

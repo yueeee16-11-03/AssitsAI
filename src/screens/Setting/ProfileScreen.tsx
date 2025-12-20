@@ -9,33 +9,41 @@ import {
   Switch,
   Animated,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 import type { RootStackParamList } from "../../navigation/types";
 import { useTheme } from 'react-native-paper';
+import { useTranslation } from 'react-i18next';
+import { useUserStore } from '../../store/userStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
 export default function ProfileScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
+  const headerPaddingTop = Math.max(8, insets.top);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   
   // Theme setup
   const theme = useTheme();
+  const { t } = useTranslation();
   const borderColor = theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
   const borderBottomColor = borderColor;
   const secondaryBg = theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,137,123,0.08)';
   const avatarBg = theme.dark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)';
   const avatarBorder = theme.dark ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.3)';
-  const logoutBg = theme.dark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)';
-  const logoutBorder = theme.dark ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.3)';
+  const logoutBg = theme.colors.surface;
+  const logoutBorder = 'rgba(239,68,68,0.12)';
   const dangerColor = '#EF4444';
 
   const [profile, setProfile] = useState({
@@ -60,29 +68,110 @@ export default function ProfileScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const handleSave = () => {
-    setIsEditing(false);
-    Alert.alert("Thành công", "Đã cập nhật thông tin cá nhân");
+  // Load authenticated user's profile from Firestore (if available)
+  const [_loadingProfile, setLoadingProfile] = useState(true);
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchProfile = async () => {
+      try {
+        const current = auth().currentUser;
+        if (!current) {
+          setLoadingProfile(false);
+          return;
+        }
+        const doc = await firestore().collection('users').doc(current.uid).get();
+        if (!mounted) return;
+        if (doc && typeof doc.exists === 'function' ? doc.exists() : doc.exists) {
+          const data = doc.data ? (doc.data() || {}) : {};
+          setProfile(prev => ({
+            ...prev,
+            name: data.name || current.displayName || prev.name,
+            email: data.email || current.email || prev.email,
+            phone: data.phoneNumber || prev.phone,
+            avatar: data.photoURL || prev.avatar,
+            dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+          }));
+        } else {
+          // Fallback to auth() user fields
+          setProfile(prev => ({
+            ...prev,
+            name: current.displayName || prev.name,
+            email: current.email || prev.email,
+            phone: current.phoneNumber || prev.phone,
+          }));
+        }
+      } catch (err) {
+        console.warn('Error fetching user profile:', err);
+      } finally {
+        if (mounted) setLoadingProfile(false);
+      }
+    };
+
+    fetchProfile();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const current = auth().currentUser;
+      if (!current) {
+        Alert.alert("Lỗi", "Người dùng chưa đăng nhập");
+        return;
+      }
+
+      // Persist phone and dateOfBirth to Firestore (merge existing fields)
+      await firestore().collection('users').doc(current.uid).set({
+        phone: profile.phone,
+        dateOfBirth: profile.dateOfBirth,
+      }, { merge: true });
+
+      setIsEditing(false);
+
+      // Update global user state so other screens reflect the change immediately
+      try {
+        const currentStoreUser = useUserStore.getState().user || {};
+        useUserStore.getState().setUser({
+          ...currentStoreUser,
+          phone: profile.phone,
+          dateOfBirth: profile.dateOfBirth,
+        });
+      } catch (err) {
+        console.warn('Error updating user store:', err);
+      }
+
+      Alert.alert("Thành công", "Đã cập nhật thông tin cá nhân");
+    } catch (err) {
+      console.warn('Error saving profile:', err);
+      Alert.alert("Lỗi", "Không thể lưu thông tin. Vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const stats = [
-    { label: "Mục tiêu", value: "5", icon: "bullseye" },
-    { label: "Thói quen", value: "8", icon: "check" },
+    { label: "Mục tiêu", value: "5", icon: "trophy" },
+    { label: "Thói quen", value: "8", icon: "playlist-check" },
     { label: "Streak", value: "15", icon: "fire" },
   ];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor, paddingTop: headerPaddingTop }] }>
         <TouchableOpacity style={[styles.backButton, { backgroundColor: secondaryBg }]} onPress={() => navigation.goBack()}>
           <Text style={[styles.backIcon, { color: theme.colors.primary }]}>←</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.primary }]}>Hồ sơ</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.primary }]}>{t('profile.title')}</Text>
         <TouchableOpacity
           style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
           onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
+          disabled={saving}
         >
-          <Text style={styles.editText}>{isEditing ? "Lưu" : "Sửa"}</Text>
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.editText}>{isEditing ? t('common.save') : t('common.edit')}</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -271,8 +360,11 @@ export default function ProfileScreen({ navigation }: Props) {
               ])
             }
           >
-            <Text style={[styles.logoutText, { color: dangerColor }]}>Đăng xuất</Text>
-          </TouchableOpacity>
+            <View style={styles.logoutRow}>
+              <Icon name="logout" size={16} color={dangerColor} style={styles.logoutIcon} />
+              <Text style={[styles.logoutText, { color: dangerColor }]}>Đăng xuất</Text>
+            </View>
+          </TouchableOpacity>  
         </Animated.View>
         <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
       </ScrollView>
@@ -282,7 +374,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1 },
   backButton: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20 },
   headerTitle: { fontSize: 18, fontWeight: "800" },
@@ -299,6 +391,9 @@ const styles = StyleSheet.create({
   userEmail: { fontSize: 14 },
   statsCard: { borderRadius: 16, padding: 20, marginBottom: 24, justifyContent: "space-around", flexDirection: "row" },
   statItem: { alignItems: "center" },
+  statItemLight: { backgroundColor: "rgba(6,182,212,0.12)", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, minWidth: 88, alignItems: "center" },
+  statItemDark: { backgroundColor: "rgba(99,102,241,0.14)", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, minWidth: 88, alignItems: "center" },
+  statIconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   statIcon: { fontSize: 28, marginBottom: 8 },
   statValue: { fontSize: 24, fontWeight: "900", marginBottom: 4 },
   statLabel: { fontSize: 12 },
@@ -322,4 +417,6 @@ const styles = StyleSheet.create({
   linkArrow: { fontSize: 20 },
   logoutButton: { borderRadius: 12, padding: 16, alignItems: "center", borderWidth: 1 },
   logoutText: { fontWeight: "700", fontSize: 16 },
+  logoutRow: { flexDirection: "row", alignItems: "center" },
+  logoutIcon: { marginRight: 8 },
 });

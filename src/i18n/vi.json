@@ -1,0 +1,46 @@
+{
+  "settings": {
+    "title": "Cài đặt",
+    "appearance": "Giao diện",
+    "darkMode": "Chế độ tối",
+    "darkModeDesc": "Giao diện tối dễ nhìn hơn",
+    "language": "Ngôn ngữ",
+    "notifications": "Thông báo",
+    "notificationDaily": "Thói quen hàng ngày",
+    "notificationBudget": "Nhắc nhở ngân sách",
+    "notificationAI": "Cập nhật từ AI",
+    "enableNotifications": "Bật thông báo",
+    "enableNotificationsDesc": "Nhận nhắc nhở và cập nhật",
+    "categories": "Danh mục chi tiêu",
+    "recurringTransactions": "Giao dịch lặp lại",
+    "autoBackup": "Tự động sao lưu",
+    "autoBackupDesc": "Sao lưu mỗi ngày lúc 2AM",
+    "biometricAuth": "Xác thực sinh học",
+    "biometricDesc": "Face ID / Touch ID",
+    "walletManagement": "Quản lý ví",
+    "walletManagementDesc": "Thêm, sửa, xóa ví & tài khoản",
+    "version": "Phiên bản",
+    "clearCache": "Xóa bộ nhớ đệm",
+    "clearCacheMessage": "Bạn có chắc muốn xóa bộ nhớ đệm? Điều này sẽ giải phóng dung lượng nhưng có thể làm chậm ứng dụng lần đầu sử dụng.",
+    "clearCacheSuccess": "Đã xóa 128MB",
+    "resetSettings": "Đặt lại cài đặt",
+    "resetSettingsMessage": "Bạn có chắc muốn đặt lại tất cả cài đặt về mặc định?",
+    "resetSettingsSuccess": "Đã đặt lại cài đặt",
+    "exportData": "Xuất dữ liệu",
+    "exportDataDesc": "Tải về file CSV/JSON",
+    "about": "Giới thiệu ứng dụng",
+    "aboutDesc": "Team, tính năng, liên hệ",
+    "helpCenter": "Trung tâm trợ giúp",
+    "helpCenterDesc": "FAQ & Hướng dẫn sử dụng",
+    "dataSecurity": "Dữ liệu & Bảo mật",
+    "terms": "Điều khoản dịch vụ",
+    "privacy": "Chính sách bảo mật"
+  },
+  "profile": {
+    "title": "Hồ sơ"
+  },
+  "common": {
+    "edit": "Sửa",
+    "save": "Lưu"
+  }
+}
