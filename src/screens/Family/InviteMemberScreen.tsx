@@ -14,9 +14,11 @@ import { useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
 import { useFamilyStore } from '../../store/familyStore';
 import { useInviteStore } from '../../store/inviteStore';
 import { useInviteMemberLogic } from './hooks/useInviteMemberLogic';
+import familyApi from '../../api/familyApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InviteMember'>;
 
@@ -88,6 +90,7 @@ export default function InviteMemberScreen({ navigation, route }: Props) {
 
   const [qrCodeVisible, setQrCodeVisible] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<PendingInvitation[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [permissionWarningStyle] = useState(() => ({
     backgroundColor: theme.dark
       ? 'rgba(245, 158, 11, 0.15)'
@@ -118,12 +121,89 @@ export default function InviteMemberScreen({ navigation, route }: Props) {
     clearError,
   });
 
+  // 🎯 Hàm xóa nhóm gia đình
+  const handleDeleteFamily = async () => {
+    if (!isOwner || !currentFamily?.id) return;
+
+    Alert.alert(
+      'Xóa nhóm gia đình',
+      `Bạn chắc chắn muốn xóa nhóm "${currentFamily.name}" vĩnh viễn? Hành động này không thể hoàn tác.`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              if (!currentFamily?.id) {
+                Alert.alert('Lỗi', 'Không tìm thấy gia đình');
+                setIsDeleting(false);
+                return;
+              }
+              const result = await familyApi.deleteFamily(currentFamily.id);
+              if (result.success) {
+                Alert.alert('Thành công', 'Đã xóa nhóm gia đình', [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Clear family store
+                      const { clearFamilies } = useFamilyStore.getState();
+                      clearFamilies?.();
+                      
+                      // Navigate to Onboarding để tạo nhóm mới
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Onboarding' as any }],
+                      });
+                    },
+                  },
+                ]);
+              } else {
+                Alert.alert('Lỗi', result.error || 'Không thể xóa nhóm');
+              }
+            } catch (err: any) {
+              Alert.alert('Lỗi', err.message || 'Có lỗi xảy ra');
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 300,
       useNativeDriver: true,
     }).start();
+
+    // ❌ SECURITY CHECK: Verify user is owner before accessing this screen
+    const currentUser = auth().currentUser;
+    if (!currentUser) {
+      Alert.alert('Lỗi', 'Vui lòng đăng nhập trước');
+      navigation.goBack();
+      return;
+    }
+
+    if (!currentFamily?.id) {
+      Alert.alert('Lỗi', 'Không tìm thấy gia đình');
+      navigation.goBack();
+      return;
+    }
+
+    // Check if user is owner
+    const isCurrentUserOwner = currentFamily?.ownerId === currentUser.uid;
+    if (!isCurrentUserOwner) {
+      Alert.alert(
+        'Quyền hạn chế',
+        'Chỉ chủ nhóm mới có quyền truy cập màn hình này',
+        [{ text: 'Quay lại', onPress: () => navigation.goBack() }]
+      );
+      return;
+    }
 
     (async () => {
       if (currentFamily?.id) {
@@ -154,16 +234,18 @@ export default function InviteMemberScreen({ navigation, route }: Props) {
     currentFamily?.id,
     currentFamily?.name,
     currentFamily?.inviteCode,
+    currentFamily?.ownerId,
     initialInviteCode,
     setCurrentInviteCode,
     setFamilyInfo,
     fetchFamilyById,
+    navigation,
   ]);
 
   const familyInfo = {
     name: currentFamily?.name || 'Gia đình của bạn',
-    memberCount: currentFamily?.members?.length || 0,
-    admin: currentFamily?.ownerName || 'Bạn',
+    memberCount: currentFamily?.memberIds?.length || 0,
+    admin: 'Chủ nhóm',
   };
 
   const getTimeUntilExpiry = (expiresAt: string) => {
@@ -526,6 +608,24 @@ export default function InviteMemberScreen({ navigation, route }: Props) {
               Mã mời có hiệu lực 7 ngày. Bạn có thể tạo mã mới hoặc gia hạn lời mời cũ
             </Text>
           </View>
+
+          {/* DELETE FAMILY BUTTON - OWNER ONLY */}
+          {isOwner && (
+            <TouchableOpacity
+              style={[styles.deleteFamilyButton, isDeleting && styles.deleteFamilyButtonDisabled]}
+              onPress={handleDeleteFamily}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Icon name="delete" size={18} color="#FFFFFF" style={styles.deleteIcon} />
+                  <Text style={styles.deleteFamilyButtonText}>Xóa nhóm gia đình</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           <View style={{ height: insets.bottom + TAB_BAR_HEIGHT }} />
         </ScrollView>
@@ -1088,5 +1188,28 @@ const getStyles = (theme: any) =>
       backgroundColor: theme.colors.secondary,
       bottom: -75,
       left: -75,
+    },
+    deleteFamilyButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderRadius: 12,
+      backgroundColor: theme.colors.error || '#EF4444',
+      marginHorizontal: 20,
+      marginTop: 20,
+      marginBottom: 20,
+    },
+    deleteFamilyButtonDisabled: {
+      opacity: 0.7,
+    },
+    deleteIcon: {
+      marginRight: 8,
+    },
+    deleteFamilyButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
     },
   });

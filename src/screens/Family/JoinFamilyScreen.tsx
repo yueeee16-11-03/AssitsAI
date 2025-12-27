@@ -66,7 +66,20 @@ export default function JoinFamilyScreen({ navigation, route }: Props) {
       await addMemberByInviteCode(codeToJoin.toUpperCase());
 
       // Refresh families list
-      await fetchFamilies();
+      const families = await fetchFamilies();
+
+      // 🔑 Set currentFamily từ danh sách mới (join thành công)
+      if (families && families.length > 0) {
+        const { setCurrentFamily } = useFamilyStore.getState();
+        // Ưu tiên: tìm family vừa join (có inviteCode khớp)
+        const justJoinedFamily = families.find(f => f.inviteCode === codeToJoin.toUpperCase());
+        if (justJoinedFamily) {
+          setCurrentFamily(justJoinedFamily);
+        } else {
+          // Fallback: lấy family đầu tiên
+          setCurrentFamily(families[0]);
+        }
+      }
 
       // Show success message
       Alert.alert(
@@ -76,8 +89,14 @@ export default function JoinFamilyScreen({ navigation, route }: Props) {
           {
             text: 'OK',
             onPress: () => {
-              // Navigate to Family Overview
-              navigation.replace('FamilyOverview');
+              // Navigate to Family Overview with familyId
+              const families = useFamilyStore.getState().families || [];
+              const justJoinedFamily = families.find(f => f.inviteCode === codeToJoin.toUpperCase());
+              if (justJoinedFamily?.id) {
+                navigation.replace('FamilyOverview', { familyId: justJoinedFamily.id });
+              } else {
+                navigation.replace('FamilyOverview', { familyId: families?.[0]?.id || '' });
+              }
             },
           },
         ]
@@ -239,7 +258,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
   },

@@ -105,12 +105,16 @@ export type RootStackParamList = {
   
   // Family Module Screens
   FamilyOnboarding: undefined;
-  FamilyOverview: undefined;
+  FamilyOverview: { familyId: string };
   CreateFamily: undefined;
   FamilyChat: undefined;
-  FamilyPermissions: undefined;
+  FamilyPermissions: { memberId?: string };
   MemberDetail: undefined;
-  SharedGoal: undefined;
+  SharedGoal: undefined; 
+  SharedWallet: undefined;
+  CreateSharedWallet: undefined;
+  SharedWalletTransaction: { walletId: string; walletName: string };
+  SharedBudget: undefined;
   InviteMember: { familyId: string; inviteCode: string };
   JoinFamily: { code?: string };
 

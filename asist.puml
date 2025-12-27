@@ -1,0 +1,55 @@
+@startuml
+title Sequence: Giám Sát & Bắt Lỗi (Sentry Integration)
+autonumber
+
+' --- CẤU HÌNH ---
+skinparam ParticipantPadding 100
+skinparam BoxPadding 30
+skinparam responseMessageBelowArrow false
+skinparam sequenceMessageAlign center
+skinparam linetype ortho
+hide footbox
+
+skinparam participant {
+    BackgroundColor White
+    BorderColor #C0392B
+    RoundCorner 5
+}
+skinparam sequence {
+    ArrowColor #C0392B
+    LifeLineBorderColor #95A5A6
+}
+
+' --- THÀNH PHẦN ---
+actor "User" as User
+participant "App Mobile" as App
+participant "Sentry / Logger" as Monitor
+actor "Developer" as Dev
+
+' --- LUỒNG XỬ LÝ ---
+activate User
+User -> App: Thao tác gây lỗi (VD: Null Pointer)
+activate App
+
+' 1. Ứng dụng bị Crash
+App -> App: Runtime Exception Occurs!
+
+' 2. SDK Tự động bắt lỗi
+App -> Monitor: Auto Capture:\nStacktrace + Device Info + Breadcrumbs
+activate Monitor
+
+' App có thể tự khởi động lại hoặc thông báo User
+App --> User: Hiển thị: "Đã có lỗi xảy ra"
+deactivate App
+
+' 3. Xử lý tại Server Log
+Monitor -> Monitor: Grouping Error + Analyze Impact
+
+' 4. Cảnh báo Dev
+Monitor -> Dev: Alert (Email/Slack/Dashboard)
+note right: Dev nhận tin: "Lỗi nghiêm trọng tại màn hình X"
+
+deactivate Monitor
+deactivate User
+
+@enduml

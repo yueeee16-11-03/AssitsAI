@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // 1. CÁC HÀM TIỆN ÍCH (HELPER FUNCTIONS)
+    // =========================================================
+
+    // Kiểm tra user đã đăng nhập
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Kiểm tra có phải chính chủ user đó không (cho User Profile)
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Kiểm tra có phải Chủ gia đình (Owner)
+    function isFamilyOwner(familyData) {
+      return isSignedIn() && familyData.ownerId == request.auth.uid;
+    }
+
+    // Kiểm tra có phải Thành viên gia đình (Member)
+    // (Kiểm tra xem UID có nằm trong mảy memberIds hay không)
+    function isFamilyMember(familyData) {
+      return isSignedIn() 
+             && "memberIds" in familyData 
+             && (request.auth.uid in familyData.memberIds);
+    }
+
+    // =========================================================
+    // 2. RULES CHO USERS (CÁ NHÂN)
+    // =========================================================
+
+    match /users/{userId} {
+      // 1. Cho phép User đọc/ghi profile của chính mình
+      allow read, write: if isUser(userId);
+      
+      // [BỔ SUNG] Cho phép update familyIds khi xóa family (từ family owner)
+      // Dùng diff() để chỉ cho phép thay đổi familyIds
+      allow update: if isSignedIn() 
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['familyIds', 'updatedAt']);
+
+      // 2. TỰ ĐỘNG cho phép đọc/ghi TẤT CẢ subcollections bên trong
+      // (Bao gồm: transactions, habits, checkIns, budgets, wallets, notifications, recurringTransactions...)
+      // Dùng cú pháp wildcard {document=**} để không cần liệt kê từng cái.
+      match /{document=**} {
+        allow read, write: if isUser(userId);
+      }
+    }
+
+    // =========================================================
+    // 3. RULES CHO FAMILY (GIA ĐÌNH)
+    // =========================================================
+
+    match /families/{familyId} {
+      
+      // 3.1 QUYỀN ĐỌC (READ) & TÌM KIẾM (LIST)
+      // - Get: Đọc 1 document cụ thể -> Chỉ thành viên mới đọc được.
+      // - List: Tìm kiếm danh sách -> Cho phép tìm nếu document có mã mời (Để phục vụ tính năng Join) HOẶC là thành viên.
+      allow get: if isFamilyMember(resource.data);
+      allow list: if resource.data.inviteCode != null || isFamilyMember(resource.data);
+
+      // 3.2 QUYỀN TẠO (CREATE)
+      // - Bắt buộc: Người tạo phải set ownerId là chính mình & tự thêm mình vào memberIds.
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.memberIds.hasAll([request.auth.uid]);
+
+      // 3.3 QUYỀN CẬP NHẬT (UPDATE)
+      // - Case 1: Owner có toàn quyền sửa.
+      // - Case 2: Member được sửa (để cập nhật thông tin), NHƯNG KHÔNG ĐƯỢC đổi Owner.
+      // - Case 3: User KHÔNG có trong memberIds cũ nhưng SẼ có trong memberIds mới (JOIN qua code)
+      //   + Kiểm tra: UID không có trong old data nhưng có trong new data
+      //   + Bảo vệ: Không được thay đổi owner/code/name (chỉ add chính mình)
+      allow update: if isFamilyOwner(resource.data)
+                    || (isFamilyMember(resource.data) && request.resource.data.ownerId == resource.data.ownerId)
+                    || (!(request.auth.uid in resource.data.memberIds)
+                        && request.auth.uid in request.resource.data.memberIds
+                        && request.resource.data.ownerId == resource.data.ownerId
+                        && request.resource.data.inviteCode == resource.data.inviteCode
+                        && request.resource.data.name == resource.data.name);
+
+      // 3.4 QUYỀN XÓA (DELETE)
+      // - Chỉ Owner mới được xóa gia đình.
+      // - Dùng resource.data thay vì get() để tránh lỗi
+      allow delete: if resource.data.ownerId == request.auth.uid;
+
+
+      // --- SUBCOLLECTION: Family Transactions (Chi tiêu chung) ---
+      match /transactions/{transactionId} {
+         // Rule: Chỉ thành viên của gia đình đó mới được xem/sửa/xoá chi tiêu chung.
+         // Lưu ý: Hàm get() tốn 1 lượt đọc database để kiểm tra quyền từ document cha.
+         allow read, write: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
+      }
+
+      // --- SUBCOLLECTION: Family Members (Thành viên gia đình) ---
+      match /members/{memberId} {
+         // Rule: Chỉ thành viên của gia đình đó mới được xem, Owner được quản lý
+         allow read: if isFamilyMember(resource.data);
+      }
+    }
+
+    // =========================================================
+    // 4. RULES CHO FAMILY_MEMBERS (ROOT LEVEL)
+    // =========================================================
+    match /family_members/{memberId} {
+      
+      // 🆕 LIST: Cho phép query members của family mà user là thành viên
+      // FIX: Thêm allow list để cho phép getFamilyMembers() query
+      allow list: if isSignedIn() && resource.data.familyId != null;
+      
+      // Create: Cho phép nếu user tạo member cho chính mình HOẶC user là owner
+      // FIX: Thêm null check để tránh lỗi getFamilyData
+      allow create: if isSignedIn() 
+                    && (request.resource.data.userId == request.auth.uid 
+                        || (request.resource.data.familyId != null 
+                            && isFamilyOwner(get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data)));
+      
+      // Read: User có thể đọc members của family mình tham gia
+      allow read: if isSignedIn() 
+                  && (resource.data.familyId != null
+                      && isFamilyMember(get(/databases/$(database)/documents/families/$(resource.data.familyId)).data));
+      
+      // Update: Chỉ owner/admin hoặc chính user đó mới được update
+      allow update: if isSignedIn() 
+                    && (resource.data.familyId != null
+                        && (isFamilyOwner(get(/databases/$(database)/documents/families/$(resource.data.familyId)).data)
+                            || request.auth.uid == resource.data.userId));
+      
+      // Delete: Chỉ owner hoặc user đó mới được xóa
+      allow delete: if isSignedIn() 
+                    && (resource.data.familyId != null
+                        && (isFamilyOwner(get(/databases/$(database)/documents/families/$(resource.data.familyId)).data)
+                            || request.auth.uid == resource.data.userId));
+    }
+
+    // =========================================================
+    // 5. RULES CHO CHAT & MESSAGES
+    // =========================================================
+
+    // Lịch sử chat (Danh sách các cuộc trò chuyện)
+    match /chatHistories/{chatId} {
+      // Create: Cho phép nếu userId trong data gửi lên là của mình
+      allow create: if request.auth.uid == request.resource.data.userId;
+      
+      // Read/Update/Delete: Cho phép nếu data hiện tại thuộc về mình
+      allow read, update, delete: if request.auth.uid == resource.data.userId;
+    }
+
+    // Tin nhắn chi tiết bên trong
+    match /chatMessages/{messageId} {
+      // Create: Chỉ được gửi tin nhắn dưới danh nghĩa của mình
+      allow create: if request.auth.uid == request.resource.data.userId;
+      
+      // Read: Chỉ đọc tin nhắn của mình
+      allow read: if request.auth.uid == resource.data.userId;
+    }
+  }
+}

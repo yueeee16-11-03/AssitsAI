@@ -5,7 +5,8 @@
  */
 
 import { create } from 'zustand';
-import { FamilyModel, FamilyMember } from '../services/FamilyService';
+import { FamilyModel } from '../services/FamilyService';
+import { FamilyMember } from '../services/FamilyMemberService';
 import FamilyApi from '../api/familyApi';
 
 interface FamilyState {
@@ -35,6 +36,9 @@ interface FamilyState {
 
   // Delete operation
   deleteFamily: (familyId: string) => Promise<void>;
+
+  // Clear state (khi xóa nhóm)
+  clearFamilies: () => void;
 
   // Set current family
   setCurrentFamily: (family: FamilyModel | null) => void;
@@ -199,6 +203,10 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
 
   setCurrentFamily: (family) => {
     set({ currentFamily: family });
+  },
+
+  clearFamilies: () => {
+    set({ families: [], currentFamily: null, error: null });
   },
 
   clearError: () => {

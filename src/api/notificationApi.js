@@ -44,20 +44,54 @@ class NotificationApi {
 
   subscribe(onUpdate, limit = 200) {
     const currentUser = auth().currentUser;
-    if (!currentUser) throw new Error('Người dùng chưa đăng nhập');
+    if (!currentUser) {
+      // Không throw, return unsubscribe function yang aman
+      return () => {};
+    }
 
-    const sub = firestore()
-      .collection('users')
-      .doc(currentUser.uid)
-      .collection('notifications')
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .onSnapshot(snapshot => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        onUpdate(items);
-      });
+    let unsubscribeListener = null;
 
-    return sub;
+    const setupListener = () => {
+      const user = auth().currentUser;
+      // Jika user berubah/logout, jangan setup listener baru
+      if (!user) {
+        return;
+      }
+
+      unsubscribeListener = firestore()
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .onSnapshot(
+          snapshot => {
+            // Kiểm tra snapshot có tồn tại và có docs không
+            if (snapshot && snapshot.docs) {
+              const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              onUpdate(items);
+            }
+          },
+          error => {
+            // Xử lý lỗi từ listener (ví dụ: permission denied sau khi logout)
+            console.warn('Notification listener error:', error.code, error.message);
+            // Không throw error vì listener sẽ tự unsubscribe nếu permission bị từ chối
+            if (error.code === 'permission-denied') {
+              // Silent fail - user đã logout hoặc không có quyền truy cập
+              return;
+            }
+          }
+        );
+    };
+
+    setupListener();
+
+    // Return unsubscribe function
+    return () => {
+      if (unsubscribeListener) {
+        unsubscribeListener();
+      }
+    };
   }
 
   async markAsRead(id) {

@@ -19,12 +19,14 @@ import type { RootStackParamList } from "../../navigation/types";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from 'react-native-paper';
+import auth from '@react-native-firebase/auth';
 import { useUserStore } from '../../store/userStore';
 import { useFamilyStore } from '../../store/familyStore';
 import { useInviteStore } from '../../store/inviteStore';
 import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import { useTransactionData } from '../../hooks/useTransactionData';
 import { useHabitStore } from '../../store/habitStore';
+import FamilyMemberService from '../../services/FamilyMemberService';
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
@@ -96,6 +98,19 @@ export default function HomeScreen({ navigation }: Props) {
   const CHART_HEIGHT = 100; // px height used for bar animations (reduced so 100% bars don't overflow)
 
   const barAnimsRef = React.useRef(Array(7).fill(0).map(() => new Animated.Value(0))).current;
+
+  // 🔄 Reset family store when user changes to prevent stale data for new user
+  React.useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged(async (user) => {
+      if (user) {
+        // Reset currentFamily to force fresh load from store
+        const { setCurrentFamily, clearError } = useFamilyStore.getState();
+        setCurrentFamily(null);
+        clearError();
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // We'll animate based on computed percentages below; initialize with zeros
   React.useEffect(() => {
@@ -242,23 +257,24 @@ export default function HomeScreen({ navigation }: Props) {
                   is.setPendingInviteCode(null);
                   navigation.navigate('JoinFamily', { code });
                 } else {
-                  // No pending code, check existing families
-                  const fs = useFamilyStore.getState();
-                  if (!fs.families || fs.families.length === 0) {
-                    try {
-                      await fs.initialize();
-                    } catch (err) {
-                      console.warn('Failed to fetch families on press:', err);
-                    }
-                  }
+                  // 🧭 LUỒNG LOGIC CHUẨN:
+                  // 1️⃣ Query family_members WHERE userId == currentUserId LIMIT 1
+                  // ➡️ Để xác định user thuộc gia đình nào
+                  try {
+                    const userFamily = await FamilyMemberService.getUserFamily();
 
-                  const updated = useFamilyStore.getState();
-                  if (updated.families && updated.families.length > 0) {
-                    if (!updated.currentFamily) {
-                      updated.setCurrentFamily(updated.families[0]);
+                    if (userFamily && userFamily.familyId) {
+                      // ✅ CÓ RECORD: User đã thuộc gia đình này
+                      console.log('✅ User belongs to family:', userFamily.familyId);
+                      navigation.navigate('FamilyOverview', { familyId: userFamily.familyId });
+                    } else {
+                      // ❌ KHÔNG CÓ RECORD: User chưa thuộc gia đình nào
+                      console.log('⚠️ User does not belong to any family');
+                      navigation.navigate('FamilyOnboarding');
                     }
-                    navigation.navigate('FamilyOverview');
-                  } else {
+                  } catch (error) {
+                    console.error('❌ Error checking user family:', error);
+                    // Fallback to onboarding on error
                     navigation.navigate('FamilyOnboarding');
                   }
                 }

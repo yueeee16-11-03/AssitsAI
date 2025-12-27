@@ -50,6 +50,10 @@ import FamilyChatScreen from "../screens/Family/FamilyChatScreen";
 import FamilyPermissionsScreen from "../screens/Family/FamilyPermissionsScreen";
 import MemberDetailScreen from "../screens/Family/MemberDetailScreen";
 import SharedGoalScreen from "../screens/Family/SharedGoalScreen";
+import SharedWalletScreen from "../screens/Family/SharedWalletScreen";
+import CreateSharedWalletScreen from "../screens/Family/CreateSharedWalletScreen";
+import SharedWalletTransactionScreen from "../screens/Family/SharedWalletTransactionScreen";
+import SharedBudgetScreen from "../screens/Family/SharedBudgetScreen";
 import InviteMemberScreen from "../screens/Family/InviteMemberScreen";
 import JoinFamilyScreen from "../screens/Family/JoinFamilyScreen";
 
@@ -170,6 +174,10 @@ export default function AppNavigation() {
         <Stack.Screen name="FamilyPermissions" component={FamilyPermissionsScreen} />
         <Stack.Screen name="MemberDetail" component={MemberDetailScreen} />
         <Stack.Screen name="SharedGoal" component={SharedGoalScreen} />
+        <Stack.Screen name="SharedWallet" component={SharedWalletScreen} />
+        <Stack.Screen name="CreateSharedWallet" component={CreateSharedWalletScreen} />
+        <Stack.Screen name="SharedWalletTransaction" component={SharedWalletTransactionScreen} />
+        <Stack.Screen name="SharedBudget" component={SharedBudgetScreen} />
         <Stack.Screen name="InviteMember" component={InviteMemberScreen} />
         <Stack.Screen name="JoinFamily" component={JoinFamilyScreen} />
       </Stack.Navigator>

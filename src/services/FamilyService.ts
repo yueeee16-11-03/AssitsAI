@@ -9,16 +9,6 @@ import auth from '@react-native-firebase/auth';
 
 // --- Interfaces ---
 
-export interface FamilyMember {
-  userId: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: 'owner' | 'member';
-  joinedAt: Date | any; // Chấp nhận cả Date JS và Timestamp Firestore
-  color?: string;
-}
-
 export interface FamilyModel {
   id?: string;
   name: string;
@@ -28,10 +18,8 @@ export interface FamilyModel {
   // [QUAN TRỌNG] 2 trường này dùng để check Security Rules
   ownerId: string;        
   memberIds: string[];    
-  // -----------------------------------------------------
-
-  ownerName?: string;
-  members: FamilyMember[]; // Dùng để hiển thị UI chi tiết
+  // ----- CHUYỂN sang family_members collection -----
+  
   inviteCode: string;
   createdAt?: Date | any;
   updatedAt?: Date | any;
@@ -47,6 +35,10 @@ class FamilyService {
 
   private getUsersRef() {
     return firestore().collection('users');
+  }
+
+  private getFamilyMembersRef() {
+    return firestore().collection('family_members');
   }
 
   private getCurrentUser() {
@@ -69,6 +61,7 @@ class FamilyService {
   /**
    * 1. Tạo gia đình mới
    * FIX LỖI: Đã thêm ownerId và memberIds để vượt qua Rule
+   * NOTE: Thành viên được quản lý qua family_members collection
    */
   async createFamily(
     name: string,
@@ -78,22 +71,7 @@ class FamilyService {
     const user = this.getCurrentUser();
     const inviteCode = this.generateInviteCode();
 
-    // 1. Lấy thông tin User để làm Profile chủ nhóm
-    const userDoc = await this.getUsersRef().doc(user.uid).get();
-    const userData = userDoc.data() as any;
-
-    const ownerMember: FamilyMember = {
-      userId: user.uid,
-      name: userData?.name || user.displayName || 'Chủ nhóm',
-      email: user.email || '',
-      avatar: userData?.avatar || '',
-      role: 'owner',
-      joinedAt: new Date(),
-      color: userData?.color || '#00796B',
-    };
-
-    // 2. Chuẩn bị dữ liệu Family
-    // ref.doc() không tham số sẽ tự tạo ID ngẫu nhiên
+    // Chuẩn bị dữ liệu Family (không chứa members)
     const newFamilyRef = this.getFamiliesRef().doc(); 
     const familyId = newFamilyRef.id;
 
@@ -106,27 +84,49 @@ class FamilyService {
       ownerId: user.uid,
       memberIds: [user.uid],
       // --------------------------------
-      ownerName: ownerMember.name,
-      members: [ownerMember],
       inviteCode,
       createdAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     };
 
-    // 3. Dùng BATCH để lưu atomic (an toàn dữ liệu)
+    // 🎯 BATCH WRITE: TẠO FAMILY + MEMBER + UPDATE USER (ATOMIC)
     const batch = firestore().batch();
 
-    // - Tạo Family
+    // BƯỚC 1: Tạo Family document
     batch.set(newFamilyRef, familyData);
 
-    // - Cập nhật User (thêm familyId vào danh sách)
+    // BƯỚC 2: Tạo family_member cho owner (TRONG CÙNG BATCH)
+    // Dùng helper để tạo memberId
+    const memberId = `${familyId}_${user.uid}`;
+    const memberRef = this.getFamilyMembersRef().doc(memberId);
+    
+    // Lấy user data để fill thông tin member
+    const userDoc = await this.getUsersRef().doc(user.uid).get();
+    const userData = userDoc.data() as any;
+    
+    const memberData = {
+      id: memberId,
+      familyId,
+      userId: user.uid,
+      name: userData?.name || 'Chủ nhóm',
+      email: userData?.email || '',
+      avatar: userData?.avatar || '',
+      color: userData?.color || '#FF9800',
+      role: 'owner',
+      isChild: false,
+      joinedAt: firestore.FieldValue.serverTimestamp(),
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    };
+    batch.set(memberRef, memberData);
+
+    // BƯỚC 3: Cập nhật User (thêm familyId vào danh sách)
     const userRef = this.getUsersRef().doc(user.uid);
     batch.update(userRef, {
       familyIds: firestore.FieldValue.arrayUnion(familyId),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     });
 
-    // Thực thi
+    // 🎯 ATOMIC COMMIT - CẢ 3 BƯỚC CÙNG LÚC
     await batch.commit();
 
     // Trả về dữ liệu đã format Date để UI dùng ngay
@@ -229,9 +229,9 @@ class FamilyService {
 
   /**
    * 5. Tham gia gia đình bằng mã mời
-   * QUAN TRỌNG: Cập nhật cả 'members' và 'memberIds'
+   * NOTE: Thành viên được tạo trong family_members collection
    */
-  async addMemberByInviteCode(inviteCode: string): Promise<FamilyMember> {
+  async addMemberByInviteCode(inviteCode: string): Promise<any> {
     const user = this.getCurrentUser();
 
     // Tìm gia đình có mã mời khớp
@@ -252,92 +252,34 @@ class FamilyService {
       throw new Error('Bạn đã là thành viên của gia đình này rồi.');
     }
 
-    // Lấy thông tin User
-    const userDoc = await this.getUsersRef().doc(user.uid).get();
-    const userData = userDoc.data() as any;
-
-    const newMember: FamilyMember = {
-      userId: user.uid,
-      name: userData?.name || user.displayName || 'Thành viên mới',
-      email: user.email || '',
-      avatar: userData?.avatar || '',
-      role: 'member',
-      joinedAt: new Date(),
-      color: userData?.color || '#FF9800',
-    };
-
-    const batch = firestore().batch();
-    const familyRef = this.getFamiliesRef().doc(familyDoc.id);
-
-    // Update Family: Thêm vào mảng members (UI) VÀ mảng memberIds (Rule)
-    batch.update(familyRef, {
-      members: firestore.FieldValue.arrayUnion(newMember),
-      memberIds: firestore.FieldValue.arrayUnion(user.uid),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Update User: Thêm familyId
-    const userRef = this.getUsersRef().doc(user.uid);
-    batch.update(userRef, {
-      familyIds: firestore.FieldValue.arrayUnion(familyDoc.id),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
-
-    await batch.commit();
+    // Import FamilyMemberService để tạo family_member
+    // ✅ Pass skipPermissionCheck=true vì invite code đã verify quyền rồi
+    const FamilyMemberService = require('./FamilyMemberService').default;
+    const newMember = await FamilyMemberService.createFamilyMember(
+      familyDoc.id,
+      user.uid,
+      'member',
+      undefined,  // spendingLimit
+      false,      // isChild
+      true        // skipPermissionCheck ← invite code đã verify!
+    );
 
     return newMember;
   }
 
   /**
    * 6. Xóa thành viên (Rời nhóm hoặc bị kick)
+   * NOTE: Xóa từ family_members collection qua FamilyMemberService
    */
   async removeMember(familyId: string, targetUserId: string): Promise<void> {
-    const currentUser = this.getCurrentUser();
-    
-    const familyRef = this.getFamiliesRef().doc(familyId);
-    const familyDoc = await familyRef.get();
-    if (!familyDoc.exists) throw new Error('Không tìm thấy gia đình');
-    
-    const familyData = familyDoc.data() as FamilyModel;
-
-    // Logic quyền hạn:
-    // - Owner có thể xóa bất kỳ ai (trừ chính mình ở hàm deleteFamily)
-    // - Member tự xóa chính mình (Rời nhóm)
-    const isOwner = familyData.ownerId === currentUser.uid;
-    const isSelf = currentUser.uid === targetUserId;
-
-    if (!isOwner && !isSelf) {
-      throw new Error('Bạn không có quyền xóa thành viên này.');
-    }
-
-    if (familyData.ownerId === targetUserId) {
-      throw new Error('Chủ nhóm không thể rời nhóm (Hãy giải tán nhóm hoặc chuyển quyền).');
-    }
-
-    // Lọc bỏ member khỏi mảng object
-    const updatedMembers = familyData.members.filter(m => m.userId !== targetUserId);
-
-    const batch = firestore().batch();
-
-    // Update Family
-    batch.update(familyRef, {
-      members: updatedMembers, // Ghi đè mảng mới
-      memberIds: firestore.FieldValue.arrayRemove(targetUserId), // Xóa ID khỏi mảng permission
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Update User bị xóa
-    const targetUserRef = this.getUsersRef().doc(targetUserId);
-    batch.update(targetUserRef, {
-      familyIds: firestore.FieldValue.arrayRemove(familyId),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
-
-    await batch.commit();
+    // Import FamilyMemberService để xóa family_member
+    const FamilyMemberService = require('./FamilyMemberService').default;
+    await FamilyMemberService.removeMember(familyId, targetUserId);
   }
 
   /**
    * 7. Giải tán (Xóa) gia đình
+   * NOTE: Xóa sạch tất cả: family document, family_members, subcollections (transactions, wallets, budgets, habits...)
    */
   async deleteFamily(familyId: string): Promise<void> {
     const user = this.getCurrentUser();
@@ -352,21 +294,46 @@ class FamilyService {
       throw new Error('Chỉ chủ nhóm mới có thể xóa gia đình.');
     }
 
-    const batch = firestore().batch();
+    // Step 1: Xóa TẤT CẢ subcollections của family
+    const subcollections = ['transactions', 'wallets', 'budgets', 'members', 'habits'];
+    for (const subcol of subcollections) {
+      const subcollectionRef = familyRef.collection(subcol);
+      const snapshot = await subcollectionRef.get();
+      
+      for (const doc of snapshot.docs) {
+        // Nếu subcollection có nested subcollections, xóa nó trước
+        if (subcol === 'habits') {
+          const logsSnapshot = await doc.ref.collection('logs').get();
+          for (const logDoc of logsSnapshot.docs) {
+            await logDoc.ref.delete();
+          }
+        }
+        await doc.ref.delete();
+      }
+    }
 
-    // Xóa familyId khỏi profile của TẤT CẢ thành viên
-    // (Lưu ý: Batch giới hạn 500 operations, nếu nhóm > 500 người cần chia nhỏ)
+    // Step 2: Xóa familyId khỏi profile của TẤT CẢ thành viên (trong users collection)
+    const batch = firestore().batch();
     familyData.memberIds.forEach((memberId) => {
       const memberRef = this.getUsersRef().doc(memberId);
       batch.update(memberRef, {
         familyIds: firestore.FieldValue.arrayRemove(familyId)
       });
     });
-
-    // Xóa document Family
+    
+    // Step 3: Xóa family document cuối cùng
     batch.delete(familyRef);
-
     await batch.commit();
+
+    // Step 4: Xóa tất cả family_members từ root collection
+    const familyMembersRef = this.getFamilyMembersRef();
+    const familyMembersSnapshot = await familyMembersRef
+      .where('familyId', '==', familyId)
+      .get();
+    
+    for (const doc of familyMembersSnapshot.docs) {
+      await doc.ref.delete();
+    }
   }
 }
 

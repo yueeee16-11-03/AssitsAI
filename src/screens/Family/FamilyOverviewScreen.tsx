@@ -6,41 +6,52 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Alert,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import type { FamilyMember } from "../../services/FamilyMemberService";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
+import { useFamilyStore } from "../../store/familyStore";
+import { useFamilyMembers, useFamilyMemberStore } from "../../store/familyMemberStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FamilyOverview">;
 
-interface FamilyMember {
-  id: string;
-  name: string;
-  avatar: string;
-  role: string;
-  finance: {
+// Using FamilyMember from FamilyService
+interface FamilyMemberUI extends FamilyMember {
+  finance?: {
     income: number;
     expense: number;
     saving: number;
   };
-  habits: {
+  habits?: {
     completed: number;
     total: number;
     streak: number;
   };
-  goals: number;
-  color: string;
+  goals?: number;
 }
 
-export default function FamilyOverviewScreen({ navigation }: Props) {
+export default function FamilyOverviewScreen({ navigation, route }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const theme = useTheme();
   const styles = getStyles(theme);
+  const { familyId } = route.params;
+  const { families, currentFamily, setCurrentFamily, fetchFamilyById } = useFamilyStore();
+  const { fetchFamilyMembers } = useFamilyMemberStore();
+  
+  // Load the specific family based on familyId from route
+  const selectedFamily = React.useMemo(() => {
+    return families.find(f => f.id === familyId) || currentFamily;
+  }, [familyId, families, currentFamily]);
+
+  const familyMembersFromStore = useFamilyMembers(selectedFamily?.id || '');
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -50,67 +61,215 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
     }).start();
   }, [fadeAnim]);
 
-  const familyMembers: FamilyMember[] = [
-    {
-      id: "1",
-      name: "Bố",
-      avatar: "account",
-      role: "Trụ cột gia đình",
-      finance: { income: 25000000, expense: 18000000, saving: 7000000 },
-      habits: { completed: 4, total: 5, streak: 15 },
-      goals: 3,
-      color: "#6366F1",
-    },
-    {
-      id: "2",
-      name: "Mẹ",
-      avatar: "account-outline",
-      role: "Quản lý tài chính",
-      finance: { income: 15000000, expense: 12000000, saving: 3000000 },
-      habits: { completed: 5, total: 5, streak: 20 },
-      goals: 4,
-      color: "#EC4899",
-    },
-    {
-      id: "3",
-      name: "Con trai",
-      avatar: "human-child",
-      role: "Học sinh",
-      finance: { income: 2000000, expense: 1500000, saving: 500000 },
-      habits: { completed: 3, total: 4, streak: 8 },
-      goals: 2,
-      color: "#10B981",
-    },
-    {
-      id: "4",
-      name: "Con gái",
-      avatar: "human-female",
-      role: "Học sinh",
-      finance: { income: 1500000, expense: 1200000, saving: 300000 },
-      habits: { completed: 4, total: 4, streak: 12 },
-      goals: 3,
-      color: "#F59E0B",
-    },
-  ];
+  // 🔐 Load the specific family if not in store
+  React.useEffect(() => {
+    if (familyId && selectedFamily?.id !== familyId) {
+      // Family not in store, try to fetch it
+      fetchFamilyById(familyId).catch(err => {
+        console.warn('Failed to fetch family:', err);
+      });
+    } else if (familyId && !currentFamily) {
+      // Set current family if not set
+      setCurrentFamily(selectedFamily || null);
+    }
+  }, [familyId, selectedFamily, currentFamily, fetchFamilyById, setCurrentFamily]);
 
-  const totalIncome = familyMembers.reduce((sum, m) => sum + m.finance.income, 0);
-  const totalExpense = familyMembers.reduce((sum, m) => sum + m.finance.expense, 0);
-  const totalSaving = familyMembers.reduce((sum, m) => sum + m.finance.saving, 0);
+  // 📥 Fetch family members when selectedFamily changes
+  React.useEffect(() => {
+    console.log('📥 useEffect triggered for fetchFamilyMembers:', {
+      selectedFamilyId: selectedFamily?.id,
+      hasFamilyId: !!selectedFamily?.id,
+    });
+
+    if (selectedFamily?.id) {
+      console.log('🔄 Calling fetchFamilyMembers with familyId:', selectedFamily.id);
+      const familyIdToFetch = selectedFamily.id;
+      fetchFamilyMembers(familyIdToFetch)
+        .then(() => {
+          console.log('✅ Members fetched successfully');
+          const allMembers = useFamilyMemberStore.getState().members;
+          const fromStore = allMembers ? allMembers[familyIdToFetch] : undefined;
+          console.log('📦 Members in store after fetch:', {
+            familyId: familyIdToFetch,
+            count: fromStore?.length || 0,
+            data: fromStore,
+          });
+        })
+        .catch(err => {
+          console.error('❌ Failed to fetch family members:', err);
+        });
+    } else {
+      console.log('⚠️ selectedFamily.id is empty or undefined');
+    }
+  }, [selectedFamily?.id, fetchFamilyMembers]);
+
+  // 🔐 CRITICAL: Check if user is member of this family
+  React.useEffect(() => {
+    const currentUser = auth().currentUser;
+    
+    // Check 1: User must be logged in
+    if (!currentUser) {
+      Alert.alert('Lỗi', 'Vui lòng đăng nhập');
+      navigation.goBack();
+      return;
+    }
+
+    // Check 2: Family must exist
+    if (!selectedFamily?.id) {
+      Alert.alert('Lỗi', 'Không tìm thấy gia đình');
+      navigation.goBack();
+      return;
+    }
+
+    // Check 3: ⭐ User MUST be member of family (either owner or member)
+    const isMemberOfFamily = selectedFamily?.memberIds?.includes(currentUser.uid) || 
+                             selectedFamily?.ownerId === currentUser.uid;
+    
+    if (!isMemberOfFamily) {
+      Alert.alert(
+        'Quyền hạn chế',
+        'Bạn không phải thành viên của gia đình này. Vui lòng join bằng mã mời.',
+        [{ text: 'Quay lại', onPress: () => navigation.goBack() }]
+      );
+      return;
+    }
+  }, [selectedFamily?.id, selectedFamily?.memberIds, selectedFamily?.ownerId, navigation]);
+
+  // ✅ Check if current user is owner
+  const isOwner = (): boolean => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) return false;
+    return selectedFamily?.ownerId === currentUser.uid;
+  };
+
+  // 🔐 If somehow we got here but selectedFamily is null/empty, redirect immediately
+  if (!selectedFamily?.id) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.header, { paddingTop: Math.max(8, insets.top + 4) }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Lỗi</Text>
+          <View style={styles.spacer} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            Không tìm thấy gia đình. Vui lòng quay lại.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+
+  // ✅ Handle remove member
+  const handleRemoveMember = (memberId: string, memberName: string) => {
+    if (!isOwner()) {
+      Alert.alert('Quyền hạn chế', 'Chỉ chủ nhóm mới có quyền xóa thành viên');
+      return;
+    }
+    
+    Alert.alert(
+      'Xóa thành viên',
+      `Bạn có chắc chắn muốn xóa ${memberName} khỏi gia đình?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Call API to remove member
+            Alert.alert('Thành công', `${memberName} đã được xóa khỏi gia đình`);
+          },
+        },
+      ]
+    );
+  };
+
+  // ✅ Handle invite button with permission check
+  const handleInviteMemberPress = () => {
+    if (!isOwner()) {
+      Alert.alert(
+        'Quyền hạn chế',
+        'Chỉ chủ nhóm mới có quyền mời thành viên',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    navigation.navigate("InviteMember" as any, { familyId: selectedFamily?.id || "", inviteCode: "" });
+  };
+
+  // ✅ Filter family members - chỉ hiển thị những member thuộc gia đình này
+  // familyMembersFromStore đã là những member của selectedFamily (được fetch từ DB)
+  // Không cần filter thêm vì dữ liệu đã đúng từ API
+  let familyMembers: FamilyMemberUI[] = familyMembersFromStore && familyMembersFromStore.length > 0 
+    ? familyMembersFromStore 
+    : [];
+  
+  console.log('🎯 familyMembersFromStore before mapping:', {
+    isArray: Array.isArray(familyMembersFromStore),
+    length: familyMembersFromStore?.length || 0,
+    data: familyMembersFromStore,
+  });
+  
+  // 🔧 Thêm finance & habits data từ mock (chờ API trả về đầy đủ dữ liệu)
+  familyMembers = familyMembers.map(m => ({
+    ...m,
+    finance: m.finance || {
+      income: Math.random() * 50000000,
+      expense: Math.random() * 30000000,
+      saving: Math.random() * 20000000,
+    },
+    habits: m.habits || {
+      completed: Math.floor(Math.random() * 10),
+      total: 10,
+      streak: Math.floor(Math.random() * 30),
+    },
+  }));
+  
+  console.log('📊 Final Family Members after mapping:', {
+    selectedFamilyId: selectedFamily?.id,
+    membersCount: familyMembers.length,
+    members: familyMembers.map(m => ({ id: m.userId, name: m.name, role: m.role })),
+  });
+  
+  // Calculate totals from actual members
+  const totalIncome = familyMembers.reduce((sum, m) => sum + (m.finance?.income || 0), 0);
+  const totalExpense = familyMembers.reduce((sum, m) => sum + (m.finance?.expense || 0), 0);
+  const totalSaving = familyMembers.reduce((sum, m) => sum + (m.finance?.saving || 0), 0);
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(8, insets.top + 4) }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gia đình</Text>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerTitle}>Gia đình</Text>
+          {selectedFamily?.name && (
+            <Text style={styles.familyNameSubtitle}>{selectedFamily.name}</Text>
+          )}
+        </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity 
-            style={styles.headerActionButton}
-            onPress={() => navigation.navigate("InviteMember" as any, { familyId: "", inviteCode: "" })}
-          >
-            <Icon name="account-plus" size={22} color={(theme.colors as any).onSecondaryContainer ?? (theme.dark ? '#FFFFFF' : theme.colors.onSurface)} />
-          </TouchableOpacity>
+          {isOwner() && (
+            <TouchableOpacity 
+              style={styles.headerActionButton}
+              onPress={handleInviteMemberPress}
+            >
+              <Icon name="account-plus" size={22} color={(theme.colors as any).onSecondaryContainer ?? (theme.dark ? '#FFFFFF' : theme.colors.onSurface)} />
+            </TouchableOpacity>
+          )}
+
+          {isOwner() && (
+            <TouchableOpacity
+              style={[styles.headerActionButton, styles.headerPermButton]}
+              onPress={() => navigation.navigate("FamilyPermissions" as any)}
+            >
+              <Icon name="shield-account" size={20} color={theme.colors.secondary} />
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity 
             style={styles.addButton}
             onPress={() => navigation.navigate("CreateFamily")}
@@ -158,128 +317,180 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
           {/* Family Members */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Thành viên ({familyMembers.length})</Text>
-            {familyMembers.map((member) => {
-              const habitRate = (member.habits.completed / member.habits.total) * 100;
+            {familyMembers.length === 0 ? (
+              <View style={styles.emptyMemberCard}>
+                <Icon name="account-multiple-outline" size={48} color={theme.colors.onSurfaceVariant} />
+                <Text style={styles.emptyMemberText}>
+                  Chưa có thành viên nào trong gia đình
+                </Text>
+              </View>
+            ) : (
+              familyMembers.map((member) => {
+                const habitRate = member.habits ? (member.habits.completed / member.habits.total) * 100 : 0;
+                const defaultColor = member.color || "#6366F1";
+                
+                // Get role display with emoji
+                const getRoleDisplay = () => {
+                  switch (member.role) {
+                    case 'owner':
+                      return '👑 Chủ nhóm';
+                    case 'admin':
+                      return '⭐ Quản trị viên';
+                    case 'child':
+                      return '👶 Con em';
+                    default:
+                      return '👤 Thành viên';
+                  }
+                };
 
-              return (
-                <TouchableOpacity
-                  key={member.id}
-                  style={[styles.memberCard, { borderLeftColor: member.color }]}
-                  activeOpacity={0.8}
-                  onPress={() => navigation.navigate("MemberDetail")}
-                >
-                  <View style={styles.memberHeader}>
-                    <View style={styles.memberInfo}>
-                      <View style={[styles.memberAvatar, { backgroundColor: `${member.color}22` }]}>
-                        <Icon name={member.avatar as any} size={32} color={member.color} />
-                      </View>
-                      <View style={styles.memberDetails}>
-                        <Text style={styles.memberName}>{member.name}</Text>
-                        <Text style={styles.memberRole}>{member.role}</Text>
-                      </View>
-                    </View>
-                    <View style={[styles.memberBadge, { backgroundColor: `${member.color}22` }]}>
-                      <Text style={[styles.memberBadgeText, { color: member.color }]}>
-                        {habitRate.toFixed(0)}%
-                      </Text>
-                    </View>
-                  </View>
+                const avatarIcon = member.role === 'owner' ? 'account' : 'account-outline';
 
-                  {/* Finance Stats */}
-                  <View style={styles.memberStats}>
-                    <View style={styles.statRow}>
-                      <Icon name="currency-usd" size={20} color={theme.colors.secondary} style={{ marginRight: 6 }} />
-                      <View style={styles.statInfo}>
-                        <Text style={styles.statLabel}>Thu nhập</Text>
-                        <Text style={styles.statValue}>
-                          ₫{(member.finance.income / 1000000).toFixed(1)}M
-                        </Text>
+                return (
+                  <TouchableOpacity
+                    key={member.userId}
+                    style={[styles.memberCard, { borderLeftColor: defaultColor }]}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate("MemberDetail")}
+                  >
+                    <View style={styles.memberHeader}>
+                      <View style={styles.memberInfo}>
+                        <View style={[styles.memberAvatar, { backgroundColor: `${defaultColor}22` }]}>
+                          <Icon name={avatarIcon} size={32} color={defaultColor} />
+                        </View>
+                        <View style={styles.memberDetails}>
+                          <Text style={styles.memberName}>{member.name || 'Không rõ tên'}</Text>
+                          <Text style={[styles.memberRole, { color: defaultColor }]}>
+                            {getRoleDisplay()}
+                          </Text>
+                        </View>
                       </View>
+                      {member.habits && (
+                        <View style={[styles.memberBadge, { backgroundColor: `${defaultColor}22` }]}>
+                          <Text style={[styles.memberBadgeText, { color: defaultColor }]}>
+                            {habitRate.toFixed(0)}%
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                    <View style={styles.statRow}>
-                      <Icon name="cash-remove" size={20} color={theme.colors.onSurfaceVariant} style={{ marginRight: 6 }} />
-                      <View style={styles.statInfo}>
-                        <Text style={styles.statLabel}>Chi tiêu</Text>
-                        <Text style={styles.statValue}>
-                          ₫{(member.finance.expense / 1000000).toFixed(1)}M
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.statRow}>
-                      <Icon name="piggy-bank" size={20} color={member.color} style={{ marginRight: 6 }} />
-                      <View style={styles.statInfo}>
-                        <Text style={styles.statLabel}>Tiết kiệm</Text>
-                        <Text style={[styles.statValue, { color: member.color }]}>
-                          ₫{(member.finance.saving / 1000000).toFixed(1)}M
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
 
-                  {/* Habits Progress */}
-                  <View style={styles.memberHabits}>
-                    <View style={styles.habitInfo}>
-                      <Text style={styles.habitLabel}>Thói quen</Text>
-                      <Text style={styles.habitValue}>
-                        {member.habits.completed}/{member.habits.total}
-                      </Text>
-                    </View>
-                    <View style={styles.habitProgress}>
-                      <View
-                        style={[
-                          styles.habitProgressFill,
-                          { width: `${habitRate}%`, backgroundColor: member.color },
-                        ]}
-                      />
-                    </View>
-                    <View style={styles.habitMeta}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name="fire" size={12} color={theme.colors.secondary} style={{ marginRight: 4 }} />
-                        <Text style={styles.habitStreak}>{member.habits.streak} ngày</Text>
+                    {/* Finance Stats */}
+                    {member.finance && (
+                      <View style={styles.memberStats}>
+                        <View style={styles.statRow}>
+                          <Icon name="currency-usd" size={20} color={theme.colors.secondary} style={styles.statIcon} />
+                          <View style={styles.statInfo}>
+                            <Text style={styles.statLabel}>Thu nhập</Text>
+                            <Text style={styles.statValue}>
+                              ₫{(member.finance.income / 1000000).toFixed(1)}M
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.statRow}>
+                          <Icon name="cash-remove" size={20} color={theme.colors.onSurfaceVariant} style={styles.statIcon} />
+                          <View style={styles.statInfo}>
+                            <Text style={styles.statLabel}>Chi tiêu</Text>
+                            <Text style={styles.statValue}>
+                              ₫{(member.finance.expense / 1000000).toFixed(1)}M
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.statRow}>
+                          <Icon name="piggy-bank" size={20} color={defaultColor} style={styles.statIcon} />
+                          <View style={styles.statInfo}>
+                            <Text style={styles.statLabel}>Tiết kiệm</Text>
+                            <Text style={[styles.statValue, { color: defaultColor }]}>
+                              ₫{(member.finance.saving / 1000000).toFixed(1)}M
+                            </Text>
+                          </View>
+                        </View>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name="target" size={12} color={theme.colors.primary} style={{ marginRight: 4 }} />
-                        <Text style={styles.habitGoals}>{member.goals} mục tiêu</Text>
-                      </View>
-                    </View>
-                  </View>
+                    )}
 
-                  {/* Quick Actions */}
-                  <View style={styles.memberActions}>
-                    <TouchableOpacity style={styles.actionBtn}>
-                      <Text style={styles.actionBtnText}>Chi tiết</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionBtn, styles.actionBtnPrimary]}>
-                      <Text style={styles.actionBtnTextPrimary}>Nhắc nhở</Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+                    {/* Habits Progress */}
+                    {member.habits && (
+                      <View style={styles.memberHabits}>
+                        <View style={styles.habitInfo}>
+                          <Text style={styles.habitLabel}>Thói quen</Text>
+                          <Text style={styles.habitValue}>
+                            {member.habits.completed}/{member.habits.total}
+                          </Text>
+                        </View>
+                        <View style={styles.habitProgress}>
+                          <View
+                            style={[
+                              styles.habitProgressFill,
+                              { width: `${habitRate}%`, backgroundColor: defaultColor },
+                            ]}
+                          />
+                        </View>
+                        <View style={styles.habitMeta}>
+                          <View style={styles.habitMetaRow}>
+                            <Icon name="fire" size={12} color={theme.colors.secondary} style={styles.habitMetaIcon} />
+                            <Text style={styles.habitStreak}>{member.habits.streak} ngày</Text>
+                          </View>
+                          <View style={styles.habitMetaRow}>
+                            <Icon name="target" size={12} color={theme.colors.primary} style={styles.habitMetaIcon} />
+                            <Text style={styles.habitGoals}>{member.goals || 0} mục tiêu</Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Quick Actions */}
+                    <View style={styles.memberActions}>
+                      <TouchableOpacity 
+                        style={[styles.actionBtn, styles.actionBtnDefault]}
+                        onPress={() => navigation.navigate("MemberDetail") }
+                      >
+                        <Icon name="information-outline" size={16} color={theme.colors.primary} style={styles.actionBtnIcon} />
+                        <Text style={styles.actionBtnText}>Chi tiết</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.actionBtn, styles.actionBtnSecondary]}
+                        activeOpacity={0.7}
+                      >
+                        <Icon name="bell-outline" size={16} color="#FFFFFF" style={styles.actionBtnIcon} />
+                        <Text style={styles.actionBtnTextSecondary}>Nhắc nhở</Text>
+                      </TouchableOpacity>
+                      {isOwner() && member.userId !== auth().currentUser?.uid && (
+                        <TouchableOpacity 
+                          style={[styles.actionBtn, styles.actionBtnDanger]}
+                          onPress={() => handleRemoveMember(member.userId, member.name || 'Thành viên')}
+                          activeOpacity={0.7}
+                        >
+                          <Icon name="trash-can-outline" size={16} color="#EF4444" style={styles.actionBtnIcon} />
+                          <Text style={styles.actionBtnTextDanger}>Xóa</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
 
           {/* AI Family Insights */}
           <View style={styles.aiCard}>
             <View style={styles.aiHeader}>
-              <Icon name="robot" size={24} color={theme.colors.secondary} style={{ marginRight: 8 }} />
+              <Icon name="robot" size={24} color={theme.colors.secondary} style={styles.aiIconMargin} />
               <Text style={styles.aiTitle}>Phân tích AI</Text>
             </View>
-            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-              <Icon name="lightbulb-on" size={14} color={theme.colors.secondary} style={{ marginRight: 6, marginTop: 2 }} />
+            <View style={styles.aiRow}>
+              <Icon name="lightbulb-on" size={14} color={theme.colors.secondary} style={styles.aiRowIcon} />
               <Text style={styles.aiText}>
                 <Text style={styles.aiBold}>Mẹ</Text> đang duy trì thói quen tốt nhất với 100% hoàn thành.
                 Cả gia đình nên học hỏi!
               </Text>
             </View>
-            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-              <Icon name="alert" size={14} color={theme.colors.onSurfaceVariant} style={{ marginRight: 6, marginTop: 2 }} />
+            <View style={styles.aiRow}>
+              <Icon name="alert" size={14} color={theme.colors.onSurfaceVariant} style={styles.aiRowIcon} />
               <Text style={styles.aiText}>
                 <Text style={styles.aiBold}>Con trai</Text> cần cải thiện thói quen đọc sách.
                 Đề xuất đặt nhắc nhở 8PM mỗi tối.
               </Text>
             </View>
-            <View style={{ flexDirection: 'row', marginBottom: 0 }}>
-              <Icon name="chart-bar" size={14} color={theme.colors.secondary} style={{ marginRight: 6, marginTop: 2 }} />
+            <View style={styles.aiRowLast}>
+              <Icon name="chart-bar" size={14} color={theme.colors.secondary} style={styles.aiRowIcon} />
               <Text style={styles.aiText}>
                 Gia đình đang tiết kiệm được <Text style={styles.aiHighlight}>
                   {((totalSaving / totalIncome) * 100).toFixed(1)}%
@@ -290,13 +501,17 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
 
           {/* Quick Actions */}
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("SharedGoal")}>
-              <Icon name="target" size={32} color={theme.colors.primary} style={{ marginBottom: 8 }} />
-              <Text style={styles.actionText}>Mục tiêu chung</Text>
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("SharedWallet" as any)}>
+              <Icon name="wallet" size={32} color={theme.colors.primary} style={styles.actionIconMargin} />
+              <Text style={styles.actionText}>Ví chung</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("FinanceDashboard")}>
-              <Icon name="cash-multiple" size={32} color={theme.colors.secondary} style={{ marginBottom: 8 }} />
-              <Text style={styles.actionText}>Tài chính</Text>
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("SharedBudget" as any)}>
+              <Icon name="cash-multiple" size={32} color={theme.colors.secondary} style={styles.actionIconMargin} />
+              <Text style={styles.actionText}>Ngân sách</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("SharedGoal" as any)}>
+              <Icon name="target" size={32} color={theme.colors.primary} style={styles.actionIconMargin} />
+              <Text style={styles.actionText}>Mục tiêu chung</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -308,10 +523,14 @@ export default function FamilyOverviewScreen({ navigation }: Props) {
 
 const getStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 48, paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', backgroundColor: theme.colors.surface },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', backgroundColor: theme.colors.surface },
+  spacer: { width: 40 },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.08)', alignItems: "center", justifyContent: "center" },
   backIcon: { fontSize: 20, color: theme.colors.primary },
   headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary },
+  familyNameSubtitle: { fontSize: 12, color: theme.colors.onSurfaceVariant, marginLeft: 8, fontStyle: 'italic' },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center' },
+  headerPermButton: { marginLeft: 8, width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(99, 102, 241, 0.06)' },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerActionButton: {
     width: 40,
@@ -396,7 +615,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   memberBadgeText: { fontSize: 16, fontWeight: "800" },
   memberStats: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
   statRow: { flexDirection: "row", alignItems: "center", flex: 1 },
-  statIcon: { fontSize: 20, marginRight: 6 },
+  statIcon: { marginRight: 6 },
   statInfo: { flex: 1 },
   statLabel: { fontSize: 11, color: theme.colors.onSurfaceVariant, marginBottom: 2 },
   statValue: { fontSize: 13, fontWeight: "700", color: theme.colors.onSurface },
@@ -409,11 +628,15 @@ const getStyles = (theme: any) => StyleSheet.create({
   habitMeta: { flexDirection: "row", justifyContent: "space-between" },
   habitStreak: { fontSize: 12, color: theme.colors.primary, fontWeight: "700" },
   habitGoals: { fontSize: 12, color: theme.colors.primary, fontWeight: "700" },
-  memberActions: { flexDirection: "row", gap: 8 },
-  actionBtn: { flex: 1, backgroundColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0, 137, 123, 0.08)', borderRadius: 10, paddingVertical: 10, alignItems: "center" },
-  actionBtnText: { color: theme.colors.primary, fontWeight: "700", fontSize: 13 },
-  actionBtnPrimary: { backgroundColor: theme.colors.secondary },
-  actionBtnTextPrimary: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
+  memberActions: { flexDirection: "row", gap: 10, marginTop: 4 },
+  actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 12, paddingVertical: 11, paddingHorizontal: 10, borderWidth: 1, gap: 6 },
+  actionBtnIcon: { marginRight: 2 },
+  actionBtnDefault: { backgroundColor: theme.dark ? 'rgba(0, 137, 123, 0.15)' : 'rgba(0, 137, 123, 0.1)', borderColor: theme.dark ? 'rgba(0, 137, 123, 0.3)' : 'rgba(0, 137, 123, 0.2)' },
+  actionBtnText: { color: theme.colors.primary, fontWeight: "700", fontSize: 12 },
+  actionBtnSecondary: { backgroundColor: theme.colors.secondary, borderColor: theme.colors.secondary },
+  actionBtnTextSecondary: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
+  actionBtnDanger: { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderColor: 'rgba(239, 68, 68, 0.3)' },
+  actionBtnTextDanger: { color: '#EF4444', fontWeight: "700", fontSize: 12 },
   aiCard: {
     // Use theme.secondaryContainer if available; else compute a safe rgba fallback from secondary
     backgroundColor: (() => {
@@ -455,8 +678,19 @@ const getStyles = (theme: any) => StyleSheet.create({
   aiText: { fontSize: 14, color: theme.colors.onSurface, lineHeight: 20, marginBottom: 8 },
   aiBold: { fontWeight: "800", color: theme.colors.primary },
   aiHighlight: { color: theme.colors.secondary, fontWeight: "900" },
-  actionsGrid: { flexDirection: "row", gap: 12 },
-  actionCard: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)' },
+  actionsGrid: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+  actionCard: { flex: 1, minWidth: "31%", backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)' },
   actionIcon: { fontSize: 32, marginBottom: 8 },
   actionText: { fontSize: 13, color: theme.colors.primary, fontWeight: "600", textAlign: "center" },
+  actionIconMargin: { marginBottom: 8 },
+  emptyMemberCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, borderLeftWidth: 4, borderTopColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderTopWidth: 1, alignItems: 'center', justifyContent: 'center', minHeight: 100 },
+  emptyMemberText: { fontSize: 13, color: theme.colors.onSurfaceVariant, marginTop: 8, textAlign: 'center' },
+  habitMetaRow: { flexDirection: 'row', alignItems: 'center' },
+  habitMetaIcon: { marginRight: 4 },
+  aiRow: { flexDirection: 'row', marginBottom: 8 },
+  aiRowLast: { flexDirection: 'row', marginBottom: 0 },
+  aiRowIcon: { marginRight: 6, marginTop: 2 },
+  aiIconMargin: { marginRight: 8 },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  errorText: { color: theme.colors.onSurface, textAlign: 'center', fontSize: 16 },
 });

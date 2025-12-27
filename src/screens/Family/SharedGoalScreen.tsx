@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from 'react-native-paper';
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useFamilyStore } from "../../store/familyStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "SharedGoal">;
 
@@ -43,6 +44,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const theme = useTheme();
   const styles = getStyles(theme);
+  const { currentFamily } = useFamilyStore();
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -230,7 +232,7 @@ export default function SharedGoalScreen({ navigation }: Props) {
               <Icon name="target" size={32} color="#00796B" style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Mục tiêu cá nhân</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("FamilyOverview")}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("FamilyOverview", { familyId: currentFamily?.id || "" })}>
               <Icon name="account-group" size={32} color="#00796B" style={{ marginBottom: 8 }} />
               <Text style={styles.actionText}>Tổng quan gia đình</Text>
             </TouchableOpacity>

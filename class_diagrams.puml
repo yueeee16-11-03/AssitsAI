@@ -1,0 +1,188 @@
+@startuml
+title Class Diagram: ASSIST - Domain Model (Updated)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor #2D6A9F
+    ArrowColor #2D6A9F
+}
+
+' --- ENUMS ---
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  DENIED
+  NORMAL
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  CHILD
+}
+
+enum WalletType {
+  CASH
+  BANK_ACCOUNT
+  CREDIT_CARD
+  E_WALLET
+  SAVING
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+' --- CORE CLASSES ---
+class User {
+  +id: string
+  +email: string
+  +displayName: string
+  +avatarUrl: string
+  +createdAt: Date
+  +isActive(): boolean
+}
+
+class Family {
+  +id: string
+  +name: string
+  +ownerId: string
+  +settings: Map
+}
+
+class FamilyMember {
+  +id: string
+  +familyId: string
+  +userId: string
+  +role: Role
+  +spendingLimit: number
+}
+
+' --- FINANCE CORE (UPDATED) ---
+
+' [NEW] Thêm class Wallet
+class Wallet {
+  +id: string
+  +familyId: string
+  +name: string
+  +type: WalletType
+  +balance: number
+  +currency: string
+  +isExcludedFromTotal: boolean
+  +recalculateBalance(): void
+}
+
+' [NEW] Thêm class Category
+class Category {
+  +id: string
+  +familyId: string
+  +name: string
+  +type: CategoryType
+  +icon: string
+  +parentId: string
+  +isDefault: boolean
+}
+
+class Transaction {
+  +id: string
+  +walletId: string
+  +categoryId: string
+  +userId: string
+  +amount: number
+  +note: string
+  +date: Date
+  +status: TransactionStatus
+  +images: string[]
+  +location: Map
+}
+
+' [NEW] Giao dịch định kỳ
+class RecurringTransaction {
+  +id: string
+  +familyId: string
+  +walletId: string
+  +amount: number
+  +frequency: string
+  +startDate: Date
+  +nextExecutionDate: Date
+  +isActive: boolean
+}
+
+class Budget {
+  +id: string
+  +familyId: string
+  +month: number
+  +year: number
+  +totalLimit: number
+}
+
+class BudgetAllocation {
+  +id: string
+  +budgetId: string
+  +categoryId: string
+  +amount: number
+}
+
+' --- FEATURES ---
+class Habit {
+  +id: string
+  +familyId: string
+  +title: string
+  +streakCount: number
+}
+
+class Notification {
+  +id: string
+  +userId: string
+  +title: string
+  +body: string
+  +isRead: boolean
+}
+
+' [NEW] AI Chat
+class ChatSession {
+  +id: string
+  +userId: string
+  +title: string
+  +createdAt: Date
+}
+
+class ChatMessage {
+  +id: string
+  +sessionId: string
+  +role: string
+  +content: string
+  +timestamp: Date
+}
+
+' --- RELATIONSHIPS ---
+
+User "1" -- "0..*" FamilyMember
+Family "1" -- "0..*" FamilyMember
+
+' Wallet Relations
+Family "1" *-- "0..*" Wallet : owns >
+Wallet "1" -- "0..*" Transaction : source of funds >
+
+' Category Relations
+Family "1" -- "0..*" Category : defines >
+Category "1" -- "0..*" Transaction : classifies >
+Category "1" -- "0..*" BudgetAllocation : limited by >
+
+' Feature Relations
+Family "1" -- "0..*" Budget
+Budget "1" *-- "0..*" BudgetAllocation
+Family "1" -- "0..*" RecurringTransaction
+
+' AI Relations
+User "1" -- "0..*" ChatSession
+ChatSession "1" *-- "0..*" ChatMessage
+
+' Transaction Link
+FamilyMember "1" -- "0..*" Transaction : created by >
+
+@enduml
