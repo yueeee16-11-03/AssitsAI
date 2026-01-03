@@ -42,8 +42,28 @@ service cloud.firestore {
       allow update: if isSignedIn() 
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['familyIds', 'updatedAt']);
 
+      // --- RULE CHO BUDGETS: Cho phép Family Owner/Member đọc ---
+      match /budgets/{budgetId} {
+        // 🔍 List: Cho phép query/filter budgets
+        // ✅ User query budget của chính mình
+        // ✅ Family Member query budget của member khác trong cùng family (via familyId filter)
+        allow list: if isSignedIn();
+
+        // ✅ User được đọc/sửa budget của chính mình
+        allow write: if isUser(userId);
+        
+        // ✅ Cho phép đọc: User chính chủ HOẶC Family Owner/Member
+        allow read: if isUser(userId)
+                    || (isSignedIn() 
+                        && resource.data.get('familyId') != null
+                        && (isFamilyOwner(get(/databases/$(database)/documents/families/
+                              resource.data.get('familyId')).data)
+                            || isFamilyMember(get(/databases/$(database)/documents/families/
+                              resource.data.get('familyId')).data)));
+      }
+
       // 2. TỰ ĐỘNG cho phép đọc/ghi TẤT CẢ subcollections bên trong
-      // (Bao gồm: transactions, habits, checkIns, budgets, wallets, notifications, recurringTransactions...)
+      // (Bao gồm: transactions, habits, checkIns, wallets, notifications, recurringTransactions...)
       // Dùng cú pháp wildcard {document=**} để không cần liệt kê từng cái.
       match /{document=**} {
         allow read, write: if isUser(userId);
@@ -98,9 +118,29 @@ service cloud.firestore {
       // --- SUBCOLLECTION: Family Members (Thành viên gia đình) ---
       match /members/{memberId} {
          // Rule: Chỉ thành viên của gia đình đó mới được xem, Owner được quản lý
-         allow read: if isFamilyMember(resource.data);
+         allow read: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
          allow create: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
          allow update, delete: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
+
+         // --- NESTED SUBCOLLECTION: Member Personal Budgets (Ngân sách cá nhân thành viên) ---
+         match /budgets/{budgetId} {
+            // ✅ Owner được đọc ngân sách của tất cả members
+            // ✅ Member được đọc/sửa ngân sách của chính mình
+            allow read: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data)
+                        || (isSignedIn() && request.auth.uid == memberId);
+            
+            allow write: if isSignedIn() && request.auth.uid == memberId;
+         }
+
+         // --- NESTED SUBCOLLECTION: Member Personal Transactions (Giao dịch cá nhân thành viên) ---
+         match /transactions/{transactionId} {
+            // ✅ Owner được đọc giao dịch của tất cả members
+            // ✅ Member được đọc/sửa giao dịch của chính mình
+            allow read: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data)
+                        || (isSignedIn() && request.auth.uid == memberId);
+            
+            allow write: if isSignedIn() && request.auth.uid == memberId;
+         }
       }
 
       // --- NESTED SUBCOLLECTION: Family Habits (Thói quen gia đình) ---
@@ -111,6 +151,22 @@ service cloud.firestore {
          match /logs/{logId} {
             allow read, write: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
          }
+      }
+
+      // --- SUBCOLLECTION: Family Categories (Danh mục giao dịch) ---
+      match /categories/{categoryId} {
+         // List: Cho phép thành viên gia đình xem danh sách danh mục
+         allow list: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
+         
+         // Read: Thành viên gia đình có thể xem danh mục
+         allow read: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
+         
+         // Create/Update: Chỉ owner/admin có thể quản lý danh mục
+         allow create, update: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data);
+         
+         // Delete: Chỉ owner có thể xóa (và không xóa default categories)
+         allow delete: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data)
+                       && !resource.data.isDefault;
       }
     }
 
@@ -150,7 +206,52 @@ service cloud.firestore {
     }
 
     // =========================================================
-    // 5. RULES CHO CHAT & MESSAGES
+    // 4.5 RULES CHO BUDGETS (ROOT LEVEL)
+    // =========================================================
+    // 💰 Budgets collection ở root level - /users/{userId}/budgets
+    // User được read/write budget của chính mình
+    // Wildcard match đã handle qua isUser(userId)
+    // Không cần thêm rule phức tạp ở đây
+
+    // =========================================================
+    // 5. RULES CHO TRANSACTIONS (ROOT LEVEL)
+    // =========================================================
+    // 🧭 QUAN TRỌNG: Transactions collection ở root level
+    // Mỗi transaction thuộc về một family và một user cụ thể
+    // Structure: { familyId, userId, memberName, type, category, amount, date, description, ... }
+    match /transactions/{transactionId} {
+      // List: Cho phép query transactions
+      // Sử dụng: .where('familyId', '==', familyId) 
+      //          .where('userId', '==', userId)
+      allow list: if isSignedIn();
+
+      // Create: User tạo transaction cho family họ là member
+      allow create: if isSignedIn() 
+                    && (request.resource.data.familyId != null 
+                        && request.resource.data.userId == request.auth.uid
+                        && isFamilyMember(get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data));
+
+      // Read: User chỉ xem được transaction của chính mình hoặc là family owner
+      allow read: if isSignedIn() 
+                  && (resource.data.familyId != null
+                      && (request.auth.uid == resource.data.userId 
+                          || isFamilyOwner(get(/databases/$(database)/documents/families/$(resource.data.familyId)).data)));
+
+      // Update: Chỉ người tạo hoặc owner family được sửa
+      allow update: if isSignedIn() 
+                    && (resource.data.familyId != null
+                        && (request.auth.uid == resource.data.userId 
+                            || isFamilyOwner(get(/databases/$(database)/documents/families/$(resource.data.familyId)).data)));
+
+      // Delete: Chỉ người tạo hoặc owner family được xóa
+      allow delete: if isSignedIn() 
+                    && (resource.data.familyId != null
+                        && (request.auth.uid == resource.data.userId 
+                            || isFamilyOwner(get(/databases/$(database)/documents/families/$(resource.data.familyId)).data)));
+    }
+
+    // =========================================================
+    // 6. RULES CHO CHAT & MESSAGES
     // =========================================================
 
     // Lịch sử chat (Danh sách các cuộc trò chuyện)

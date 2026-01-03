@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
@@ -38,6 +39,8 @@ interface FamilyMemberUI extends FamilyMember {
 
 export default function FamilyOverviewScreen({ navigation, route }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const theme = useTheme();
@@ -63,16 +66,42 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
 
   // 🔐 Load the specific family if not in store
   React.useEffect(() => {
-    if (familyId && selectedFamily?.id !== familyId) {
-      // Family not in store, try to fetch it
-      fetchFamilyById(familyId).catch(err => {
+    const loadFamily = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+
+        // Nếu familyId không có, báo lỗi ngay
+        if (!familyId) {
+          setLoadError('Không tìm thấy mã gia đình');
+          setIsLoading(false);
+          return;
+        }
+
+        // Nếu family đã có trong store, không cần fetch
+        const existingFamily = families.find(f => f.id === familyId);
+        if (existingFamily) {
+          setCurrentFamily(existingFamily);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch family từ DB nếu chưa có
+        if (familyId && selectedFamily?.id !== familyId) {
+          await fetchFamilyById(familyId);
+          setIsLoading(false);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (err) {
         console.warn('Failed to fetch family:', err);
-      });
-    } else if (familyId && !currentFamily) {
-      // Set current family if not set
-      setCurrentFamily(selectedFamily || null);
-    }
-  }, [familyId, selectedFamily, currentFamily, fetchFamilyById, setCurrentFamily]);
+        setLoadError('Không thể tải gia đình. Vui lòng thử lại.');
+        setIsLoading(false);
+      }
+    };
+
+    loadFamily();
+  }, [familyId, fetchFamilyById, setCurrentFamily, families, selectedFamily?.id]);
 
   // 📥 Fetch family members when selectedFamily changes
   React.useEffect(() => {
@@ -105,18 +134,16 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
 
   // 🔐 CRITICAL: Check if user is member of this family
   React.useEffect(() => {
+    // Không check nếu đang loading hoặc có lỗi
+    if (isLoading || loadError || !selectedFamily?.id) {
+      return;
+    }
+
     const currentUser = auth().currentUser;
     
     // Check 1: User must be logged in
     if (!currentUser) {
       Alert.alert('Lỗi', 'Vui lòng đăng nhập');
-      navigation.goBack();
-      return;
-    }
-
-    // Check 2: Family must exist
-    if (!selectedFamily?.id) {
-      Alert.alert('Lỗi', 'Không tìm thấy gia đình');
       navigation.goBack();
       return;
     }
@@ -133,7 +160,7 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
       );
       return;
     }
-  }, [selectedFamily?.id, selectedFamily?.memberIds, selectedFamily?.ownerId, navigation]);
+  }, [selectedFamily?.id, selectedFamily?.memberIds, selectedFamily?.ownerId, navigation, isLoading, loadError]);
 
   // ✅ Check if current user is owner
   const isOwner = (): boolean => {
@@ -142,8 +169,26 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
     return selectedFamily?.ownerId === currentUser.uid;
   };
 
-  // 🔐 If somehow we got here but selectedFamily is null/empty, redirect immediately
-  if (!selectedFamily?.id) {
+  // 🔐 If somehow we got here but selectedFamily is null/empty, show loading or error
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.header, { paddingTop: Math.max(8, insets.top + 4) }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Gia đình</Text>
+          <View style={styles.spacer} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError || !selectedFamily?.id) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={[styles.header, { paddingTop: Math.max(8, insets.top + 4) }]}>
@@ -155,8 +200,14 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
         </View>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>
-            Không tìm thấy gia đình. Vui lòng quay lại.
+            {loadError || 'Không tìm thấy gia đình. Vui lòng quay lại.'}
           </Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.retryButtonText}>Quay lại</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -470,34 +521,7 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
           </View>
 
           {/* AI Family Insights */}
-          <View style={styles.aiCard}>
-            <View style={styles.aiHeader}>
-              <Icon name="robot" size={24} color={theme.colors.secondary} style={styles.aiIconMargin} />
-              <Text style={styles.aiTitle}>Phân tích AI</Text>
-            </View>
-            <View style={styles.aiRow}>
-              <Icon name="lightbulb-on" size={14} color={theme.colors.secondary} style={styles.aiRowIcon} />
-              <Text style={styles.aiText}>
-                <Text style={styles.aiBold}>Mẹ</Text> đang duy trì thói quen tốt nhất với 100% hoàn thành.
-                Cả gia đình nên học hỏi!
-              </Text>
-            </View>
-            <View style={styles.aiRow}>
-              <Icon name="alert" size={14} color={theme.colors.onSurfaceVariant} style={styles.aiRowIcon} />
-              <Text style={styles.aiText}>
-                <Text style={styles.aiBold}>Con trai</Text> cần cải thiện thói quen đọc sách.
-                Đề xuất đặt nhắc nhở 8PM mỗi tối.
-              </Text>
-            </View>
-            <View style={styles.aiRowLast}>
-              <Icon name="chart-bar" size={14} color={theme.colors.secondary} style={styles.aiRowIcon} />
-              <Text style={styles.aiText}>
-                Gia đình đang tiết kiệm được <Text style={styles.aiHighlight}>
-                  {((totalSaving / totalIncome) * 100).toFixed(1)}%
-                </Text> thu nhập. Mục tiêu là 25%!
-              </Text>
-            </View>
-          </View>
+         
 
           {/* Quick Actions */}
           <View style={styles.actionsGrid}>
@@ -692,5 +716,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   aiRowIcon: { marginRight: 6, marginTop: 2 },
   aiIconMargin: { marginRight: 8 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  errorText: { color: theme.colors.onSurface, textAlign: 'center', fontSize: 16 },
+  errorText: { color: theme.colors.onSurface, textAlign: 'center', fontSize: 16, marginBottom: 20 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: theme.colors.onSurface, marginTop: 12, fontSize: 14 },
+  retryButton: { backgroundColor: theme.colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  retryButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
 });

@@ -45,9 +45,16 @@ import TransactionHistoryScreen from "../screens/Finance/TransactionHistoryScree
 import AIProcessingOverlay from "../screens/Finance/AIProcessingOverlay";
 import FamilyOnboardingScreen from "../screens/Family/FamilyOnboardingScreen";
 import FamilyOverviewScreen from "../screens/Family/FamilyOverviewScreen";
+import FamilyAdminDashboardScreen from "../screens/Family/FamilyAdminDashboardScreen";
 import CreateFamilyScreen from "../screens/Family/CreateFamilyScreen";
 import FamilyChatScreen from "../screens/Family/FamilyChatScreen";
 import FamilyPermissionsScreen from "../screens/Family/FamilyPermissionsScreen";
+import FamilyMembersScreen from "../screens/Family/FamilyMembersScreen";
+import FamilyTransactionsScreen from "../screens/Family/FamilyTransactionsScreen";
+import FamilyCategoriesScreen from "../screens/Family/FamilyCategoriesScreen";
+import FamilyBudgetScreen from "../screens/Family/FamilyBudgetScreen";
+import FamilyReportsScreen from "../screens/Family/FamilyReportsScreen";
+import FamilySettingsScreen from "../screens/Family/FamilySettingsScreen";
 import MemberDetailScreen from "../screens/Family/MemberDetailScreen";
 import SharedGoalScreen from "../screens/Family/SharedGoalScreen";
 import SharedWalletScreen from "../screens/Family/SharedWalletScreen";
@@ -169,9 +176,16 @@ export default function AppNavigation() {
         <Stack.Screen name="AIProcessingOverlay" component={AIProcessingOverlay} />
         <Stack.Screen name="FamilyOnboarding" component={FamilyOnboardingScreen} />
         <Stack.Screen name="FamilyOverview" component={FamilyOverviewScreen} />
+        <Stack.Screen name="FamilyAdminDashboard" component={FamilyAdminDashboardScreen} />
         <Stack.Screen name="CreateFamily" component={CreateFamilyScreen} />
         <Stack.Screen name="FamilyChat" component={FamilyChatScreen} />
         <Stack.Screen name="FamilyPermissions" component={FamilyPermissionsScreen} />
+        <Stack.Screen name="FamilyMembers" component={FamilyMembersScreen} />
+        <Stack.Screen name="FamilyTransactions" component={FamilyTransactionsScreen} />
+        <Stack.Screen name="FamilyCategories" component={FamilyCategoriesScreen} />
+        <Stack.Screen name="FamilyBudget" component={FamilyBudgetScreen} />
+        <Stack.Screen name="FamilyReports" component={FamilyReportsScreen} />
+        <Stack.Screen name="FamilySettings" component={FamilySettingsScreen} />
         <Stack.Screen name="MemberDetail" component={MemberDetailScreen} />
         <Stack.Screen name="SharedGoal" component={SharedGoalScreen} />
         <Stack.Screen name="SharedWallet" component={SharedWalletScreen} />

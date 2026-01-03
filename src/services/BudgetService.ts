@@ -161,7 +161,6 @@ class BudgetService {
       let beforeBudgetValue: number | null = null;
       let categoryId: string | null = null;
       try {
-        const currentUser = auth().currentUser;
         if (currentUser) {
           const doc = await firestore()
             .collection('users')
@@ -169,12 +168,12 @@ class BudgetService {
             .collection('budgets')
             .doc(budgetId)
             .get({ source: 'server' });
-          if (doc && doc.exists) {
+          if (doc && doc.exists()) {
             beforeBudgetValue = doc.data()?.budget || null;
             categoryId = String(doc.data()?.categoryId || '');
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         console.warn('BudgetService: failed reading pre-update budget', e?.message || e);
       }
 
@@ -211,7 +210,7 @@ class BudgetService {
             console.log('BudgetService: created budget overrun notification', notifId);
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         console.warn('BudgetService: post-update overrun notification failed', e?.message || e);
       }
       return true;

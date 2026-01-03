@@ -106,9 +106,16 @@ export type RootStackParamList = {
   // Family Module Screens
   FamilyOnboarding: undefined;
   FamilyOverview: { familyId: string };
+  FamilyAdminDashboard: undefined;
   CreateFamily: undefined;
   FamilyChat: undefined;
   FamilyPermissions: { memberId?: string };
+  FamilyMembers: undefined;
+  FamilyTransactions: undefined;
+  FamilyCategories: undefined;
+  FamilyBudget: undefined;
+  FamilyReports: undefined;
+  FamilySettings: undefined;
   MemberDetail: undefined;
   SharedGoal: undefined; 
   SharedWallet: undefined;
