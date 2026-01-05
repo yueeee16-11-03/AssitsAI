@@ -125,4 +125,6 @@ export type RootStackParamList = {
   InviteMember: { familyId: string; inviteCode: string };
   JoinFamily: { code?: string };
 
+  // Notes Module
+  Notes: undefined;
 };

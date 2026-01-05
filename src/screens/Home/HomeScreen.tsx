@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Image,
   Dimensions,
   Modal,
 } from "react-native";
@@ -39,6 +38,17 @@ export default function HomeScreen({ navigation }: Props) {
   const [popoverLeft, setPopoverLeft] = useState<number | undefined>(undefined);
   const [popoverTop, setPopoverTop] = useState<number | undefined>(undefined);
   const [popoverComputedWidth, setPopoverComputedWidth] = useState<number | undefined>(undefined);
+  
+  // Carousel automation state
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  const carouselFadeAnim = React.useRef(new Animated.Value(1)).current;
+  
+  // Carousel images
+  const carouselImages = [
+    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=800&q=80',
+  ];
 
   // Theme setup
   const theme = useTheme();
@@ -101,8 +111,8 @@ export default function HomeScreen({ navigation }: Props) {
 
   // 🔄 Reset family store when user changes to prevent stale data for new user
   React.useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged(async (user) => {
-      if (user) {
+    const unsubscribe = auth().onAuthStateChanged(async (authUser) => {
+      if (authUser) {
         // Reset currentFamily to force fresh load from store
         const { setCurrentFamily, clearError } = useFamilyStore.getState();
         setCurrentFamily(null);
@@ -222,6 +232,29 @@ export default function HomeScreen({ navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(dailyPercents)]);
 
+  // Auto-scroll carousel every 4 seconds
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      // Fade out
+      Animated.timing(carouselFadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        // Change image
+        setCurrentCarouselIndex((prev) => (prev + 1) % carouselImages.length);
+        // Fade in
+        Animated.timing(carouselFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [carouselImages.length, carouselFadeAnim]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <TouchableOpacity
@@ -306,18 +339,23 @@ export default function HomeScreen({ navigation }: Props) {
           onPress={() => {/* TODO: handle ad carousel press */}}
         >
           <View style={[styles.adCarouselWrap, { width: SCREEN_WIDTH + 48 }]}>
-            {/* Replace source with your real ad image */}
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80' }}
-              style={styles.adCarouselImg}
+            {/* Animated carousel image */}
+            <Animated.Image
+              source={{ uri: carouselImages[currentCarouselIndex] }}
+              style={[styles.adCarouselImg, { opacity: carouselFadeAnim }]}
               resizeMode="cover"
             />
             {/* Indicator dots */}
             <View style={styles.adCarouselDots}>
-              <View style={styles.adCarouselDot} />
-              <View style={[styles.adCarouselDot, styles.adCarouselDotInactive]} />
-              <View style={[styles.adCarouselDot, styles.adCarouselDotInactive]} />
-              <View style={[styles.adCarouselDot, styles.adCarouselDotInactive]} />
+              {carouselImages.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.adCarouselDot,
+                    currentCarouselIndex !== index && styles.adCarouselDotInactive,
+                  ]}
+                />
+              ))}
             </View>
             {/* overlay removed from here to keep layout flow */}
           </View>
@@ -369,7 +407,7 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </TouchableOpacity>
 {/* Notebook-style card (vector icon, compact) */}
-        <TouchableOpacity style={[styles.notebookCard, { backgroundColor: theme.colors.surface, borderColor: notebookBorderColor }]} activeOpacity={0.9} onPress={() => {}}>
+        <TouchableOpacity style={[styles.notebookCard, { backgroundColor: theme.colors.surface, borderColor: notebookBorderColor }]} activeOpacity={0.9} onPress={() => navigation.navigate('Notes')}>
           <View style={styles.notebookContent}>
             <View style={styles.notebookLeft}>
               <View style={[styles.notebookIconCircle, { backgroundColor: notebookOrangeBg }]}>
@@ -377,6 +415,9 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
               <Text style={[styles.notebookTitle, { color: theme.colors.onSurface }]}>Sổ Ghi Chú</Text>
             </View>
+            <TouchableOpacity onPress={() => navigation.navigate('Notes')}>
+              <Icon name="chevron-right" size={20} color={theme.colors.onSurfaceVariant} />
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
 
@@ -491,14 +532,14 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.section}>
           <TouchableOpacity
             style={[styles.personalGoalButton, { backgroundColor: buttonCardBg, borderColor: buttonBorderColor }]}
-            onPress={() => {}}
+            onPress={() => navigation.navigate('CategoryManagement')}
             activeOpacity={0.85}
           >
             <View style={styles.personalGoalInlineRow}>
               <View style={[styles.notebookIconCircle, { backgroundColor: cyanIconBg }]}>
-                <Icon name="account-heart-outline" size={18} color="#06B6D4" />
+                <Icon name="shape" size={18} color="#06B6D4" />
               </View>
-              <Text style={[styles.personalGoalText, { color: theme.colors.onSurface }]}>Mục tiêu cá nhân</Text>
+              <Text style={[styles.personalGoalText, { color: theme.colors.onSurface }]}>Danh mục chi tiêu</Text>
             </View>
           </TouchableOpacity>
 

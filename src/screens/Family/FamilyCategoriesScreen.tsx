@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,35 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
 import { useFamilyStore } from '../../store/familyStore';
-import { FamilyCategory } from '../../services/admin/FamilyCategoryService';
-import firestore from '@react-native-firebase/firestore';
-import FamilyTransactionService from '../../services/admin/FamilyTransactionService';
+import FamilyCategoryService, { 
+  FamilyCategory,
+  FamilyTransaction,
+  UserCategoryGroup 
+} from '../../services/admin/FamilyCategoryService';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'FamilyPermissions'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'FamilyCategories'>;
+
+type FilterType = 'all' | 'income' | 'expense';
+
+// Color constants
+const COLORS = {
+  income: '#10B981',
+  expense: '#EF4444',
+  transactions: '#6366F1',
+  white: '#fff',
+  incomeBg: '#10B98110',
+  expenseBg: '#EF444410',
+} as const;
 
 export default function FamilyCategoriesScreen({ navigation }: Props) {
   const theme = useTheme();
@@ -30,15 +47,24 @@ export default function FamilyCategoriesScreen({ navigation }: Props) {
   const { currentFamily } = useFamilyStore();
 
   // State
-  const [categories, setCategories] = useState<FamilyCategory[]>([]);
-  const [originalCategories, setOriginalCategories] = useState<FamilyCategory[] | null>(null);
-  const [membersMap, setMembersMap] = useState<Record<string, string>>({});
+  const [userGroups, setUserGroups] = useState<UserCategoryGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<FilterType>('all');
 
-  // Fetch categories (derive from users' transactions only — ignore defaults and mock data)
-  const fetchCategories = React.useCallback(async () => {
+  // Transaction dropdown state
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [categoryTransactions, setCategoryTransactions] = useState<Map<string, FamilyTransaction[]>>(
+    new Map()
+  );
+  const [loadingTransactions, setLoadingTransactions] = useState<string | null>(null);
+
+  // Info modal
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
+  // Fetch categories from transactions grouped by user
+  const fetchCategories = useCallback(async () => {
     try {
       setError(null);
       if (!currentFamily?.id) {
@@ -47,101 +73,180 @@ export default function FamilyCategoriesScreen({ navigation }: Props) {
         return;
       }
 
-      // Fetch family members -> map userId => name
-      let members: Record<string, string> = {};
-      try {
-        const memberSnapshots = await firestore()
-          .collection('family_members')
-          .where('familyId', '==', currentFamily.id)
-          .get({ source: 'server' });
+      // Kiểm tra quyền: chỉ owner mới được xem
+      const currentUser = auth().currentUser;
+      const isOwner = currentFamily.ownerId === currentUser?.uid;
 
-        memberSnapshots.docs.forEach((doc) => {
-          const memberData = doc.data() as any;
-          if (memberData.userId) members[memberData.userId] = memberData.name || 'Unknown';
-        });
-        setMembersMap(members);
-      } catch (memErr) {
-        console.warn('Could not fetch family members for categories owner lookup', memErr);
+      if (!isOwner) {
+        setError('Chỉ chủ gia đình mới có quyền truy cập chức năng này');
+        setLoading(false);
+        return;
       }
 
-      // Fetch recent transactions for the family (server) and derive categories from them
-      try {
-        const txs = await FamilyTransactionService.getRecentTransactions(currentFamily.id, 1000);
-
-        const normalize = (s: any) => {
-          try {
-            return String(s || '')
-              .normalize('NFD')
-              .replace(/\p{Extended_Pictographic}/gu, '') // remove emoji
-              .replace(/[\u0300-\u036f]/g, '') // remove diacritics
-              .toLowerCase()
-              .trim();
-          } catch {
-            return String(s || '').toLowerCase().trim();
-          }
-        };
-
-        const mapCategoryToColor = (category: string) => {
-          const palette = ['#10B981', '#EF4444', '#F59E0B', '#6366F1', '#06B6D4', '#F97316', '#8B5CF6', '#E11D48'];
-          const n = normalize(category);
-          if (!n) return palette[0];
-          let sum = 0;
-          for (let i = 0; i < n.length; i++) sum += n.charCodeAt(i);
-          return palette[sum % palette.length];
-        };
-
-        const derivedMap: Record<string, any> = {};
-        txs.forEach(tx => {
-          const labelRaw = tx.category || '';
-          const normalized = normalize(labelRaw);
-          if (!normalized) return;
-          if (!derivedMap[normalized]) {
-            derivedMap[normalized] = {
-              id: `derived_${normalized}`,
-              familyId: currentFamily.id,
-              name: String(labelRaw).toString().replace(/\p{Extended_Pictographic}/gu, '').trim() || String(labelRaw),
-              type: tx.type || 'expense',
-              icon: FamilyTransactionService.getTransactionIcon(tx.type || 'expense', String(labelRaw)),
-              color: mapCategoryToColor(labelRaw),
-              isDefault: false,
-              createdBy: tx.userId,
-              usageCount: 1,
-            };
-          } else {
-            derivedMap[normalized].usageCount += 1;
-          }
-        });
-
-        const derivedCategories: FamilyCategory[] = Object.values(derivedMap).map((d: any) => ({
-          id: d.id,
-          familyId: d.familyId,
-          name: d.name,
-          type: d.type,
-          icon: d.icon,
-          color: d.color,
-          isDefault: false,
-          createdBy: d.createdBy,
-        }));
-
-        // Use derived categories only (do not include service defaults)
-        setCategories(derivedCategories);
-        setOriginalCategories(derivedCategories);
-      } catch (txErr) {
-        console.warn('Could not fetch transactions to derive categories', txErr);
-        // Fallback to empty list
-        setCategories([]);
-        setOriginalCategories([]);
-      }
-
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      setError(
-        err instanceof Error ? err.message : 'Lỗi khi tải danh mục'
+      const data = await FamilyCategoryService.fetchFamilyCategoriesByUser(
+        currentFamily.id
       );
+      
+      setUserGroups(data);
+      console.log('✅ [FamilyCategoriesScreen] Categories loaded:', {
+        userCount: data.length,
+        totalCategories: data.reduce((sum, g) => sum + g.categories.length, 0),
+      });
+    } catch (err) {
+      console.error('❌ [FamilyCategoriesScreen] Error fetching categories:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi khi tải danh mục';
+      setError(errorMessage);
+      
+      // Show alert for critical errors
+      if (errorMessage.includes('not authenticated') || errorMessage.includes('permission')) {
+        Alert.alert('❌ Lỗi truy cập', errorMessage);
+      }
+    } finally {
       setLoading(false);
     }
-  }, [currentFamily?.id]);
+  }, [currentFamily?.id, currentFamily?.ownerId]);
+
+  // Handle toggle category to show/hide transactions
+  const handleToggleCategory = useCallback(async (category: FamilyCategory) => {
+    if (!currentFamily?.id) {
+      Alert.alert('⚠️ Lỗi', 'Không tìm thấy thông tin gia đình');
+      return;
+    }
+
+    const categoryId = category.id!;
+
+    // Toggle collapse if already expanded
+    if (expandedCategoryId === categoryId) {
+      setExpandedCategoryId(null);
+      return;
+    }
+
+    // Expand if transactions already loaded
+    if (categoryTransactions.has(categoryId)) {
+      setExpandedCategoryId(categoryId);
+      return;
+    }
+
+    // Fetch transactions
+    try {
+      setLoadingTransactions(categoryId);
+      console.log('🔄 [FamilyCategoriesScreen] Fetching transactions for category:', {
+        categoryId,
+        categoryName: category.name,
+        type: category.type,
+      });
+
+      const transactions = await FamilyCategoryService.getTransactionsByCategory(
+        currentFamily.id,
+        category.name,
+        category.type
+      );
+
+      setCategoryTransactions((prev) => new Map(prev).set(categoryId, transactions));
+      setExpandedCategoryId(categoryId);
+      
+      console.log('✅ [FamilyCategoriesScreen] Transactions loaded:', {
+        categoryId,
+        count: transactions.length,
+      });
+    } catch (err) {
+      console.error('❌ [FamilyCategoriesScreen] Error fetching transactions:', err);
+      Alert.alert(
+        '❌ Lỗi',
+        err instanceof Error ? err.message : 'Không thể tải giao dịch'
+      );
+    } finally {
+      setLoadingTransactions(null);
+    }
+  }, [currentFamily?.id, expandedCategoryId, categoryTransactions]);
+
+  // Handle delete transaction
+  const handleDeleteTransaction = useCallback((transaction: FamilyTransaction, categoryId: string) => {
+    const transactionDesc = transaction.description || 'Không có mô tả';
+    const userName = transaction.userName || 'Unknown';
+    
+    Alert.alert(
+      '🗑️ Xóa giao dịch',
+      `Bạn có chắc muốn xóa giao dịch "${transactionDesc}" của ${userName}?\n\nHành động này không thể hoàn tác.`,
+      [
+        { 
+          text: 'Hủy', 
+          style: 'cancel' 
+        },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            if (!currentFamily?.id) {
+              Alert.alert('❌ Lỗi', 'Không tìm thấy thông tin gia đình');
+              return;
+            }
+
+            try {
+              console.log('🗑️ [FamilyCategoriesScreen] Deleting transaction:', {
+                transactionId: transaction.id,
+                walletId: transaction.walletId,
+                categoryId,
+              });
+
+              await FamilyCategoryService.deleteTransaction(
+                currentFamily.id,
+                transaction.walletId,
+                transaction.id
+              );
+
+              // Cập nhật UI: xóa transaction khỏi list
+              const updatedTransactions = (categoryTransactions.get(categoryId) || []).filter(
+                (t) => t.id !== transaction.id
+              );
+              setCategoryTransactions((prev) => new Map(prev).set(categoryId, updatedTransactions));
+
+              // Refresh categories để cập nhật số lượng
+              await fetchCategories();
+
+              console.log('✅ [FamilyCategoriesScreen] Transaction deleted successfully');
+              Alert.alert('✅ Thành công', 'Đã xóa giao dịch');
+            } catch (err: any) {
+              console.error('❌ [FamilyCategoriesScreen] Error deleting transaction:', err);
+              Alert.alert(
+                '❌ Lỗi', 
+                err.message || 'Không thể xóa giao dịch. Vui lòng thử lại.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }, [currentFamily?.id, categoryTransactions, fetchCategories]);
+
+  // Format date
+  const formatDate = useCallback((date: any): string => {
+    try {
+      const dateObj = date?.toDate ? date.toDate() : new Date(date);
+      if (isNaN(dateObj.getTime())) return 'N/A';
+      
+      const day = dateObj.getDate().toString().padStart(2, '0');
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+      const year = dateObj.getFullYear();
+      const hours = dateObj.getHours().toString().padStart(2, '0');
+      const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+      return `${day}/${month}/${year} • ${hours}:${minutes}`;
+    } catch {
+      return 'N/A';
+    }
+  }, []);
+
+  // Format currency
+  const formatCurrency = useCallback((amount: number): string => {
+    try {
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+      }).format(amount);
+    } catch {
+      return `${amount.toLocaleString('vi-VN')} ₫`;
+    }
+  }, []);
 
   // Initial load
   React.useEffect(() => {
@@ -157,55 +262,45 @@ export default function FamilyCategoriesScreen({ navigation }: Props) {
   }, [fetchCategories]);
 
   // Pull to refresh
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
+    setCategoryTransactions(new Map());
+    setExpandedCategoryId(null);
+    
+    console.log('🔄 [FamilyCategoriesScreen] Refreshing categories...');
+    
     try {
       await fetchCategories();
     } catch (err) {
-      console.error('Error refreshing categories:', err);
+      console.error('❌ [FamilyCategoriesScreen] Error refreshing categories:', err);
+      Alert.alert('⚠️ Lỗi', 'Không thể làm mới dữ liệu');
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [fetchCategories]);
 
-  // Get type color
-  const getTypeColor = (type: 'income' | 'expense'): string => {
-    return type === 'income' ? theme.colors.secondary : '#EF4444';
-  };
+  // Get filtered user groups - Memoized
+  const filteredUserGroups = useMemo((): UserCategoryGroup[] => {
+    if (filterType === 'all') return userGroups;
+    
+    return userGroups
+      .map(group => ({
+        ...group,
+        categories: group.categories.filter(c => c.type === filterType)
+      }))
+      .filter(group => group.categories.length > 0);
+  }, [userGroups, filterType]);
 
-  // Helpers to get owner id/name (categories may store owner under different fields)
-  const getCategoryOwnerId = (cat: any): string | undefined => {
-    return (cat.ownerId || cat.createdBy || cat.createdById || cat.userId) as string | undefined;
-  };
+  // Calculate stats - Memoized
+  const stats = useMemo(() => {
+    const allCategories = userGroups.flatMap(g => g.categories);
+    const total = allCategories.length;
+    const income = allCategories.filter((c) => c.type === 'income').length;
+    const expense = allCategories.filter((c) => c.type === 'expense').length;
+    const totalTransactions = allCategories.reduce((sum, c) => sum + (c.transactionCount || 0), 0);
 
-  const getCategoryOwnerName = (cat: any): string => {
-    const ownerId = getCategoryOwnerId(cat);
-    if (ownerId && membersMap[ownerId]) return membersMap[ownerId];
-    if (cat.isDefault) return 'Chung';
-    return 'Người dùng';
-  };
-
-  // Handle search
-  const handleSearch = () => {
-    Alert.prompt(
-      'Tìm kiếm danh mục',
-      'Nhập tên danh mục cần tìm',
-      (text) => {
-        if (!text || !text.trim()) return;
-        const source = originalCategories ?? categories;
-        const filtered = source.filter(cat =>
-          cat.name.toLowerCase().includes(text.toLowerCase())
-        );
-        if (filtered.length === 0) {
-          Alert.alert('Không tìm thấy', 'Không có danh mục nào khớp');
-          return;
-        }
-        // Apply filtered results
-        setCategories(filtered);
-      },
-      'plain-text'
-    );
-  };
+    return { total, income, expense, totalTransactions };
+  }, [userGroups]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -217,12 +312,17 @@ export default function FamilyCategoriesScreen({ navigation }: Props) {
         >
           <Text style={styles.backIcon}>←</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>Danh mục</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Quản trị danh mục</Text>
+          <Text style={styles.headerSubtitle}>
+            {currentFamily?.ownerId === auth().currentUser?.uid ? 'Chủ gia đình' : 'Thành viên'}
+          </Text>
+        </View>
         <Pressable
-          style={styles.addIconButton}
-          onPress={() => Alert.alert('Thêm danh mục', 'Tạo danh mục mới')}
+          style={styles.infoButton}
+          onPress={() => setShowInfoModal(true)}
         >
-          <Icon name="plus" size={20} color={theme.colors.primary} />
+          <Icon name="information" size={24} color={theme.colors.primary} />
         </Pressable>
       </View>
 
@@ -246,7 +346,7 @@ export default function FamilyCategoriesScreen({ navigation }: Props) {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.onSurfaceVariant }]}>
-              Đang tải danh mục...
+              Đang tải danh mục từ giao dịch gia đình...
             </Text>
           </View>
         ) : error ? (
@@ -266,93 +366,236 @@ export default function FamilyCategoriesScreen({ navigation }: Props) {
           </View>
         ) : (
           <Animated.View style={{ opacity: fadeAnim }}>
-            {/* Big search button (full width, above stats) */}
-            <Pressable style={styles.searchBigButton} onPress={handleSearch}>
-              <Icon name="magnify" size={18} color={theme.colors.primary} />
-              <Text style={styles.searchBigText}>Tìm kiếm danh mục</Text>
-            </Pressable>
-
-            {/* Stats */}
+            {/* Stats Card */}
             <View style={styles.statsCard}>
-              <View style={styles.statsRow}>
-                <Text style={styles.statsTitle}>
-                  Tổng số danh mục: {categories.length}
-                </Text>
-                <View style={styles.statsActions}>
-                  {originalCategories && originalCategories.length !== categories.length && (
-                    <Pressable
-                      style={styles.clearButton}
-                      onPress={() => {
-                        setCategories(originalCategories);
-                      }}
-                    >
-                      <Icon name="close" size={16} color={theme.colors.onSurfaceVariant} />
-                    </Pressable>
-                  )}
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Icon name="format-list-bulleted" size={20} color={theme.colors.primary} />
+                  <Text style={styles.statValue}>{stats.total}</Text>
+                  <Text style={styles.statLabel}>Danh mục</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Icon name="trending-up" size={20} color={COLORS.income} />
+                  <Text style={[styles.statValue, styles.incomeColor]}>{stats.income}</Text>
+                  <Text style={styles.statLabel}>Thu</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Icon name="trending-down" size={20} color={COLORS.expense} />
+                  <Text style={[styles.statValue, styles.expenseColor]}>{stats.expense}</Text>
+                  <Text style={styles.statLabel}>Chi</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Icon name="swap-horizontal" size={20} color={COLORS.transactions} />
+                  <Text style={[styles.statValue, styles.transactionsColor]}>{stats.totalTransactions}</Text>
+                  <Text style={styles.statLabel}>Giao dịch</Text>
                 </View>
               </View>
-            </View> 
-
-            {/* Categories Grid */}
-            <View style={styles.categoriesGrid}>
-              {categories.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <Icon
-                    name="inbox-outline"
-                    size={48}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                  <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
-                    Chưa có danh mục nào
-                  </Text>
-                </View>
-              ) : (
-                categories.map((category) => (
-                  <Pressable
-                    key={category.id}
-                    style={[styles.categoryCard, { borderLeftColor: category.color }]}
-                    onPress={() =>
-                      Alert.alert(
-                        category.name,
-                        `Loại: ${category.type === 'income' ? 'Thu nhập' : 'Chi tiêu'}`
-                      )
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.categoryIcon,
-                        { backgroundColor: `${category.color}20` },
-                      ]}
-                    >
-                      <Icon name={category.icon} size={32} color={category.color} />
-                    </View>
-                    <View style={styles.categoryInfo}>
-                      <Text style={styles.categoryName}>{category.name}</Text>
-
-                      <View style={styles.ownerRow}>
-                        <Icon name="account-circle" size={14} color={theme.colors.onSurfaceVariant} style={styles.ownerIcon} />
-                        <Text style={[styles.ownerText, { color: theme.colors.onSurfaceVariant }]}>{getCategoryOwnerName(category)}</Text>
-                        <View style={styles.flexSpacer} />
-                        <View style={styles.typeRow}>
-                          <Icon
-                            name={category.type === 'income' ? 'wallet' : 'cash-remove'}
-                            size={14}
-                            color={getTypeColor(category.type)}
-                            style={styles.typeIcon}
-                          />
-                          <Text style={[
-                            styles.categoryType,
-                            { color: getTypeColor(category.type) }
-                          ]}>
-                            {category.type === 'income' ? 'Thu nhập' : 'Chi tiêu'}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </Pressable>
-                ))
-              )}
             </View>
+
+            {/* Filter Tabs */}
+            <View style={styles.filterTabs}>
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  filterType === 'all' && [styles.filterTabActive, { backgroundColor: theme.colors.primary }],
+                ]}
+                onPress={() => setFilterType('all')}
+              >
+                <Text style={[
+                  styles.filterTabText,
+                  filterType === 'all' && styles.filterTabTextActive,
+                ]}>
+                  Tất cả ({stats.total})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  filterType === 'income' && [styles.filterTabActive, { backgroundColor: '#10B981' }],
+                ]}
+                onPress={() => setFilterType('income')}
+              >
+                <Icon 
+                  name="trending-up" 
+                  size={16} 
+                  color={filterType === 'income' ? COLORS.white : COLORS.income} 
+                />
+                <Text style={[
+                  styles.filterTabText,
+                  filterType === 'income' ? styles.filterTabTextActive : styles.incomeColor,
+                ]}>
+                  Thu ({stats.income})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  filterType === 'expense' && [styles.filterTabActive, { backgroundColor: '#EF4444' }],
+                ]}
+                onPress={() => setFilterType('expense')}
+              >
+                <Icon 
+                  name="trending-down" 
+                  size={16} 
+                  color={filterType === 'expense' ? COLORS.white : COLORS.expense} 
+                />
+                <Text style={[
+                  styles.filterTabText,
+                  filterType === 'expense' ? styles.filterTabTextActive : styles.expenseColor,
+                ]}>
+                  Chi ({stats.expense})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Categories by User */}
+            {filteredUserGroups.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Icon
+                  name="inbox-outline"
+                  size={48}
+                  color={theme.colors.onSurfaceVariant}
+                />
+                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                  Chưa có danh mục nào
+                </Text>
+                <Text style={[styles.emptySubtext, { color: theme.colors.onSurfaceVariant }]}>
+                  Tạo giao dịch gia đình để tự động tạo danh mục
+                </Text>
+              </View>
+            ) : (
+              filteredUserGroups.map((userGroup) => (
+                <View key={userGroup.userId} style={styles.userSection}>
+                  {/* User Header */}
+                  <View style={styles.userHeader}>
+                    <View style={styles.userAvatar}>
+                      <Icon name="account" size={20} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.userInfo}>
+                      <Text style={[styles.userName, { color: theme.colors.onSurface }]}>
+                        {userGroup.userName}
+                      </Text>
+                      {userGroup.userEmail && (
+                        <Text style={[styles.userEmail, { color: theme.colors.onSurfaceVariant }]}>
+                          {userGroup.userEmail}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.userStats}>
+                      <Text style={[styles.userCategoryCount, { color: theme.colors.primary }]}>
+                        {userGroup.categories.length} danh mục
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* User Categories */}
+                  <View style={styles.categoriesGrid}>
+                    {userGroup.categories.map((category) => (
+                      <View key={category.id}>
+                        <Pressable
+                          style={[styles.categoryCard, { borderLeftColor: category.color }]}
+                          onPress={() => handleToggleCategory(category)}
+                        >
+                          <View
+                            style={[
+                              styles.categoryIcon,
+                              { backgroundColor: `${category.color}20` },
+                            ]}
+                          >
+                            <Icon name={category.icon} size={32} color={category.color} />
+                          </View>
+                          <View style={styles.categoryInfo}>
+                            <Text style={[styles.categoryName, { color: theme.colors.primary }]}>
+                              {category.name}
+                            </Text>
+                            <View style={styles.categoryRow}>
+                              <View style={[
+                                styles.typeBadge,
+                                category.type === 'income' ? styles.typeBadgeIncome : styles.typeBadgeExpense
+                              ]}>
+                                <Icon
+                                  name={category.type === 'income' ? 'trending-up' : 'trending-down'}
+                                  size={12}
+                                  color={category.type === 'income' ? '#10B981' : '#EF4444'}
+                                />
+                                <Text style={[
+                                  styles.typeBadgeText,
+                                  category.type === 'income' ? styles.incomeColor : styles.expenseColor
+                                ]}>
+                                  {category.type === 'income' ? 'Thu nhập' : 'Chi tiêu'}
+                                </Text>
+                              </View>
+                              <Text style={[styles.categoryStats, { color: theme.colors.onSurfaceVariant }]}>
+                                {category.transactionCount || 0} giao dịch • {formatCurrency(category.totalAmount || 0)}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.categoryActions}>
+                            {loadingTransactions === category.id ? (
+                              <ActivityIndicator size="small" color={theme.colors.primary} />
+                            ) : (
+                              <View style={styles.expandButton}>
+                                <Text style={[styles.expandText, { color: theme.colors.primary }]}>
+                                  {expandedCategoryId === category.id ? 'Ẩn' : 'Xem'} {category.transactionCount || 0}
+                                </Text>
+                                <Icon
+                                  name={expandedCategoryId === category.id ? 'chevron-up' : 'chevron-down'}
+                                  size={20}
+                                  color={theme.colors.primary}
+                                />
+                              </View>
+                            )}
+                          </View>
+                        </Pressable>
+
+                        {/* Transaction List */}
+                        {expandedCategoryId === category.id && categoryTransactions.has(category.id!) && (
+                          <View style={styles.transactionList}>
+                            {(categoryTransactions.get(category.id!) || []).map((transaction) => (
+                              <View key={transaction.id} style={styles.transactionItem}>
+                                <View style={styles.transactionInfo}>
+                                  <Text style={[styles.transactionDesc, { color: theme.colors.onSurface }]}>
+                                    {transaction.description || 'Không có mô tả'}
+                                  </Text>
+                                  <View style={styles.transactionMeta}>
+                                    <Icon name="account" size={14} color={theme.colors.onSurfaceVariant} />
+                                    <Text style={[styles.transactionUser, { color: theme.colors.onSurfaceVariant }]}>
+                                      {transaction.userName}
+                                    </Text>
+                                    <Text style={[styles.transactionDot, { color: theme.colors.onSurfaceVariant }]}>
+                                      •
+                                    </Text>
+                                    <Text style={[styles.transactionDate, { color: theme.colors.onSurfaceVariant }]}>
+                                      {formatDate(transaction.date)}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <View style={styles.transactionRight}>
+                                  <Text style={[
+                                    styles.transactionAmount,
+                                    transaction.type === 'income' ? styles.incomeColor : styles.expenseColor
+                                  ]}>
+                                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                                  </Text>
+                                  <TouchableOpacity
+                                    style={styles.deleteTransactionButton}
+                                    onPress={() => handleDeleteTransaction(transaction, category.id!)}
+                                  >
+                                    <Icon name="delete" size={18} color="#EF4444" />
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))
+            )}
 
             {/* Bottom spacer so scrolling to the end shows whitespace */}
             <View style={styles.bottomSpacer} />
@@ -360,6 +603,41 @@ export default function FamilyCategoriesScreen({ navigation }: Props) {
           </Animated.View>
         )}
       </ScrollView>
+
+      {/* Info Modal */}
+      <Modal
+        visible={showInfoModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowInfoModal(false)}
+        >
+          <Pressable style={[styles.infoModalContent, { backgroundColor: theme.colors.surface }]}>
+            <Icon name="information" size={48} color={theme.colors.primary} />
+            <Text style={[styles.infoModalTitle, { color: theme.colors.onSurface }]}>
+              Quản trị danh mục gia đình
+            </Text>
+            <Text style={[styles.infoModalText, { color: theme.colors.onSurfaceVariant }]}>
+              🔒 <Text style={styles.boldText}>Chỉ dành cho Chủ gia đình</Text>
+              {'\n\n'}
+              📊 <Text style={styles.semiBoldText}>Danh mục tự động:</Text> Danh mục được AI tạo tự động từ giao dịch của các thành viên. Bạn không thể thêm/sửa/xóa danh mục.
+              {'\n\n'}
+              👥 <Text style={styles.semiBoldText}>Quản lý giao dịch:</Text> Xem danh mục và giao dịch của từng thành viên. Bạn có thể xóa giao dịch nếu cần.
+              {'\n\n'}
+              🔄 <Text style={styles.semiBoldText}>Tự động cập nhật:</Text> Khi thành viên tạo giao dịch mới, danh mục sẽ tự động xuất hiện hoặc cập nhật.
+            </Text>
+            <TouchableOpacity
+              style={[styles.infoModalButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => setShowInfoModal(false)}
+            >
+              <Text style={styles.infoModalButtonText}>Đã hiểu</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -397,18 +675,22 @@ const getStyles = (theme: any) =>
       color: theme.colors.primary,
       fontWeight: 'bold',
     },
+    headerTitleContainer: {
+      flex: 1,
+      alignItems: 'center',
+    },
     headerTitle: {
       fontSize: 18,
       fontWeight: '800',
       color: theme.colors.primary,
     },
-    spacer: {
-      width: 40,
+    headerSubtitle: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 2,
     },
-    flexSpacer: {
-      flex: 1,
-    },
-    searchButton: {
+    infoButton: {
       width: 40,
       height: 40,
       borderRadius: 12,
@@ -469,82 +751,115 @@ const getStyles = (theme: any) =>
       marginTop: 12,
       fontWeight: '500',
     },
+    emptySubtext: {
+      fontSize: 12,
+      marginTop: 8,
+      textAlign: 'center',
+      paddingHorizontal: 40,
+    },
     statsCard: {
       backgroundColor: theme.colors.surface,
       borderRadius: 16,
       padding: 16,
-      marginBottom: 20,
+      marginBottom: 16,
       borderWidth: 1,
       borderColor: theme.dark
         ? 'rgba(255,255,255,0.1)'
         : 'rgba(0,0,0,0.05)',
     },
-    statsTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.primary,
-    },
-    statsRow: {
+    statsGrid: {
       flexDirection: 'row',
-      alignItems: 'center',
       justifyContent: 'space-between',
     },
-    statsActions: {
-      flexDirection: 'row',
+    statItem: {
+      flex: 1,
       alignItems: 'center',
+      gap: 4,
     },
-    statsSearchButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginLeft: 8,
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'
-    },
-    clearButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginLeft: 8,
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'
-    },
-    // Large search button above stats
-    searchBigButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      borderRadius: 12,
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-      marginBottom: 12,
-      gap: 10,
-    },
-    searchBigText: {
-      marginLeft: 8,
-      color: theme.colors.primary,
+    statValue: {
+      fontSize: 18,
       fontWeight: '700',
+      color: theme.colors.primary,
     },
-    addIconButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+    statLabel: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: theme.colors.onSurfaceVariant,
+    },
+    filterTabs: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 16,
+    },
+    filterTab: {
+      flex: 1,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.dark
-        ? 'rgba(255,255,255,0.06)'
-        : 'rgba(0, 137, 123, 0.08)',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.05)' : '#F8FAFC',
+      gap: 6,
+    },
+    filterTabActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    filterTabText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.onSurfaceVariant,
+    },
+    filterTabTextActive: {
+      color: '#fff',
     },
     bottomSpacer: {
       height: 120,
     },
+    userSection: {
+      marginBottom: 24,
+    },
+    userHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+    },
+    userAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.1)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    userInfo: {
+      flex: 1,
+    },
+    userName: {
+      fontSize: 16,
+      fontWeight: '700',
+      marginBottom: 2,
+    },
+    userEmail: {
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    userStats: {
+      alignItems: 'flex-end',
+    },
+    userCategoryCount: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
     categoriesGrid: {
       flexDirection: 'column',
       gap: 12,
-      marginBottom: 20,
     },
     categoryCard: {
       flexDirection: 'row',
@@ -576,44 +891,162 @@ const getStyles = (theme: any) =>
       color: theme.colors.primary,
       marginBottom: 4,
     },
-    typeRow: {
+    categoryRow: {
       flexDirection: 'row',
       alignItems: 'center',
-    },
-    typeIcon: {
-      marginRight: 6,
-    },
-    categoryType: {
-      fontSize: 12,
-      fontWeight: '500',
-    },
-    ownerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 6,
-    },
-    ownerIcon: {
-      marginRight: 6,
-    },
-    ownerText: {
-      fontSize: 12,
-      fontWeight: '500',
-    },
-    addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.secondary,
-      borderRadius: 12,
-      paddingVertical: 14,
       gap: 8,
     },
-    addIcon: {
-      marginRight: 4,
+    typeBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
     },
-    addButtonText: {
+    typeBadgeText: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    categoryStats: {
+      fontSize: 11,
+      fontWeight: '500',
+    },
+    categoryActions: {
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      marginLeft: 8,
+    },
+    expandButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    expandText: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    transactionList: {
+      marginTop: 8,
+      marginLeft: 12,
+      marginRight: 12,
+      marginBottom: 12,
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.02)' : '#F8FAFC',
+      borderRadius: 12,
+      overflow: 'hidden',
+    },
+    transactionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : '#E2E8F0',
+    },
+    transactionInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    transactionDesc: {
+      fontSize: 13,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    transactionMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    transactionUser: {
+      fontSize: 11,
+      fontWeight: '500',
+    },
+    transactionDot: {
+      fontSize: 11,
+    },
+    transactionDate: {
+      fontSize: 11,
+      fontWeight: '500',
+    },
+    transactionRight: {
+      alignItems: 'flex-end',
+      gap: 8,
+    },
+    transactionAmount: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    deleteTransactionButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: '#FEF2F2',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    infoModalContent: {
+      width: '85%',
+      maxWidth: 400,
+      borderRadius: 20,
+      padding: 24,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    infoModalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      marginTop: 16,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    infoModalText: {
+      fontSize: 14,
+      lineHeight: 20,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    infoModalButton: {
+      width: '100%',
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    infoModalButtonText: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: '#fff',
+    },
+    // Color styles
+    incomeColor: {
+      color: COLORS.income,
+    },
+    expenseColor: {
+      color: COLORS.expense,
+    },
+    transactionsColor: {
+      color: COLORS.transactions,
+    },
+    typeBadgeIncome: {
+      backgroundColor: COLORS.incomeBg,
+    },
+    typeBadgeExpense: {
+      backgroundColor: COLORS.expenseBg,
+    },
+    // Font weight styles
+    boldText: {
+      fontWeight: '700',
+    },
+    semiBoldText: {
+      fontWeight: '600',
     },
   });

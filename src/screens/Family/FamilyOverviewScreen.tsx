@@ -13,34 +13,22 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from 'react-native-paper';
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
-import type { FamilyMember } from "../../services/FamilyMemberService";
 // @ts-ignore: react-native-vector-icons types may be missing in this project
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import { useFamilyStore } from "../../store/familyStore";
 import { useFamilyMembers, useFamilyMemberStore } from "../../store/familyMemberStore";
+import { FamilyDataService, type FamilyMemberWithStats } from "../../services/admin/FamilyDataService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FamilyOverview">;
-
-// Using FamilyMember from FamilyService
-interface FamilyMemberUI extends FamilyMember {
-  finance?: {
-    income: number;
-    expense: number;
-    saving: number;
-  };
-  habits?: {
-    completed: number;
-    total: number;
-    streak: number;
-  };
-  goals?: number;
-}
 
 export default function FamilyOverviewScreen({ navigation, route }: Props) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [sharedWalletBalance, setSharedWalletBalance] = useState<number>(0);
+  const [familyGoalsCount, setFamilyGoalsCount] = useState<number>(0);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMemberWithStats[]>([]);
   const insets = useSafeAreaInsets();
   const TAB_BAR_HEIGHT = 70;
   const theme = useTheme();
@@ -55,6 +43,13 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
   }, [familyId, families, currentFamily]);
 
   const familyMembersFromStore = useFamilyMembers(selectedFamily?.id || '');
+  
+  // ✅ Get base family members
+  const baseFamilyMembers = React.useMemo(() => {
+    return familyMembersFromStore && familyMembersFromStore.length > 0 
+      ? familyMembersFromStore 
+      : [];
+  }, [familyMembersFromStore]);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -162,6 +157,60 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
     }
   }, [selectedFamily?.id, selectedFamily?.memberIds, selectedFamily?.ownerId, navigation, isLoading, loadError]);
 
+  // 📊 Fetch shared wallet balance and family goals
+  React.useEffect(() => {
+    const fetchFamilyFinancialData = async () => {
+      if (!selectedFamily?.id || baseFamilyMembers.length === 0) return;
+
+      try {
+        const [walletBalance, goalsCount] = await Promise.all([
+          FamilyDataService.getSharedWalletBalance(selectedFamily.id),
+          FamilyDataService.getFamilyGoalsCount(selectedFamily.id, baseFamilyMembers),
+        ]);
+
+        setSharedWalletBalance(walletBalance);
+        setFamilyGoalsCount(goalsCount);
+      } catch (error) {
+        console.error('Error fetching family financial data:', error);
+      }
+    };
+
+    fetchFamilyFinancialData();
+  }, [selectedFamily?.id, baseFamilyMembers]);
+
+  // 🔧 Enrich members with REAL finance & habits data using service
+  React.useEffect(() => {
+    const enrichMembers = async () => {
+      if (baseFamilyMembers.length === 0) {
+        setFamilyMembers([]);
+        return;
+      }
+
+      try {
+        const enriched = await FamilyDataService.enrichMembersWithRealData(baseFamilyMembers);
+        setFamilyMembers(enriched);
+      } catch (error) {
+        console.error('Error enriching members:', error);
+        // Fallback to mock data
+        const mockEnriched = FamilyDataService.enrichMembersWithMockData(baseFamilyMembers);
+        setFamilyMembers(mockEnriched);
+      }
+    };
+
+    enrichMembers();
+  }, [baseFamilyMembers]);
+  
+  // 📊 Calculate family overview statistics using service
+  const familyStats = React.useMemo(() => {
+    const stats = FamilyDataService.calculateFamilyStats(familyMembers);
+    // Override walletBalance with real shared wallet data
+    return {
+      ...stats,
+      walletBalance: sharedWalletBalance,
+      totalGoals: familyGoalsCount,
+    };
+  }, [familyMembers, sharedWalletBalance, familyGoalsCount]);
+
   // ✅ Check if current user is owner
   const isOwner = (): boolean => {
     const currentUser = auth().currentUser;
@@ -251,45 +300,6 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
     navigation.navigate("InviteMember" as any, { familyId: selectedFamily?.id || "", inviteCode: "" });
   };
 
-  // ✅ Filter family members - chỉ hiển thị những member thuộc gia đình này
-  // familyMembersFromStore đã là những member của selectedFamily (được fetch từ DB)
-  // Không cần filter thêm vì dữ liệu đã đúng từ API
-  let familyMembers: FamilyMemberUI[] = familyMembersFromStore && familyMembersFromStore.length > 0 
-    ? familyMembersFromStore 
-    : [];
-  
-  console.log('🎯 familyMembersFromStore before mapping:', {
-    isArray: Array.isArray(familyMembersFromStore),
-    length: familyMembersFromStore?.length || 0,
-    data: familyMembersFromStore,
-  });
-  
-  // 🔧 Thêm finance & habits data từ mock (chờ API trả về đầy đủ dữ liệu)
-  familyMembers = familyMembers.map(m => ({
-    ...m,
-    finance: m.finance || {
-      income: Math.random() * 50000000,
-      expense: Math.random() * 30000000,
-      saving: Math.random() * 20000000,
-    },
-    habits: m.habits || {
-      completed: Math.floor(Math.random() * 10),
-      total: 10,
-      streak: Math.floor(Math.random() * 30),
-    },
-  }));
-  
-  console.log('📊 Final Family Members after mapping:', {
-    selectedFamilyId: selectedFamily?.id,
-    membersCount: familyMembers.length,
-    members: familyMembers.map(m => ({ id: m.userId, name: m.name, role: m.role })),
-  });
-  
-  // Calculate totals from actual members
-  const totalIncome = familyMembers.reduce((sum, m) => sum + (m.finance?.income || 0), 0);
-  const totalExpense = familyMembers.reduce((sum, m) => sum + (m.finance?.expense || 0), 0);
-  const totalSaving = familyMembers.reduce((sum, m) => sum + (m.finance?.saving || 0), 0);
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header, { paddingTop: Math.max(8, insets.top + 4) }]}>
@@ -334,67 +344,49 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Family Summary */}
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Tổng quan gia đình</Text>
+            <View style={styles.summaryHeader}>
+              <Icon name="home-heart" size={28} color={theme.colors.primary} />
+              <Text style={styles.summaryTitle}>Tổng quan gia đình</Text>
+            </View>
             <View style={styles.summaryStats}>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Thu nhập</Text>
-                <Text style={[styles.summaryValue, { color: theme.colors.secondary }]}>
-                  ₫{(totalIncome / 1000000).toFixed(1)}M
-                </Text>
-              </View>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Chi tiêu</Text>
-                <Text style={[styles.summaryValue, { color: theme.colors.onSurfaceVariant }]}>
-                  ₫{(totalExpense / 1000000).toFixed(1)}M
-                </Text>
-              </View>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Tiết kiệm</Text>
+              <View style={styles.summaryItemSmall}>
+                <Icon name="account-multiple" size={32} color={theme.colors.primary} style={styles.summaryIcon} />
+                <Text style={styles.summaryLabel}>Thành viên</Text>
                 <Text style={[styles.summaryValue, { color: theme.colors.primary }]}>
-                  ₫{(totalSaving / 1000000).toFixed(1)}M
+                  {familyStats.totalMembers}
+                </Text>
+              </View>
+              <View style={styles.summaryItemLarge}>
+                <Icon name="wallet" size={40} color={theme.colors.secondary} style={styles.summaryIcon} />
+                <Text style={styles.summaryLabel}>Ví chung</Text>
+                <Text style={[styles.summaryValue, { color: theme.colors.secondary }]}>
+                  {FamilyDataService.formatCurrency(familyStats.walletBalance)}
+                </Text>
+              </View>
+              <View style={styles.summaryItemSmall}>
+                <Icon name="bullseye-arrow" size={32} color={theme.colors.primary} style={styles.summaryIcon} />
+                <Text style={styles.summaryLabel}>Mục tiêu</Text>
+                <Text style={[styles.summaryValue, { color: theme.colors.primary }]}>
+                  {familyStats.totalGoals}
                 </Text>
               </View>
             </View>
-            <View style={styles.summaryProgress}>
-              <View style={[styles.summaryProgressFill, { width: `${(totalSaving / totalIncome) * 100}%` }]} />
-            </View>
-            <Text style={styles.summaryPercentage}>
-              {((totalSaving / totalIncome) * 100).toFixed(1)}% tỷ lệ tiết kiệm
-            </Text>
           </View>
 
-          {/* Family Members */}
+          {/* Members List */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Thành viên ({familyMembers.length})</Text>
+            <Text style={styles.sectionTitle}>Thành viên ({familyStats.totalMembers})</Text>
             {familyMembers.length === 0 ? (
               <View style={styles.emptyMemberCard}>
-                <Icon name="account-multiple-outline" size={48} color={theme.colors.onSurfaceVariant} />
-                <Text style={styles.emptyMemberText}>
-                  Chưa có thành viên nào trong gia đình
-                </Text>
+                <Icon name="account-multiple-plus" size={48} color={theme.colors.primary} />
+                <Text style={styles.emptyMemberText}>Chưa có thành viên nào</Text>
               </View>
             ) : (
               familyMembers.map((member) => {
-                const habitRate = member.habits ? (member.habits.completed / member.habits.total) * 100 : 0;
+                const habitRate = FamilyDataService.calculateMemberHabitRate(member);
                 const defaultColor = member.color || "#6366F1";
-                
-                // Get role display with emoji
-                const getRoleDisplay = () => {
-                  switch (member.role) {
-                    case 'owner':
-                      return '👑 Chủ nhóm';
-                    case 'admin':
-                      return '⭐ Quản trị viên';
-                    case 'child':
-                      return '👶 Con em';
-                    default:
-                      return '👤 Thành viên';
-                  }
-                };
-
-                const avatarIcon = member.role === 'owner' ? 'account' : 'account-outline';
+                const roleDisplay = FamilyDataService.getMemberRoleDisplay(member.role);
+                const avatarIcon = FamilyDataService.getMemberAvatarIcon(member.role);
 
                 return (
                   <TouchableOpacity
@@ -411,7 +403,7 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
                         <View style={styles.memberDetails}>
                           <Text style={styles.memberName}>{member.name || 'Không rõ tên'}</Text>
                           <Text style={[styles.memberRole, { color: defaultColor }]}>
-                            {getRoleDisplay()}
+                            {roleDisplay}
                           </Text>
                         </View>
                       </View>
@@ -546,121 +538,367 @@ export default function FamilyOverviewScreen({ navigation, route }: Props) {
 }
 
 const getStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 8, paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', backgroundColor: theme.colors.surface },
+  container: { 
+    flex: 1, 
+    backgroundColor: theme.colors.background 
+  },
+  header: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "space-between", 
+    paddingTop: 8, 
+    paddingHorizontal: 20, 
+    paddingBottom: 12, 
+    borderBottomWidth: 1, 
+    borderBottomColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', 
+    backgroundColor: theme.colors.surface,
+    shadowColor: theme.dark ? '#000' : '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   spacer: { width: 40 },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.08)', alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: theme.colors.primary },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary },
-  familyNameSubtitle: { fontSize: 12, color: theme.colors.onSurfaceVariant, marginLeft: 8, fontStyle: 'italic' },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center' },
-  headerPermButton: { marginLeft: 8, width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(99, 102, 241, 0.06)' },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  backButton: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 14, 
+    backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)', 
+    alignItems: "center", 
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.dark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.15)',
+  },
+  backIcon: { 
+    fontSize: 22, 
+    color: theme.colors.primary, 
+    fontWeight: "bold" 
+  },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: "800", 
+    color: theme.colors.primary,
+    letterSpacing: 0.3,
+  },
+  familyNameSubtitle: { 
+    fontSize: 13, 
+    color: theme.colors.onSurfaceVariant, 
+    marginLeft: 8, 
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  headerTitleRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  headerPermButton: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
+  },
+  headerActions: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 10 
+  },
   headerActionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    // use secondaryContainer if available
-    backgroundColor: (() => {
-      const container = (theme.colors as any).secondaryContainer;
-      if (container) return container;
-      const sec = theme.colors.secondary;
-      if (typeof sec === 'string' && sec.startsWith('#')) {
-        let c = sec.replace('#', '');
-        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
-        const r = parseInt(c.substring(0, 2), 16);
-        const g = parseInt(c.substring(2, 4), 16);
-        const b = parseInt(c.substring(4, 6), 16);
-        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.4)` : `rgba(${r}, ${g}, ${b}, 0.12)`;
-      }
-      return theme.dark ? 'rgba(99, 102, 241, 0.4)' : `${theme.colors.secondary}20`;
-    })(),
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.dark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.dark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.2)',
   },
-  addButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.colors.secondary, alignItems: "center", justifyContent: "center" },
-  addIcon: { fontSize: 24, color: "#00897B", fontWeight: "700" },
-  content: { padding: 16 },
+  addButton: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 14, 
+    backgroundColor: theme.colors.primary, 
+    alignItems: "center", 
+    justifyContent: "center",
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addIcon: { fontSize: 24, color: "#FFFFFF", fontWeight: "700" },
+  content: { padding: 20 },
   summaryCard: {
-    // Use theme.secondaryContainer if available; else compute safe rgba fallback from secondary
-    backgroundColor: (() => {
-      const container = (theme.colors as any).secondaryContainer;
-      if (container) return container;
-      const sec = theme.colors.secondary;
-      if (typeof sec === 'string' && sec.startsWith('#')) {
-        let c = sec.replace('#', '');
-        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
-        const r = parseInt(c.substring(0, 2), 16);
-        const g = parseInt(c.substring(2, 4), 16);
-        const b = parseInt(c.substring(4, 6), 16);
-        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.15)` : `rgba(${r}, ${g}, ${b}, 0.16)`;
-      }
-      return theme.dark ? 'rgba(99, 102, 241, 0.15)' : `${theme.colors.secondary}26`;
-    })(),
+    backgroundColor: theme.colors.surface,
     borderRadius: 20,
     padding: 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: (() => {
-      const container = (theme.colors as any).secondaryContainer;
-      if (container) return container;
-      const sec = theme.colors.secondary;
-      if (typeof sec === 'string' && sec.startsWith('#')) {
-        let c = sec.replace('#', '');
-        if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
-        const r = parseInt(c.substring(0, 2), 16);
-        const g = parseInt(c.substring(2, 4), 16);
-        const b = parseInt(c.substring(4, 6), 16);
-        return theme.dark ? `rgba(${r}, ${g}, ${b}, 0.32)` : `rgba(${r}, ${g}, ${b}, 0.3)`;
-      }
-      return theme.dark ? 'rgba(99, 102, 241, 0.4)' : `${theme.colors.secondary}4D`;
-    })(),
+    borderColor: theme.dark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)',
+    shadowColor: theme.dark ? '#000' : theme.colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  summaryTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.primary, marginBottom: 16, textAlign: "center" },
-  summaryStats: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
-  summaryItem: { alignItems: "center" },
-  summaryLabel: { fontSize: 12, color: theme.colors.onSurfaceVariant, marginBottom: 4 },
-  summaryValue: { fontSize: 18, fontWeight: "800" },
-  summaryDivider: { width: 1, height: 40, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)' },
-  summaryProgress: { height: 8, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)', borderRadius: 4, overflow: "hidden", marginBottom: 8 },
-  summaryProgressFill: { height: "100%", backgroundColor: theme.colors.secondary, borderRadius: 4 },
-  summaryPercentage: { fontSize: 13, color: theme.colors.onSurfaceVariant, textAlign: "center" },
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: theme.colors.primary, marginBottom: 16, backgroundColor: theme.colors.background },
-  memberCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, borderTopColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderTopWidth: 1 },
-  memberHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  memberInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
-  memberAvatar: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginRight: 12 },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    gap: 10,
+  },
+  summaryTitle: { 
+    fontSize: 19, 
+    fontWeight: "800", 
+    color: theme.colors.primary,
+    letterSpacing: 0.3,
+  },
+  summaryStats: { 
+    flexDirection: "row", 
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  summaryItemSmall: { 
+    alignItems: "center",
+    flex: 0.85,
+    backgroundColor: theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(99, 102, 241, 0.04)',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(99, 102, 241, 0.08)',
+  },
+  summaryItemLarge: { 
+    alignItems: "center",
+    flex: 1.3,
+    backgroundColor: theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(99, 102, 241, 0.04)',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(99, 102, 241, 0.08)',
+  },
+  summaryIcon: {
+    marginBottom: 10,
+  },
+  summaryItem: { 
+    alignItems: "center",
+    flex: 1,
+    backgroundColor: theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(99, 102, 241, 0.04)',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(99, 102, 241, 0.08)',
+  },
+  summaryIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  summaryLabel: { 
+    fontSize: 12, 
+    color: theme.colors.onSurfaceVariant, 
+    marginBottom: 8,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  summaryValue: { 
+    fontSize: 20, 
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+  section: { marginBottom: 28 },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: "800", 
+    color: theme.colors.primary, 
+    marginBottom: 18,
+    letterSpacing: 0.4,
+  },
+  memberCard: { 
+    backgroundColor: theme.colors.surface, 
+    borderRadius: 20, 
+    padding: 20, 
+    marginBottom: 18, 
+    borderLeftWidth: 5,
+    shadowColor: theme.dark ? '#000' : theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  memberHeader: { 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    alignItems: "center", 
+    marginBottom: 18 
+  },
+  memberInfo: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    flex: 1 
+  },
+  memberAvatar: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 30, 
+    alignItems: "center", 
+    justifyContent: "center", 
+    marginRight: 14 
+  },
   memberAvatarText: { fontSize: 32 },
   memberDetails: { flex: 1 },
-  memberName: { fontSize: 18, fontWeight: "800", color: theme.colors.primary, marginBottom: 4 },
-  memberRole: { fontSize: 13, color: theme.colors.onSurfaceVariant },
-  memberBadge: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
-  memberBadgeText: { fontSize: 16, fontWeight: "800" },
-  memberStats: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
-  statRow: { flexDirection: "row", alignItems: "center", flex: 1 },
-  statIcon: { marginRight: 6 },
+  memberName: { 
+    fontSize: 19, 
+    fontWeight: "800", 
+    color: theme.colors.onSurface, 
+    marginBottom: 5,
+    letterSpacing: 0.3,
+  },
+  memberRole: { 
+    fontSize: 13, 
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  memberBadge: { 
+    borderRadius: 14, 
+    paddingHorizontal: 14, 
+    paddingVertical: 8 
+  },
+  memberBadgeText: { 
+    fontSize: 16, 
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  memberStats: { 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    marginBottom: 18,
+    gap: 8,
+  },
+  statRow: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    flex: 1 
+  },
+  statIcon: { marginRight: 7 },
   statInfo: { flex: 1 },
-  statLabel: { fontSize: 11, color: theme.colors.onSurfaceVariant, marginBottom: 2 },
-  statValue: { fontSize: 13, fontWeight: "700", color: theme.colors.onSurface },
-  memberHabits: { marginBottom: 12 },
-  habitInfo: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  habitLabel: { fontSize: 13, color: theme.colors.primary, fontWeight: "700" },
-  habitValue: { fontSize: 13, color: theme.colors.onSurface, fontWeight: "700" },
-  habitProgress: { height: 6, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)', borderRadius: 3, overflow: "hidden", marginBottom: 8 },
-  habitProgressFill: { height: "100%", borderRadius: 3 },
-  habitMeta: { flexDirection: "row", justifyContent: "space-between" },
-  habitStreak: { fontSize: 12, color: theme.colors.primary, fontWeight: "700" },
-  habitGoals: { fontSize: 12, color: theme.colors.primary, fontWeight: "700" },
-  memberActions: { flexDirection: "row", gap: 10, marginTop: 4 },
-  actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 12, paddingVertical: 11, paddingHorizontal: 10, borderWidth: 1, gap: 6 },
-  actionBtnIcon: { marginRight: 2 },
-  actionBtnDefault: { backgroundColor: theme.dark ? 'rgba(0, 137, 123, 0.15)' : 'rgba(0, 137, 123, 0.1)', borderColor: theme.dark ? 'rgba(0, 137, 123, 0.3)' : 'rgba(0, 137, 123, 0.2)' },
-  actionBtnText: { color: theme.colors.primary, fontWeight: "700", fontSize: 12 },
-  actionBtnSecondary: { backgroundColor: theme.colors.secondary, borderColor: theme.colors.secondary },
-  actionBtnTextSecondary: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
-  actionBtnDanger: { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderColor: 'rgba(239, 68, 68, 0.3)' },
-  actionBtnTextDanger: { color: '#EF4444', fontWeight: "700", fontSize: 12 },
+  statLabel: { 
+    fontSize: 12, 
+    color: theme.colors.onSurfaceVariant, 
+    marginBottom: 3,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  statValue: { 
+    fontSize: 14, 
+    fontWeight: "800", 
+    color: theme.colors.onSurface,
+    letterSpacing: 0.2,
+  },
+  memberHabits: { marginBottom: 14 },
+  habitInfo: { 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    marginBottom: 10 
+  },
+  habitLabel: { 
+    fontSize: 14, 
+    color: theme.colors.primary, 
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  habitValue: { 
+    fontSize: 14, 
+    color: theme.colors.onSurface, 
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  habitProgress: { 
+    height: 8, 
+    backgroundColor: theme.dark ? 'rgba(255,255,255,0.12)' : 'rgba(99, 102, 241, 0.12)', 
+    borderRadius: 4, 
+    overflow: "hidden", 
+    marginBottom: 10 
+  },
+  habitProgressFill: { 
+    height: "100%", 
+    borderRadius: 4 
+  },
+  habitMeta: { 
+    flexDirection: "row", 
+    justifyContent: "space-between" 
+  },
+  habitStreak: { 
+    fontSize: 13, 
+    color: theme.colors.onSurface, 
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  habitGoals: { 
+    fontSize: 13, 
+    color: theme.colors.onSurface, 
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  memberActions: { 
+    flexDirection: "row", 
+    gap: 10, 
+    marginTop: 6 
+  },
+  actionBtn: { 
+    flex: 1, 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "center", 
+    borderRadius: 14, 
+    paddingVertical: 12, 
+    paddingHorizontal: 12, 
+    borderWidth: 1.5, 
+    gap: 6 
+  },
+  actionBtnIcon: {},
+  actionBtnDefault: { 
+    backgroundColor: theme.dark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)', 
+    borderColor: theme.dark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.3)' 
+  },
+  actionBtnText: { 
+    color: theme.colors.primary, 
+    fontWeight: "700", 
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  actionBtnSecondary: { 
+    backgroundColor: theme.colors.primary, 
+    borderColor: theme.colors.primary 
+  },
+  actionBtnTextSecondary: { 
+    color: "#FFFFFF", 
+    fontWeight: "700", 
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  actionBtnDanger: { 
+    backgroundColor: 'rgba(239, 68, 68, 0.12)', 
+    borderColor: 'rgba(239, 68, 68, 0.4)' 
+  },
+  actionBtnTextDanger: { 
+    color: '#EF4444', 
+    fontWeight: "700", 
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
   aiCard: {
     // Use theme.secondaryContainer if available; else compute a safe rgba fallback from secondary
     backgroundColor: (() => {
@@ -702,23 +940,103 @@ const getStyles = (theme: any) => StyleSheet.create({
   aiText: { fontSize: 14, color: theme.colors.onSurface, lineHeight: 20, marginBottom: 8 },
   aiBold: { fontWeight: "800", color: theme.colors.primary },
   aiHighlight: { color: theme.colors.secondary, fontWeight: "900" },
-  actionsGrid: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
-  actionCard: { flex: 1, minWidth: "31%", backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 137, 123, 0.15)' },
-  actionIcon: { fontSize: 32, marginBottom: 8 },
-  actionText: { fontSize: 13, color: theme.colors.primary, fontWeight: "600", textAlign: "center" },
-  actionIconMargin: { marginBottom: 8 },
-  emptyMemberCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, borderLeftWidth: 4, borderTopColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderTopWidth: 1, alignItems: 'center', justifyContent: 'center', minHeight: 100 },
-  emptyMemberText: { fontSize: 13, color: theme.colors.onSurfaceVariant, marginTop: 8, textAlign: 'center' },
+  actionsGrid: { 
+    flexDirection: "row", 
+    gap: 14, 
+    flexWrap: "wrap" 
+  },
+  actionCard: { 
+    flex: 1, 
+    minWidth: "30%", 
+    backgroundColor: theme.colors.surface, 
+    borderRadius: 14, 
+    padding: 14, 
+    alignItems: "center", 
+    borderWidth: 1, 
+    borderColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(99, 102, 241, 0.1)',
+    shadowColor: theme.dark ? '#000' : theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  actionIcon: { fontSize: 26, marginBottom: 6 },
+  actionText: { 
+    fontSize: 11, 
+    color: theme.colors.onSurface, 
+    fontWeight: "700", 
+    textAlign: "center",
+    letterSpacing: 0.2,
+  },
+  actionIconMargin: { marginBottom: 6 },
+  emptyMemberCard: { 
+    backgroundColor: theme.colors.surface, 
+    borderRadius: 20, 
+    padding: 24, 
+    borderLeftWidth: 5, 
+    borderLeftColor: theme.colors.primary,
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+  },
+  emptyMemberText: { 
+    fontSize: 14, 
+    color: theme.colors.onSurfaceVariant, 
+    marginTop: 10, 
+    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
   habitMetaRow: { flexDirection: 'row', alignItems: 'center' },
   habitMetaIcon: { marginRight: 4 },
   aiRow: { flexDirection: 'row', marginBottom: 8 },
   aiRowLast: { flexDirection: 'row', marginBottom: 0 },
   aiRowIcon: { marginRight: 6, marginTop: 2 },
   aiIconMargin: { marginRight: 8 },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  errorText: { color: theme.colors.onSurface, textAlign: 'center', fontSize: 16, marginBottom: 20 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: theme.colors.onSurface, marginTop: 12, fontSize: 14 },
-  retryButton: { backgroundColor: theme.colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-  retryButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
+  errorContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingHorizontal: 28 
+  },
+  errorText: { 
+    color: theme.colors.onSurface, 
+    textAlign: 'center', 
+    fontSize: 16, 
+    marginBottom: 24,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    lineHeight: 24,
+  },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  loadingText: { 
+    color: theme.colors.onSurface, 
+    marginTop: 16, 
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  retryButton: { 
+    backgroundColor: theme.colors.primary, 
+    paddingHorizontal: 32, 
+    paddingVertical: 14, 
+    borderRadius: 14,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryButtonText: { 
+    color: '#FFFFFF', 
+    fontWeight: '700', 
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
 });

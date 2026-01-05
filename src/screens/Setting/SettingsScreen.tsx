@@ -32,11 +32,10 @@ export default function SettingsScreen({ navigation }: Props) {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
   const borderColor = theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-  const surfaceStyle = { backgroundColor: theme.colors.surface, borderColor };
   const dangerBorder = theme.dark ? 'rgba(239,68,68,0.24)' : 'rgba(239,68,68,0.12)';
-  const dangerStyle = { backgroundColor: theme.colors.surface, borderColor: dangerBorder };
-  const smallButtonBg = theme.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,137,123,0.08)';
+  const smallButtonBg = theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.08)';
   const dangerColor = theme.colors.error ?? '#EF4444';
+  const cardShadowColor = theme.dark ? '#000000' : theme.colors.primary;
   const [language, setLanguage] = useState<"vi" | "en">((i18n.language && i18n.language.startsWith('en')) ? 'en' : 'vi');
   const [notifications, setNotifications] = useState(true);
   // AI mode state removed (section removed)
@@ -104,50 +103,62 @@ export default function SettingsScreen({ navigation }: Props) {
           {/* Appearance */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="palette-outline" size={18} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={styles.sectionTitle}>{t('settings.appearance')}</Text>
+              <Icon name="palette" size={24} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>{t('settings.appearance')}</Text>
             </View>
 
-            <View style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: theme.colors.primary }]}>{t('settings.darkMode')}</Text>
-                <Text style={[styles.settingDescription, { color: theme.colors.onSurface }]}>{t('settings.darkModeDesc')}</Text>
+            <View style={[styles.settingCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}>
+              <View style={styles.settingCardRow}>
+                <View style={[styles.iconWrapper, styles.iconBgPurple]}>
+                  <Icon name="theme-light-dark" size={24} color="#8B5CF6" />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.onSurface }]}>{t('settings.darkMode')}</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.onSurfaceVariant }]}>{t('settings.darkModeDesc')}</Text>
+                </View>
+                <Switch
+                  value={isDark}
+                  onValueChange={setIsDark}
+                  trackColor={{ false: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)", true: theme.colors.primary }}
+                  thumbColor={isDark ? "#FFFFFF" : theme.dark ? "#888" : "#F3F4F6"}
+                  ios_backgroundColor={theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}
+                />
               </View>
-              <Switch
-                value={isDark}
-                onValueChange={setIsDark}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
-                thumbColor="#fff"
-              />
             </View>
 
-            <View style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.language')}</Text>
-                <Text style={styles.settingDescription}>
-                  {language === "vi" ? "Tiếng Việt" : "English"}
-                </Text>
-              </View>
-              <View style={styles.languageButtonWrap}>
-                <TouchableOpacity
-                  style={[styles.languageToggle, { backgroundColor: smallButtonBg }]}
-                  onPress={() => setLanguageModalVisible(true)}
-                >
-                  <Text style={styles.languageText}>
-                    {language === "vi" ? "🇻🇳" : "🇬🇧"}
+            <View style={[styles.settingCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}>
+              <View style={styles.settingCardRow}>
+                <View style={[styles.iconWrapper, styles.iconBgBlue]}>
+                  <Icon name="translate" size={24} color="#3B82F6" />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.onSurface }]}>{t('settings.language')}</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.onSurfaceVariant }]}>
+                    {language === "vi" ? "Tiếng Việt" : "English"}
                   </Text>
-                </TouchableOpacity>
+                </View>
+                <View style={styles.languageButtonWrap}>
+                  <TouchableOpacity
+                    style={[styles.languageToggle, { backgroundColor: smallButtonBg }]}
+                    onPress={() => setLanguageModalVisible(true)}
+                  >
+                    <Text style={styles.languageText}>
+                      {language === "vi" ? "🇻🇳" : "🇬🇧"}
+                    </Text>
+                  </TouchableOpacity>
 
-                {languageModalVisible && (
-                  <View style={[styles.languageDropdownWrap, { backgroundColor: theme.colors.surface, borderColor }]}>
-                    <TouchableOpacity style={styles.languageDropdownItem} onPress={async () => { try { await i18n.changeLanguage('vi'); setLanguage('vi'); } catch (err) { console.warn(err); } setLanguageModalVisible(false); }}>
-                      <Text style={[styles.languageDropdownText, { color: theme.colors.onSurface }]}>Tiếng Việt</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.languageDropdownItem} onPress={async () => { try { await i18n.changeLanguage('en'); setLanguage('en'); } catch (err) { console.warn(err); } setLanguageModalVisible(false); }}>
-                      <Text style={[styles.languageDropdownText, { color: theme.colors.onSurface }]}>English</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                  {languageModalVisible && (
+                    <View style={[styles.languageDropdownWrap, { backgroundColor: theme.colors.surface, borderColor }]}>
+                      <TouchableOpacity style={styles.languageDropdownItem} onPress={async () => { try { await i18n.changeLanguage('vi'); setLanguage('vi'); } catch (err) { console.warn(err); } setLanguageModalVisible(false); }}>
+                        <Text style={[styles.languageDropdownText, { color: theme.colors.onSurface }]}>🇻🇳 Tiếng Việt</Text>
+                      </TouchableOpacity>
+                      <View style={[styles.divider, { backgroundColor: borderColor }]} />
+                      <TouchableOpacity style={styles.languageDropdownItem} onPress={async () => { try { await i18n.changeLanguage('en'); setLanguage('en'); } catch (err) { console.warn(err); } setLanguageModalVisible(false); }}>
+                        <Text style={[styles.languageDropdownText, { color: theme.colors.onSurface }]}>🇬🇧 English</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
           </View>
@@ -155,55 +166,71 @@ export default function SettingsScreen({ navigation }: Props) {
           {/* Notifications */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="bell-outline" size={18} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
+              <Icon name="bell-ring" size={24} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>{t('settings.notifications')}</Text>
             </View>
 
-            <View style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { color: theme.colors.primary }]}>{t('settings.enableNotifications')}</Text>
-                <Text style={[styles.settingDescription, { color: theme.colors.onSurface }]}>{t('settings.enableNotificationsDesc')}</Text>
+            <View style={[styles.settingCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}>
+              <View style={styles.settingCardRow}>
+                <View style={[styles.iconWrapper, styles.iconBgGreen]}>
+                  <Icon name="bell-ring" size={24} color="#10B981" />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.onSurface }]}>{t('settings.enableNotifications')}</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.onSurfaceVariant }]}>{t('settings.enableNotificationsDesc')}</Text>
+                </View>
+                <Switch
+                  value={notifications}
+                  onValueChange={setNotifications}
+                  trackColor={{ false: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)", true: theme.colors.primary }}
+                  thumbColor={notifications ? "#FFFFFF" : theme.dark ? "#888" : "#F3F4F6"}
+                  ios_backgroundColor={theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}
+                />
               </View>
-              <Switch
-                value={notifications}
-                onValueChange={setNotifications}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
-                thumbColor="#00897B"
-              />
             </View>
 
             {notifications && (
-              <>
-                <View style={[styles.subSettingRow, surfaceStyle]}>
+              <View style={[styles.subSettingsContainer, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}>
+                <View style={styles.subSettingRow}>
+                  <Icon name="alarm" size={20} color={theme.colors.onSurfaceVariant} style={styles.subSettingIcon} />
                   <Text style={[styles.subSettingLabel, { color: theme.colors.onSurface }]}>{t('settings.notificationDaily')}</Text>
                   <Switch
                     value={true}
                     onValueChange={() => {}}
-                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
-                    thumbColor="#00897B"
+                    trackColor={{ false: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)", true: theme.colors.primary }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor={theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}
                   />
                 </View>
 
-                <View style={[styles.subSettingRow, surfaceStyle]}>
+                <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+                <View style={styles.subSettingRow}>
+                  <Icon name="wallet-outline" size={20} color={theme.colors.onSurfaceVariant} style={styles.subSettingIcon} />
                   <Text style={[styles.subSettingLabel, { color: theme.colors.onSurface }]}>{t('settings.notificationBudget')}</Text>
                   <Switch
                     value={true}
                     onValueChange={() => {}}
-                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
-                    thumbColor="#00897B"
+                    trackColor={{ false: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)", true: theme.colors.primary }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor={theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}
                   />
                 </View>
 
-                <View style={[styles.subSettingRow, surfaceStyle]}>
-                  <Text style={styles.subSettingLabel}>{t('settings.notificationAI')}</Text>
+                <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+                <View style={styles.subSettingRow}>
+                  <Icon name="robot-outline" size={20} color={theme.colors.onSurfaceVariant} style={styles.subSettingIcon} />
+                  <Text style={[styles.subSettingLabel, { color: theme.colors.onSurface }]}>{t('settings.notificationAI')}</Text>
                   <Switch
                     value={false}
                     onValueChange={() => {}}
-                    trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
-                    thumbColor="#00897B"
+                    trackColor={{ false: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)", true: theme.colors.primary }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor={theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}
                   />
                 </View>
-              </>
+              </View>
             )}
           </View>
 
@@ -212,153 +239,229 @@ export default function SettingsScreen({ navigation }: Props) {
           {/* Finance Management */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="credit-card-outline" size={18} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={styles.sectionTitle}>{t('settings.walletManagement')}</Text>
+              <Icon name="wallet" size={24} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>Quản lý tài chính</Text>
             </View>
 
             <TouchableOpacity 
-              style={[styles.settingRow, surfaceStyle]}
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
               onPress={() => navigation.navigate("WalletManagement")}
+              activeOpacity={0.7}
             >
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.walletManagement')}</Text>
-                <Text style={styles.settingDescription}>{t('settings.walletManagementDesc')}</Text>
+              <View style={[styles.iconWrapper, styles.iconBgCyan]}>
+                <Icon name="wallet" size={24} color="#06B6D4" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.walletManagement')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>{t('settings.walletManagementDesc')}</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.settingRow, surfaceStyle]}
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
               onPress={() => navigation.navigate("CategoryManagement")}
+              activeOpacity={0.7}
             >
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.categories')}</Text>
-                <Text style={styles.settingDescription}>Tùy chỉnh danh mục chi tiêu</Text>
+              <View style={[styles.iconWrapper, styles.iconBgOrange]}>
+                <Icon name="shape" size={24} color="#F59E0B" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.categories')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>Tùy chỉnh danh mục chi tiêu</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.settingRow, surfaceStyle]}
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
               onPress={() => navigation.navigate("RecurringTransactions")}
+              activeOpacity={0.7}
             >
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.recurringTransactions')}</Text>
-                <Text style={styles.settingDescription}>Quản lý hóa đơn & thu nhập định kỳ</Text>
+              <View style={[styles.iconWrapper, styles.iconBgPink]}>
+                <Icon name="repeat" size={24} color="#EC4899" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.recurringTransactions')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>Quản lý hóa đơn & thu nhập định kỳ</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
 
           {/* Data & Security */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="lock-outline" size={18} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>{t('settings.dataSecurity') /* key should be added in i18n if missing */}</Text>
+              <Icon name="shield-lock" size={24} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>Dữ liệu & Bảo mật</Text>
             </View>
 
-            <View style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.autoBackup')}</Text>
-                <Text style={styles.settingDescription}>{t('settings.autoBackupDesc')}</Text>
+            <View style={[styles.settingCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}>
+              <View style={styles.settingCardRow}>
+                <View style={[styles.iconWrapper, styles.iconBgBlue]}>
+                  <Icon name="backup-restore" size={24} color="#3B82F6" />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.onSurface }]}>{t('settings.autoBackup')}</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.onSurfaceVariant }]}>{t('settings.autoBackupDesc')}</Text>
+                </View>
+                <Switch
+                  value={autoBackup}
+                  onValueChange={setAutoBackup}
+                  trackColor={{ false: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)", true: theme.colors.primary }}
+                  thumbColor={autoBackup ? "#FFFFFF" : theme.dark ? "#888" : "#F3F4F6"}
+                  ios_backgroundColor={theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}
+                />
               </View>
-              <Switch
-                value={autoBackup}
-                onValueChange={setAutoBackup}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
-                thumbColor="#00897B"
-              />
             </View>
 
-            <View style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.biometricAuth')}</Text>
-                <Text style={styles.settingDescription}>{t('settings.biometricDesc')}</Text>
+            <View style={[styles.settingCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}>
+              <View style={styles.settingCardRow}>
+                <View style={[styles.iconWrapper, styles.iconBgOrange]}>
+                  <Icon name="fingerprint" size={24} color="#F59E0B" />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingLabel, { color: theme.colors.onSurface }]}>{t('settings.biometricAuth')}</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.onSurfaceVariant }]}>{t('settings.biometricDesc')}</Text>
+                </View>
+                <Switch
+                  value={biometric}
+                  onValueChange={setBiometric}
+                  trackColor={{ false: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)", true: theme.colors.primary }}
+                  thumbColor={biometric ? "#FFFFFF" : theme.dark ? "#888" : "#F3F4F6"}
+                  ios_backgroundColor={theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}
+                />
               </View>
-              <Switch
-                value={biometric}
-                onValueChange={setBiometric}
-                trackColor={{ false: "rgba(255,255,255,0.1)", true: "#06B6D4" }}
-                thumbColor="#00897B"
-              />
             </View>
 
-            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.exportData')}</Text>
-                <Text style={styles.settingDescription}>Tải về file CSV/JSON</Text>
+            <TouchableOpacity 
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconWrapper, styles.iconBgGreen]}>
+                <Icon name="download" size={24} color="#10B981" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.exportData')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>Tải về file CSV/JSON</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
 
           {/* About */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="information-outline" size={18} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={styles.sectionTitle}>{t('settings.about')}</Text>
+              <Icon name="information" size={24} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>{t('settings.about')}</Text>
             </View>
 
-            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.version')}</Text>
-                <Text style={styles.settingDescription}>1.0.0 (Build 100)</Text>
+            <View style={[styles.infoCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}>
+              <View style={styles.infoRow}>
+                <View style={[styles.iconWrapper, styles.iconBgPurple]}>
+                  <Icon name="information-variant" size={24} color="#8B5CF6" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={[styles.infoLabel, { color: theme.colors.onSurfaceVariant }]}>{t('settings.version')}</Text>
+                  <Text style={[styles.infoValue, { color: theme.colors.onSurface }]}>1.0.0 (Build 100)</Text>
+                </View>
               </View>
-            </TouchableOpacity>
+            </View>
 
             <TouchableOpacity 
-              style={[styles.settingRow, surfaceStyle]}
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
               onPress={() => navigation.navigate("About")}
+              activeOpacity={0.7}
             >
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.about')}</Text>
-                <Text style={styles.settingDescription}>Team, tính năng, liên hệ</Text>
+              <View style={[styles.iconWrapper, styles.iconBgBlue]}>
+                <Icon name="information" size={24} color="#3B82F6" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.about')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>Team, tính năng, liên hệ</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.settingRow, surfaceStyle]}
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
               onPress={() => navigation.navigate("HelpCenter")}
+              activeOpacity={0.7}
             >
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.helpCenter')}</Text>
-                <Text style={styles.settingDescription}>FAQ & Hướng dẫn sử dụng</Text>
+              <View style={[styles.iconWrapper, styles.iconBgGreen]}>
+                <Icon name="help-circle" size={24} color="#10B981" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.helpCenter')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>FAQ & Hướng dẫn sử dụng</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.terms')}</Text>
+            <TouchableOpacity 
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconWrapper, styles.iconBgCyan]}>
+                <Icon name="file-document" size={24} color="#06B6D4" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.terms')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>Điều khoản sử dụng</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.settingRow, surfaceStyle]}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>{t('settings.privacy')}</Text>
+            <TouchableOpacity 
+              style={[styles.linkCard, { backgroundColor: theme.colors.surface, shadowColor: cardShadowColor }]}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconWrapper, styles.iconBgOrange]}>
+                <Icon name="shield-account" size={24} color="#F59E0B" />
               </View>
-              <Text style={styles.chevron}>→</Text>
+              <View style={styles.linkText}>
+                <Text style={[styles.linkLabel, { color: theme.colors.onSurface }]}>{t('settings.privacy')}</Text>
+                <Text style={[styles.linkDescription, { color: theme.colors.onSurfaceVariant }]}>Chính sách bảo mật</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
 
           {/* Danger Zone */}
           <View style={styles.section}>
-            {/* Test Gemini API button removed */}
+            <View style={styles.sectionHeader}>
+              <Icon name="alert" size={24} color={dangerColor} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, { color: dangerColor }]}>Vùng nguy hiểm</Text>
+            </View>
 
-            <TouchableOpacity style={[styles.dangerButton, styles.dangerButtonCompact, dangerStyle]} onPress={handleClearCache}>
-              <View style={styles.dangerRow}>
-                <Icon name="trash-can-outline" size={16} color={dangerColor} style={styles.dangerIcon} />
-                <Text style={[styles.dangerButtonText, { color: dangerColor }]}>{t('settings.clearCache')}</Text>
+            <TouchableOpacity 
+              style={[styles.dangerCard, { backgroundColor: theme.colors.surface, borderColor: dangerBorder, shadowColor: cardShadowColor }]} 
+              onPress={handleClearCache}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconWrapper, styles.iconBgDanger]}>
+                <Icon name="trash-can" size={24} color={dangerColor} />
               </View>
+              <View style={styles.dangerText}>
+                <Text style={[styles.dangerLabel, { color: dangerColor }]}>{t('settings.clearCache')}</Text>
+                <Text style={[styles.dangerDescription, { color: theme.colors.onSurfaceVariant }]}>Xóa dữ liệu tạm thời</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={dangerColor} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.dangerButton, styles.dangerButtonCompact, dangerStyle]} onPress={handleResetSettings}>
-              <View style={styles.dangerRow}>
-                <Icon name="restore" size={16} color={dangerColor} style={styles.dangerIcon} />
-                <Text style={[styles.dangerButtonText, { color: dangerColor }]}>{t('settings.resetSettings')}</Text>
+            <TouchableOpacity 
+              style={[styles.dangerCard, { backgroundColor: theme.colors.surface, borderColor: dangerBorder, shadowColor: cardShadowColor }]} 
+              onPress={handleResetSettings}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconWrapper, styles.iconBgDanger]}>
+                <Icon name="restore" size={24} color={dangerColor} />
               </View>
+              <View style={styles.dangerText}>
+                <Text style={[styles.dangerLabel, { color: dangerColor }]}>{t('settings.resetSettings')}</Text>
+                <Text style={[styles.dangerDescription, { color: theme.colors.onSurfaceVariant }]}>Đặt lại cài đặt mặc định</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={dangerColor} />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -369,42 +472,242 @@ export default function SettingsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
-  backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0, 137, 123, 0.08)", alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: "#00897B" },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#00796B" },
-  placeholder: { width: 40 },
-  content: { padding: 16 },
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#00796B" },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  sectionIcon: { marginRight: 8 },
-  rowCenter: { flexDirection: "row", alignItems: "center" },
-  settingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
-  settingInfo: { flex: 1 },
-  settingLabel: { fontSize: 16, fontWeight: "700", color: "#00796B", marginBottom: 4 },
-  settingDescription: { fontSize: 13, color: "#999999" },
-  chevron: { fontSize: 20, color: "#999999", marginLeft: 12 },
-  languageToggle: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0, 137, 123, 0.12)", alignItems: "center", justifyContent: "center" },
+  container: { flex: 1 },
+  header: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "space-between", 
+    paddingHorizontal: 20, 
+    paddingBottom: 12, 
+    borderBottomWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  backButton: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 14, 
+    alignItems: "center", 
+    justifyContent: "center",
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  backIcon: { fontSize: 22, fontWeight: "bold" },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  placeholder: { width: 44 },
+  content: { padding: 20 },
+  
+  // Section
+  section: { marginBottom: 28 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionIcon: {
+    marginRight: 10,
+  },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  
+  // Setting Cards
+  settingCard: {
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  settingCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  settingInfo: { flex: 1, marginRight: 12 },
+  settingLabel: { 
+    fontSize: 16, 
+    fontWeight: "700", 
+    marginBottom: 3,
+    letterSpacing: 0.2,
+  },
+  settingDescription: { 
+    fontSize: 13,
+    letterSpacing: 0.1,
+  },
+  
+  // Icon Wrappers
+  iconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  iconBgPurple: { backgroundColor: 'rgba(139, 92, 246, 0.08)' },
+  iconBgBlue: { backgroundColor: 'rgba(59, 130, 246, 0.08)' },
+  iconBgGreen: { backgroundColor: 'rgba(16, 185, 129, 0.08)' },
+  iconBgOrange: { backgroundColor: 'rgba(245, 158, 11, 0.08)' },
+  iconBgCyan: { backgroundColor: 'rgba(6, 182, 212, 0.08)' },
+  iconBgPink: { backgroundColor: 'rgba(236, 72, 153, 0.08)' },
+  iconBgDanger: { backgroundColor: 'rgba(239, 68, 68, 0.08)' },
+  
+  // Language Selector
+  languageToggle: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 22, 
+    alignItems: "center", 
+    justifyContent: "center",
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   languageText: { fontSize: 24 },
-  languageDropdownWrap: { position: 'absolute', top: 44, right: 0, minWidth: 140, borderRadius: 8, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 8, zIndex: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
-  languageDropdownItem: { paddingVertical: 10, paddingHorizontal: 12 },
-  languageDropdownText: { fontSize: 15 },
   languageButtonWrap: { position: 'relative' },
-  subSettingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 8, padding: 10, marginBottom: 8, marginLeft: 16, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
-  subSettingLabel: { fontSize: 14, fontWeight: "600", color: "#00796B" },
-  aiModeSelector: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
-  aiModeLabel: { fontSize: 14, fontWeight: "700", color: "#00796B", marginBottom: 12 },
-  aiModeButtons: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  aiModeButton: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 8, paddingVertical: 10, alignItems: "center", borderWidth: 2, borderColor: "transparent" },
-  aiModeButtonActive: { borderColor: "#06B6D4", backgroundColor: "rgba(6,182,212,0.1)" },
-  aiModeButtonText: { fontSize: 14, fontWeight: "700", color: "#999999" },
-  aiModeButtonTextActive: { color: "#FFFFFF" },
-  aiModeDescription: { fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 18 },
-  dangerButton: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 12, alignItems: "center", justifyContent: "center", marginBottom: 12, borderWidth: 1, borderColor: "rgba(239,68,68,0.12)" },
-  dangerButtonCompact: { paddingVertical: 8, paddingHorizontal: 12 },
-  dangerRow: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
-  dangerIcon: { marginRight: 8 },
-  dangerButtonText: { color: "#EF4444", fontWeight: "700", fontSize: 14 },
+  languageDropdownWrap: { 
+    position: 'absolute', 
+    top: 50, 
+    right: 0, 
+    minWidth: 160, 
+    borderRadius: 12, 
+    overflow: 'hidden', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 8 }, 
+    shadowOpacity: 0.12, 
+    shadowRadius: 16, 
+    elevation: 12, 
+    zIndex: 20, 
+    borderWidth: 1,
+  },
+  languageDropdownItem: { paddingVertical: 14, paddingHorizontal: 16 },
+  languageDropdownText: { 
+    fontSize: 15, 
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  
+  // Sub Settings
+  subSettingsContainer: {
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  subSettingRow: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    paddingVertical: 10,
+  },
+  subSettingIcon: { marginRight: 12 },
+  subSettingLabel: { 
+    flex: 1,
+    fontSize: 15, 
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  
+  // Link Cards
+  linkCard: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    borderRadius: 16, 
+    padding: 18, 
+    marginBottom: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  linkText: { flex: 1 },
+  linkLabel: { 
+    fontSize: 16, 
+    fontWeight: "700", 
+    marginBottom: 3,
+    letterSpacing: 0.2,
+  },
+  linkDescription: { 
+    fontSize: 13,
+    letterSpacing: 0.1,
+  },
+  
+  // Info Card
+  infoCard: { 
+    borderRadius: 16, 
+    padding: 18, 
+    marginBottom: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: { 
+    fontSize: 12, 
+    fontWeight: "700", 
+    marginBottom: 6,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  infoValue: { 
+    fontSize: 16, 
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  
+  // Danger Cards
+  dangerCard: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    borderRadius: 16, 
+    padding: 18, 
+    marginBottom: 12,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  dangerText: { flex: 1 },
+  dangerLabel: { 
+    fontSize: 16, 
+    fontWeight: "700", 
+    marginBottom: 3,
+    letterSpacing: 0.2,
+  },
+  dangerDescription: { 
+    fontSize: 13,
+    letterSpacing: 0.1,
+  },
+  
+  // Divider
+  divider: {
+    height: 1,
+    marginVertical: 4,
+  },
 });

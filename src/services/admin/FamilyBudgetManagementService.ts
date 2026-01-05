@@ -407,14 +407,20 @@ class FamilyBudgetManagementService {
 
       this.log(`📋 Fetching personal budgets for member ${memberId} in family ${familyId}`);
 
-      // 1. Lấy budgets từ /users/{memberId}/budgets
-      // ✅ Filter theo familyId để chỉ lấy budgets của family này
+      // 1. Lấy TẤT CẢ budgets từ /users/{memberId}/budgets
+      // 📝 Note: Không filter familyId vì subcollection này đã thuộc user cụ thể
+      //         Nếu muốn filter theo family thì sẽ filter trong code
       const budgetsSnapshot = await firestore()
         .collection('users')
         .doc(memberId)
         .collection('budgets')
-        .where('familyId', '==', familyId)
         .get({ source: 'server' });
+
+      console.log(`🔍 [DEBUG] Raw budgets snapshot for ${memberId}:`, {
+        size: budgetsSnapshot.size,
+        empty: budgetsSnapshot.empty,
+        docs: budgetsSnapshot.docs.map(d => ({ id: d.id, data: d.data() }))
+      });
 
       const budgets = budgetsSnapshot.docs.map((doc: any) => ({
         id: doc.id,
@@ -433,20 +439,24 @@ class FamilyBudgetManagementService {
           .orderBy('createdAt', 'desc')
           .get({ source: 'server' });
 
+        console.log(`🔍 [DEBUG] Raw transactions snapshot for ${memberId}:`, {
+          size: transactionsSnapshot.size,
+          empty: transactionsSnapshot.empty,
+        });
+
         transactionsSnapshot.docs.forEach((doc: any) => {
           const data = doc.data();
-          // Filter cứng để đảm bảo chỉ tính chi tiêu thuộc family này
-          if (data.familyId === familyId) {
-            allTransactions.push({
-              id: doc.id,
-              type: data.type || 'expense',
-              categoryId: (data.categoryId || '').toString(),
-              category: data.category,
-              amount: data.amount || 0,
-              date: data.date,
-              createdAt: data.createdAt,
-            });
-          }
+          // ⚠️ Không filter theo familyId nữa vì có thể transactions cũ không có field này
+          allTransactions.push({
+            id: doc.id,
+            type: data.type || 'expense',
+            categoryId: (data.categoryId || '').toString(),
+            category: data.category,
+            amount: data.amount || 0,
+            date: data.date,
+            createdAt: data.createdAt,
+            familyId: data.familyId, // Keep for reference
+          });
         });
 
         this.log(`   Found ${allTransactions.length} transactions for member ${memberId}`);
@@ -1153,6 +1163,359 @@ class FamilyBudgetManagementService {
     } catch (error) {
       this.logError('Logging action failed', error);
       // Không throw để không ảnh hưởng main operation
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // 7. PERSONAL BUDGET MANAGEMENT (THÊM/SỬA/XÓA NGÂN SÁCH CÁ NHÂN)
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * ➕ Tạo ngân sách cá nhân mới cho member
+   * @param familyId - ID gia đình
+   * @param memberId - ID thành viên
+   * @param budgetData - Dữ liệu ngân sách
+   */
+  async createMemberPersonalBudget(
+    familyId: string,
+    memberId: string,
+    budgetData: {
+      category: string;
+      allocatedAmount: number;
+      period: 'weekly' | 'monthly' | 'yearly';
+      currency?: string;
+    }
+  ): Promise<{
+    id: string;
+    category: string;
+    budget: number;
+    spent: number;
+    predicted: number;
+  }> {
+    try {
+      const currentUser = this.getCurrentUser();
+      this.log(`➕ Creating personal budget for member ${memberId} in family ${familyId}`);
+
+      // Kiểm tra quyền: Chỉ owner/admin hoặc chính user đó mới được tạo
+      const canCreate = await this.canManagePersonalBudget(familyId, currentUser.uid, memberId);
+      if (!canCreate) {
+        throw new Error('❌ Bạn không có quyền tạo ngân sách cho thành viên này');
+      }
+
+      // Tạo budget document
+      const budgetRef = this.getUsersRef()
+        .doc(memberId)
+        .collection('budgets')
+        .doc();
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+
+      const newBudget = {
+        id: budgetRef.id,
+        familyId: familyId,
+        category: budgetData.category,
+        allocatedAmount: budgetData.allocatedAmount,
+        budget: budgetData.allocatedAmount, // Alias
+        spent: 0,
+        predicted: 0,
+        period: budgetData.period,
+        currency: budgetData.currency || 'VND',
+        year: currentYear,
+        month: currentMonth,
+        isActive: true,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+        createdBy: currentUser.uid,
+      };
+
+      await budgetRef.set(newBudget);
+
+      console.log(`✅ [SERVICE] Budget created successfully:`, {
+        budgetId: budgetRef.id,
+        memberId,
+        familyId,
+        category: budgetData.category,
+        amount: budgetData.allocatedAmount,
+        path: `/users/${memberId}/budgets/${budgetRef.id}`
+      });
+
+      // Log action
+      await this.logAction(
+        familyId,
+        currentUser.uid,
+        'PERSONAL_BUDGET_CREATED',
+        {
+          memberId,
+          budgetId: budgetRef.id,
+          category: budgetData.category,
+          amount: budgetData.allocatedAmount,
+        }
+      );
+
+      this.log(`✅ Personal budget created for member ${memberId}: ${budgetData.category}`);
+
+      return {
+        id: budgetRef.id,
+        category: budgetData.category,
+        budget: budgetData.allocatedAmount,
+        spent: 0,
+        predicted: 0,
+      };
+    } catch (error) {
+      this.logError('Creating personal budget failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ✏️ Cập nhật ngân sách cá nhân của member
+   * @param familyId - ID gia đình
+   * @param memberId - ID thành viên
+   * @param budgetId - ID ngân sách cần update
+   * @param updates - Dữ liệu cập nhật
+   */
+  async updateMemberPersonalBudget(
+    familyId: string,
+    memberId: string,
+    budgetId: string,
+    updates: {
+      category?: string;
+      allocatedAmount?: number;
+      period?: 'weekly' | 'monthly' | 'yearly';
+    }
+  ): Promise<void> {
+    try {
+      const currentUser = this.getCurrentUser();
+      this.log(`✏️ Updating personal budget ${budgetId} for member ${memberId}`);
+
+      // Kiểm tra quyền
+      const canUpdate = await this.canManagePersonalBudget(familyId, currentUser.uid, memberId);
+      if (!canUpdate) {
+        throw new Error('❌ Bạn không có quyền cập nhật ngân sách này');
+      }
+
+      // Kiểm tra budget có tồn tại không
+      const budgetRef = this.getUsersRef()
+        .doc(memberId)
+        .collection('budgets')
+        .doc(budgetId);
+
+      const budgetDoc = await budgetRef.get();
+      if (!budgetDoc.exists) {
+        throw new Error('❌ Ngân sách không tồn tại');
+      }
+
+      const budgetData = budgetDoc.data();
+      if (budgetData?.familyId !== familyId) {
+        throw new Error('❌ Ngân sách không thuộc gia đình này');
+      }
+
+      // Chuẩn bị updates
+      const updateData: any = {
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentUser.uid,
+      };
+
+      if (updates.category !== undefined) {
+        updateData.category = updates.category;
+      }
+
+      if (updates.allocatedAmount !== undefined) {
+        updateData.allocatedAmount = updates.allocatedAmount;
+        updateData.budget = updates.allocatedAmount; // Alias
+      }
+
+      if (updates.period !== undefined) {
+        updateData.period = updates.period;
+      }
+
+      await budgetRef.update(updateData);
+
+      // Log action
+      await this.logAction(
+        familyId,
+        currentUser.uid,
+        'PERSONAL_BUDGET_UPDATED',
+        {
+          memberId,
+          budgetId,
+          updates,
+        }
+      );
+
+      this.log(`✅ Personal budget updated: ${budgetId}`);
+    } catch (error) {
+      this.logError('Updating personal budget failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🗑️ Xóa ngân sách cá nhân của member
+   * @param familyId - ID gia đình
+   * @param memberId - ID thành viên
+   * @param budgetId - ID ngân sách cần xóa
+   */
+  async deleteMemberPersonalBudget(
+    familyId: string,
+    memberId: string,
+    budgetId: string
+  ): Promise<void> {
+    try {
+      const currentUser = this.getCurrentUser();
+      this.log(`🗑️ Deleting personal budget ${budgetId} for member ${memberId}`);
+
+      console.log('🔍 [DELETE DEBUG] Delete info:', {
+        familyId,
+        memberId,
+        budgetId,
+        currentUserId: currentUser.uid,
+        path: `/users/${memberId}/budgets/${budgetId}`,
+        isSameUser: currentUser.uid === memberId
+      });
+
+      // Kiểm tra quyền
+      const canDelete = await this.canManagePersonalBudget(familyId, currentUser.uid, memberId);
+      console.log('🔍 [DELETE DEBUG] Permission check:', { canDelete });
+      
+      if (!canDelete) {
+        throw new Error('❌ Bạn không có quyền xóa ngân sách này');
+      }
+
+      // Kiểm tra budget có tồn tại không
+      const budgetRef = this.getUsersRef()
+        .doc(memberId)
+        .collection('budgets')
+        .doc(budgetId);
+
+      console.log('🔍 [DELETE DEBUG] Budget ref path:', budgetRef.path);
+      console.log('🔍 [DELETE DEBUG] Fetching budget document...');
+      
+      // Thử đọc document trước để xem có quyền read không
+      let budgetDoc;
+      try {
+        budgetDoc = await budgetRef.get();
+        console.log('✅ [DELETE DEBUG] Budget document fetched successfully');
+      } catch (readError: any) {
+        console.error('❌ [DELETE DEBUG] Failed to read budget:', {
+          code: readError.code,
+          message: readError.message
+        });
+        throw readError;
+      }
+      
+      if (!budgetDoc.exists) {
+        console.log('❌ [DELETE DEBUG] Budget not found');
+        throw new Error('❌ Ngân sách không tồn tại');
+      }
+
+      const budgetData = budgetDoc.data();
+      console.log('🔍 [DELETE DEBUG] Budget data:', {
+        exists: budgetDoc.exists,
+        familyId: budgetData?.familyId,
+        category: budgetData?.category,
+        budgetOwnerId: memberId,
+        currentUserId: currentUser.uid
+      });
+
+      if (budgetData?.familyId !== familyId) {
+        console.log('❌ [DELETE DEBUG] Budget does not belong to this family');
+        throw new Error('❌ Ngân sách không thuộc gia đình này');
+      }
+
+      // Kiểm tra quyền family owner
+      const familyDoc = await firestore().collection('families').doc(familyId).get();
+      const familyData = familyDoc.data();
+      const isFamilyOwner = familyData?.ownerId === currentUser.uid;
+      
+      console.log('🔍 [DELETE DEBUG] Family ownership check:', {
+        familyOwnerId: familyData?.ownerId,
+        currentUserId: currentUser.uid,
+        isFamilyOwner,
+        canDeleteByOwnership: currentUser.uid === memberId || isFamilyOwner
+      });
+
+      // Xóa budget
+      console.log('🔍 [DELETE DEBUG] Attempting to delete with:', {
+        method: 'budgetRef.delete()',
+        expectedFirestoreRuleMatch: currentUser.uid === memberId ? 'isUser(userId)' : 'isFamilyOwner(...)'
+      });
+      
+      try {
+        await budgetRef.delete();
+        console.log('✅ [DELETE DEBUG] Budget deleted successfully');
+      } catch (deleteError: any) {
+        console.error('❌ [DELETE DEBUG] Delete operation failed:', {
+          code: deleteError.code,
+          message: deleteError.message,
+          fullError: deleteError
+        });
+        throw deleteError;
+      }
+
+      // Log action
+      await this.logAction(
+        familyId,
+        currentUser.uid,
+        'PERSONAL_BUDGET_DELETED',
+        {
+          memberId,
+          budgetId,
+          category: budgetData?.category,
+        }
+      );
+
+      this.log(`✅ Personal budget deleted: ${budgetId}`);
+    } catch (error: any) {
+      console.error('❌ [DELETE DEBUG] Delete failed:', {
+        errorCode: error.code,
+        errorMessage: error.message,
+        fullError: error
+      });
+      
+      // Provide better error messages
+      if (error.code === 'permission-denied') {
+        this.logError('Deleting personal budget failed - Permission Denied', error);
+        throw new Error('❌ Lỗi quyền truy cập: Vui lòng kiểm tra Firebase Rules đã được deploy chưa. Bạn cần có quyền owner hoặc là chính user đó để xóa ngân sách này.');
+      }
+      
+      this.logError('Deleting personal budget failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🔐 Kiểm tra user có quyền quản lý personal budget của member không
+   * - Owner/Admin của family có thể quản lý tất cả
+   * - Member chỉ có thể quản lý budget của chính mình
+   */
+  private async canManagePersonalBudget(
+    familyId: string,
+    userId: string,
+    targetMemberId: string
+  ): Promise<boolean> {
+    try {
+      // Nếu là chính user đó thì được phép
+      if (userId === targetMemberId) {
+        return true;
+      }
+
+      // Kiểm tra role trong family
+      const memberDoc = await this.getFamilyMembersRef()
+        .doc(`${familyId}_${userId}`)
+        .get();
+
+      if (!memberDoc.exists) {
+        return false;
+      }
+
+      const memberData = memberDoc.data() as any;
+      return ['owner', 'admin'].includes(memberData.role);
+    } catch (error) {
+      this.logError('Checking personal budget permission failed', error);
+      return false;
     }
   }
 }

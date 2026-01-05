@@ -63,7 +63,7 @@ export default function BottomTabs({ navigationRef, currentRouteName, showFab = 
         </View>
 
         <View style={[styles.centerActionWrap, overlay && styles.centerActionWrapOverlay]} pointerEvents="box-none">
-          <TouchableOpacity style={[styles.centerActionButton, { backgroundColor: theme.colors.secondary }]} onPress={() => { if (showSheet) openBottomSheet(); else navigationRef?.current?.navigate('AddTransaction'); }} activeOpacity={0.9}>
+          <TouchableOpacity style={[styles.centerActionButton]} onPress={() => { if (showSheet) openBottomSheet(); else navigationRef?.current?.navigate('AddTransaction'); }} activeOpacity={0.9}>
             <Icon name="plus" size={32} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -76,8 +76,8 @@ export default function BottomTabs({ navigationRef, currentRouteName, showFab = 
           transform: [{ scale: chatPulse.interpolate({ inputRange: [0,1], outputRange: [1,1.08] }) }],
         }
       ]}>
-        <TouchableOpacity style={[styles.fabButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline }]} onPress={() => navigationRef?.current?.navigate('AIChat')} activeOpacity={0.85}>
-          <Icon name="chat-outline" size={24} color={theme.colors.onSurfaceVariant} />
+        <TouchableOpacity style={[styles.fabButton]} onPress={() => navigationRef?.current?.navigate('AIChat')} activeOpacity={0.85}>
+          <Icon name="chat-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </Animated.View>
       )}
@@ -94,15 +94,15 @@ export default function BottomTabs({ navigationRef, currentRouteName, showFab = 
               {!scanOptionsVisible && (
                 <>
                   <TouchableOpacity style={[styles.sheetItem, { borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddTransaction'); }} activeOpacity={0.85}>
-                    <View style={[styles.sheetIcon, { backgroundColor: theme.colors.secondary }]}><Icon name="cash-minus" size={22} color="#FFFFFF" /></View>
+                    <View style={[styles.sheetIcon]}><Icon name="cash-minus" size={22} color="#FFFFFF" /></View>
                     <Text style={[styles.sheetText, { color: theme.colors.onSurface }]}>Thêm chi tiêu</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.sheetItem, { borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddIncome'); }} activeOpacity={0.85}>
-                    <View style={[styles.sheetIcon, { backgroundColor: theme.colors.secondary }]}><Icon name="cash-plus" size={22} color="#FFFFFF" /></View>
+                    <View style={[styles.sheetIcon]}><Icon name="cash-plus" size={22} color="#FFFFFF" /></View>
                     <Text style={[styles.sheetText, { color: theme.colors.onSurface }]}>Thêm thu nhập</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.sheetItem, { borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]} onPress={() => { setScanOptionsVisible(true); }} activeOpacity={0.85}>
-                    <View style={[styles.sheetIcon, { backgroundColor: theme.colors.secondary }]}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
+                    <View style={[styles.sheetIcon]}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
                     <Text style={[styles.sheetText, { color: theme.colors.onSurface }]}>Quét hóa đơn</Text>
                   </TouchableOpacity>
                 </>
@@ -110,15 +110,15 @@ export default function BottomTabs({ navigationRef, currentRouteName, showFab = 
               {scanOptionsVisible && (
                 <>
                   <TouchableOpacity style={[styles.sheetItem, { borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]} onPress={() => { setScanOptionsVisible(false); }} activeOpacity={0.85}>
-                    <View style={[styles.sheetIconMuted, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}><Icon name="chevron-left" size={22} color={theme.colors.secondary} /></View>
+                    <View style={[styles.sheetIconMuted]}><Icon name="chevron-left" size={22} color="#10B981" /></View>
                     <Text style={[styles.sheetText, { color: theme.colors.onSurface }]}>Quay lại</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.sheetItem, { borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddTransaction', { openCamera: true }); }} activeOpacity={0.85}>
-                    <View style={[styles.sheetIcon, { backgroundColor: theme.colors.secondary }]}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
+                    <View style={[styles.sheetIcon]}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
                     <Text style={[styles.sheetText, { color: theme.colors.onSurface }]}>Quét hóa đơn chi tiêu</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.sheetItem, { borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]} onPress={() => { closeBottomSheet(); navigationRef?.current?.navigate('AddIncome', { openCamera: true }); }} activeOpacity={0.85}>
-                    <View style={[styles.sheetIcon, { backgroundColor: theme.colors.secondary }]}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
+                    <View style={[styles.sheetIcon]}><Icon name="qrcode-scan" size={22} color="#FFFFFF" /></View>
                     <Text style={[styles.sheetText, { color: theme.colors.onSurface }]}>Quét hóa đơn thu nhập</Text>
                   </TouchableOpacity>
                 </>
@@ -145,17 +145,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   tabLabelBold: { fontSize: 13, color: theme.colors.onSurfaceVariant, marginTop: 4, fontWeight: 'bold', letterSpacing: 0.2 },
   tabCenterPlaceholder: { width: 70 },
   centerActionWrap: { position: 'absolute', left: 0, right: 0, bottom: 34, alignItems: 'center', pointerEvents: 'box-none' },
-  centerActionButton: { width: 70, height: 70, borderRadius: 35, backgroundColor: theme.colors.secondary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.colors.secondary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 12, borderWidth: 4, borderColor: theme.colors.surface },
+  centerActionButton: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#1F2937', alignItems: 'center', justifyContent: 'center', shadowColor: '#10B981', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 12, borderWidth: 3, borderColor: '#10B981' },
   bottomTabBarWrapOverlay: { zIndex: 9999, elevation: 9999 },
   centerActionWrapOverlay: { zIndex: 9999, elevation: 9999 },
   fab: { position: 'absolute', zIndex: 20, right: 24, bottom: 110, alignItems: 'center', justifyContent: 'center' },
-  fabButton: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center', shadowColor: theme.colors.secondary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 12, borderWidth: 3, borderColor: theme.colors.outline },
+  fabButton: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', shadowColor: '#06B6D4', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 12, borderWidth: 3, borderColor: '#06B6D4' },
   bottomSheetOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.32)', zIndex: 60 },
   bottomSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 260, backgroundColor: theme.colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingTop: 18, paddingBottom: 28, paddingHorizontal: 18, shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 20, zIndex: 70 },
   bottomSheetHandleWrap: { alignItems: 'center', marginTop: 0 },
   bottomSheetContent: { marginTop: 8 },
   sheetItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' },
-  sheetIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: theme.colors.secondary, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  sheetIconMuted: { width: 44, height: 44, borderRadius: 12, backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  sheetIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#1F2937', alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 2, borderColor: '#10B981' },
+  sheetIconMuted: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#374151', alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 2, borderColor: '#10B981' },
   sheetText: { color: theme.colors.onSurface, fontSize: 16, fontWeight: '700' },
 });

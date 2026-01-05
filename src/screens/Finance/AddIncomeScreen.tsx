@@ -45,7 +45,10 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
   const TAB_BAR_HEIGHT = 70;
   // Note state
   const [note, setNote] = useState("");
-  const [fontStyle, setFontStyle] = useState<"title" | "regular" | "italic">("regular");
+  const [isBulletMode, setIsBulletMode] = useState(false);
+  const [textSize, setTextSize] = useState<"large" | "medium" | "small">("medium");
+  const [fabScale] = useState(new Animated.Value(1));
+  const [fabRotation] = useState(new Animated.Value(0));
   
   // UI state
   const [_isLoading, _setIsLoading] = useState(false);
@@ -135,17 +138,28 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
   // ===== 🎯 PHÉP THUẬT: Bắt processedData từ ResultScreen =====
   // Note: processedData handling removed - now handled by AIProcessingOverlay
 
-  // Get dynamic noteInput style based on fontStyle
-  const getNoteInputStyle = () => {
-    return {
-      fontWeight: fontStyle === "title" ? "800" as const : "500" as const,
-      fontStyle: fontStyle === "italic" ? "italic" as const : "normal" as const,
-    };
+  // Toggle bullet mode and add bullets to existing lines
+  const toggleBulletMode = () => {
+    setIsBulletMode(!isBulletMode);
+    if (!isBulletMode && note.trim()) {
+      const lines = note.split('\n');
+      const bulletedLines = lines.map(line => line.trim() ? (line.startsWith('• ') ? line : '• ' + line) : line);
+      setNote(bulletedLines.join('\n'));
+    }
   };
 
-  // Cycle font style: title -> regular -> italic -> title
-  const toggleFontStyle = () => {
-    setFontStyle((prev) => (prev === "title" ? "regular" : prev === "regular" ? "italic" : "title"));
+  // Cycle text size: large -> medium -> small -> large
+  const toggleTextSize = () => {
+    setTextSize(prev => prev === 'large' ? 'medium' : prev === 'medium' ? 'small' : 'large');
+  };
+
+  // Get text size style
+  const getTextSizeStyle = () => {
+    switch (textSize) {
+      case 'large': return { fontSize: 20, lineHeight: 28 };
+      case 'small': return { fontSize: 14, lineHeight: 20 };
+      default: return { fontSize: 16, lineHeight: 24 };
+    }
   };
 
   React.useEffect(() => {
@@ -259,21 +273,24 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
       enabled={true}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.modernHeader}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.modernBackButton}
           onPress={() => navigation.goBack()}
         >
           <MaterialCommunityIcons name="arrow-left" size={20} color={onSurface} />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: onSurface }]}>Thêm thu nhập</Text>
+        <View style={styles.modernHeaderCenter}>
+          <MaterialCommunityIcons name="cash-plus" size={20} color="#10B981" style={styles.headerIcon} />
+          <Text style={[styles.modernHeaderTitle, { color: onSurface }]}>Thêm thu nhập</Text>
+        </View>
 
         <TouchableOpacity
-          style={styles.saveButtonHeader}
+          style={styles.modernSaveButton}
           onPress={handleSave}
         >
-          <Text style={styles.saveButtonHeaderText}>Lưu</Text>
+          <MaterialCommunityIcons name="check" size={20} color={onSurface} />
         </TouchableOpacity>
       </View>
 
@@ -330,17 +347,27 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
             )}
 
             {/* Note Input */}
-            <View style={styles.section}>
+            <View style={styles.noteContainer}>
+              <View style={styles.noteHeader}>
+                <Text style={[styles.noteHeaderTitle, { color: onSurface }]}>Ghi chú thu nhập</Text>
+                <Text style={[styles.noteHelperText, { color: onSurfaceVariant }]}>{note.length} ký tự</Text>
+              </View>
               <TextInput
                 style={[
-                  styles.fullScreenInput,
-                  getNoteInputStyle(),
+                  styles.modernNoteInput,
+                  getTextSizeStyle(),
                   { color: onSurface }
                 ]}
-                placeholder="Viết ghi chú ở đây..."
+                placeholder="Nhập ghi chú của bạn..."
                 placeholderTextColor={onSurfaceVariant}
                 value={note}
-                onChangeText={setNote}
+                onChangeText={(text) => {
+                  if (isBulletMode && text.endsWith('\n') && text.length > note.length) {
+                    setNote(text + '• ');
+                  } else {
+                    setNote(text);
+                  }
+                }}
                 multiline
                 onFocus={() => setIsInputFocused(true)}
                 onBlur={() => setIsInputFocused(false)}
@@ -369,66 +396,96 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
         </ScrollView>
 
         {/* Floating Form Toggle Button - Bottom Right */}
-        <TouchableOpacity
-          style={styles.floatingFormButton}
-          onPress={() => {
-            if (!showManualForm) {
-              const now = new Date();
-              const formatted = `${now.toLocaleDateString('vi-VN')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-              setSelectedTime(formatted);
-            }
-            setShowManualForm(!showManualForm);
-          }}
+        <Animated.View
+          style={[
+            styles.modernFab,
+            showManualForm && styles.modernFabActive,
+            {
+              transform: [
+                { scale: fabScale },
+                {
+                  rotate: fabRotation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '45deg'],
+                  }),
+                },
+              ],
+            },
+          ]}
         >
-          <MaterialCommunityIcons
-            name={showManualForm ? "close" : "plus"}
-            size={28}
-            color="#FFFFFF"
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              Animated.parallel([
+                Animated.spring(fabScale, {
+                  toValue: showManualForm ? 1 : 0.9,
+                  useNativeDriver: true,
+                  friction: 5,
+                }),
+                Animated.spring(fabRotation, {
+                  toValue: showManualForm ? 0 : 1,
+                  useNativeDriver: true,
+                  friction: 5,
+                }),
+              ]).start();
+
+              if (!showManualForm) {
+                const now = new Date();
+                const formatted = `${now.toLocaleDateString('vi-VN')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                setSelectedTime(formatted);
+              }
+              setShowManualForm(!showManualForm);
+            }}
+            style={styles.fabTouchable}
+          >
+            <MaterialCommunityIcons
+              name="plus"
+              size={28}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Keyboard Toolbar - Only shows when input focused, automatically pushed above keyboard */}
         {isInputFocused && (
           <View style={styles.keyboardToolbar}>
-            <TouchableOpacity onPress={toggleFontStyle}>
-              <MaterialCommunityIcons 
-                name={fontStyle === 'title' ? 'format-bold' : fontStyle === 'regular' ? 'format-size' : 'format-italic'} 
-                size={28} 
-                color={onSurfaceVariant} 
-                style={styles.iconStyle}
+            <TouchableOpacity style={styles.modernToolbarButton} onPress={toggleBulletMode}>
+              <MaterialCommunityIcons
+                name="format-list-bulleted"
+                size={22}
+                color={isBulletMode ? "#10B981" : onSurface}
               />
+              <Text style={[styles.toolbarLabel, { color: isBulletMode ? "#10B981" : onSurfaceVariant }]}>Gạch đầu</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleVoiceInput}>
-              <MaterialCommunityIcons 
-                name={isRecording ? 'stop-circle' : 'microphone-outline'} 
-                size={28} 
-                color={isRecording ? '#EF4444' : '#000000'} 
-                style={styles.iconStyle}
+            <TouchableOpacity style={styles.modernToolbarButton} onPress={handleVoiceInput}>
+              <MaterialCommunityIcons
+                name={isRecording ? "stop-circle" : "microphone"}
+                size={22}
+                color={isRecording ? "#EF4444" : onSurface}
               />
+              <Text style={[styles.toolbarLabel, { color: isRecording ? "#EF4444" : onSurfaceVariant }]}>
+                {isRecording ? "Dừng" : "Ghi âm"}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleTakePicture}>
-              <MaterialCommunityIcons 
-                name="camera-outline" 
-                size={28} 
-                color="#000000" 
-                style={styles.iconStyle}
+            <TouchableOpacity style={styles.modernToolbarButton} onPress={handleTakePicture}>
+              <MaterialCommunityIcons
+                name="camera-outline"
+                size={22}
+                color={onSurface}
               />
+              <Text style={[styles.toolbarLabel, { color: onSurfaceVariant }]}>Camera</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => {
-                if (note.trim()) navigation.navigate('AIProcessingOverlay', { textNote: note, transactionType: type });
-                else Alert.alert('Lỗi', 'Vui lòng nhập ghi chú trước');
-              }}
-            >
-              <MaterialCommunityIcons 
-                name="check-circle-outline" 
-                size={28} 
-                color={onSurfaceVariant} 
-                style={styles.iconStyle}
+            <TouchableOpacity style={styles.modernToolbarButton} onPress={toggleTextSize}>
+              <MaterialCommunityIcons
+                name={textSize === 'large' ? 'format-size' : textSize === 'small' ? 'format-font-size-decrease' : 'format-font-size-increase'}
+                size={22}
+                color={onSurface}
               />
+              <Text style={[styles.toolbarLabel, { color: onSurfaceVariant }]}>
+                {textSize === 'large' ? 'To' : textSize === 'small' ? 'Nhỏ' : 'Vừa'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -696,6 +753,9 @@ export default function AddIncomeScreen({ navigation, route }: Props) {
 function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void; onClose: () => void }) {
   const theme = useTheme();
   const styles = getStyles(theme);
+  const onSurface = theme.colors.onSurface;
+  const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
+  const isDark = theme.dark;
   const { hasPermission, requestPermission } = useCameraPermission();
   const [cameraPosition, setCameraPosition] = React.useState<"back" | "front">("back");
   const device = useCameraDevice(cameraPosition);
@@ -844,30 +904,42 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
       {/* Top Header with Close and Camera Flip buttons */}
       <View style={styles.cameraHeader}>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={onClose}>
-          <MaterialCommunityIcons name="close-outline" size={16} color="#6B7280" />
+          <MaterialCommunityIcons name="close-outline" size={16} color={onSurface} />
         </TouchableOpacity>
         <View style={styles.cameraHeaderTitleWrap}>
-          <MaterialCommunityIcons name="qrcode-scan" size={14} color="#6B7280" style={styles.cameraHeaderIconSpacing} />
-          <Text style={styles.cameraHeaderTitle}>Quét hóa đơn thu nhập</Text>
+          <MaterialCommunityIcons name="qrcode-scan" size={14} color={onSurfaceVariant} style={styles.cameraHeaderIconSpacing} />
+          <Text style={[styles.cameraHeaderTitle, { color: onSurface }]}>Quét hóa đơn thu nhập</Text>
         </View>
         <TouchableOpacity style={styles.cameraHeaderButton} onPress={toggleCameraPosition}>
-          <MaterialCommunityIcons name="camera-flip-outline" size={16} color="#6B7280" />
+          <MaterialCommunityIcons name="camera-flip-outline" size={16} color={onSurface} />
         </TouchableOpacity>
       </View>
 
+      {/* Overlay panels to darken areas outside scan frame */}
+      <View style={styles.scanOverlayTop} />
+      <View style={styles.scanOverlayBottom} />
+      <View style={styles.scanOverlayLeft} />
+      <View style={styles.scanOverlayRight} />
+      
       {/* Bill Scanning Frame */}
       <View style={styles.billScanFrame}>
-        <View style={styles.billFrameCorner} />
-        <View style={[styles.billFrameCorner, styles.billFrameCornerTopRight]} />
-        <View style={[styles.billFrameCorner, styles.billFrameCornerBottomLeft]} />
-        <View style={[styles.billFrameCorner, styles.billFrameCornerBottomRight]} />
-        <Text style={styles.billFrameText}>Căn chỉnh ảnh vào khung</Text>
+        {/* Corner indicators */}
+        <View style={[styles.billFrameCorner, styles.cornerTopLeft]} />
+        <View style={[styles.billFrameCorner, styles.cornerTopRight]} />
+        <View style={[styles.billFrameCorner, styles.cornerBottomLeft]} />
+        <View style={[styles.billFrameCorner, styles.cornerBottomRight]} />
+        
+        {/* Guide text */}
+        <View style={styles.scanGuideContainer}>
+          <MaterialCommunityIcons name="scan-helper" size={20} color={isDark ? '#10B981' : '#06B6D4'} />
+          <Text style={styles.billFrameText}>Căn chỉnh hóa đơn vào khung</Text>
+        </View>
       </View>
 
       {/* Status Bar */}
       <View style={styles.cameraStatusBar}>
         <View style={styles.statusIndicator}>
-          <Text style={styles.statusText}>
+          <Text style={[styles.statusText, { color: onSurface }]}>
             {torchEnabled ? 'Đèn: Bật' : 'Đèn: Tắt'}
           </Text>
         </View>
@@ -883,8 +955,8 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
           onPress={handlePickFromGallery}
         >
           <View style={styles.cameraControlInner}>
-            <MaterialCommunityIcons name="image-outline" size={22} color="#000000" style={styles.cameraControlIcon} />
-            <Text style={styles.cameraControlLabel}>Thư viện</Text>
+            <MaterialCommunityIcons name="image-outline" size={22} color={onSurface} style={styles.cameraControlIcon} />
+            <Text style={[styles.cameraControlLabel, { color: onSurfaceVariant }]}>Thư viện</Text>
           </View>
         </TouchableOpacity>
 
@@ -901,8 +973,8 @@ function CameraScreen({ onCapture, onClose }: { onCapture: (uri: string) => void
             onPress={toggleFlash}
           >
             <View style={styles.cameraControlInner}>
-              <MaterialCommunityIcons name={torchEnabled ? 'flash' : 'flash-off'} size={22} color="#000000" style={styles.cameraControlIcon} />
-              <Text style={styles.cameraControlLabel}>Flash</Text>
+              <MaterialCommunityIcons name={torchEnabled ? 'flash' : 'flash-off'} size={22} color={onSurface} style={styles.cameraControlIcon} />
+              <Text style={[styles.cameraControlLabel, { color: onSurfaceVariant }]}>Flash</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -921,21 +993,54 @@ function getStyles(theme: any): any {
   const onSurface = theme.colors.onSurface;
   const onSurfaceVariant = theme.colors.onSurfaceVariant || '#9CA3AF';
   const outline = theme.colors.outline || 'rgba(0,0,0,0.06)';
+  const isDark = theme.dark;
 
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: surface },
   safeArea: { flex: 1, backgroundColor: surface },
   
-  header: {
+  modernHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 8,
+    paddingTop: 12,
     paddingHorizontal: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: outline,
+    paddingBottom: 12,
     backgroundColor: surface,
+  },
+  modernHeaderCenter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  modernHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  headerIcon: {
+    marginRight: 4,
+  },
+  modernBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  modernSaveButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   
   mainContent: {
@@ -975,6 +1080,34 @@ function getStyles(theme: any): any {
   voiceIcon: { fontSize: 20, color: '#000000' },
   
   section: { marginBottom: 24 },
+  noteContainer: {
+    flex: 1,
+    backgroundColor: surface,
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  noteHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  noteHelperText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modernNoteInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+    textAlignVertical: 'top',
+    minHeight: 300,
+  },
 
   // full-screen style for note input (no visible box)
   fullScreenInput: {
@@ -990,31 +1123,29 @@ function getStyles(theme: any): any {
 
   keyboardToolbar: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingBottom: 32,
-    marginBottom: 0,
-    backgroundColor: '#F3F4F6',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: outline,
-    alignItems: 'center',
-    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    backgroundColor: surface,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
     gap: 8,
   },
-  toolbarButton: {
+  modernToolbarButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    backgroundColor: "#FFFBF0",
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    marginHorizontal: 4,
+    borderColor: 'rgba(255,255,255,0.05)',
+    gap: 4,
   },
-  iconStyle: {
-    opacity: 0.95,
+  toolbarLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   billImageContainer: {
@@ -1129,8 +1260,8 @@ function getStyles(theme: any): any {
     paddingHorizontal: 16,
     paddingVertical: 10,
     paddingTop: 12,
-    backgroundColor: "rgba(255,255,255,0.95)",
     zIndex: 10,
+    backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.95)',
   },
   cameraHeaderButton: {
     width: 36,
@@ -1141,7 +1272,6 @@ function getStyles(theme: any): any {
     justifyContent: "center",
   },
   cameraHeaderTitle: {
-    color: "#6B7280",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -1150,34 +1280,105 @@ function getStyles(theme: any): any {
   cameraHeaderIconSpacing: { marginRight: 8 },
   billScanFrame: {
     position: "absolute",
-    left: "8%",
-    right: "8%",
-    top: "20%",
-    height: 350,
-    borderRadius: 0,
-    borderWidth: 0,
-    borderColor: "transparent",
+    left: "10%",
+    right: "10%",
+    top: "22%",
+    height: 340,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.3)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 5,
+    zIndex: 6,
   },
   billFrameCorner: {
-    display: "none",
+    position: "absolute",
+    width: 30,
+    height: 30,
+    borderWidth: 4,
   },
-  billFrameCornerTopRight: {
-    display: "none",
+  cornerTopLeft: {
+    top: -2,
+    left: -2,
+    borderBottomWidth: 0,
+    borderRightWidth: 0,
+    borderTopLeftRadius: 16,
+    borderColor: isDark ? '#10B981' : '#06B6D4',
   },
-  billFrameCornerBottomLeft: {
-    display: "none",
+  cornerTopRight: {
+    top: -2,
+    right: -2,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderTopRightRadius: 16,
+    borderColor: isDark ? '#10B981' : '#06B6D4',
   },
-  billFrameCornerBottomRight: {
-    display: "none",
+  cornerBottomLeft: {
+    bottom: -2,
+    left: -2,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomLeftRadius: 16,
+    borderColor: isDark ? '#10B981' : '#06B6D4',
+  },
+  cornerBottomRight: {
+    bottom: -2,
+    right: -2,
+    borderTopWidth: 0,
+    borderLeftWidth: 0,
+    borderBottomRightRadius: 16,
+    borderColor: isDark ? '#10B981' : '#06B6D4',
   },
   billFrameText: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     textAlign: "center",
+    marginLeft: 8,
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  scanGuideContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.9)',
+  },
+  scanOverlayTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "22%",
+    zIndex: 5,
+    backgroundColor: 'rgba(0,0,0,1)',
+  },
+  scanOverlayBottom: {
+    position: "absolute",
+    bottom: 300,
+    left: 0,
+    right: 0,
+    top: "62%",
+    zIndex: 5,
+    backgroundColor: 'rgba(0,0,0,1)',
+  },
+  scanOverlayLeft: {
+    position: "absolute",
+    top: "22%",
+    bottom: 300,
+    left: 0,
+    width: "10%",
+    zIndex: 5,
+    backgroundColor: 'rgba(0,0,0,1)',
+  },
+  scanOverlayRight: {
+    position: "absolute",
+    top: "22%",
+    bottom: 300,
+    right: 0,
+    width: "10%",
+    zIndex: 5,
+    backgroundColor: 'rgba(0,0,0,1)',
   },
   cameraStatusBar: {
     position: "absolute",
@@ -1188,13 +1389,12 @@ function getStyles(theme: any): any {
     zIndex: 5,
   },
   statusIndicator: {
-    backgroundColor: "rgba(0,0,0,0.06)",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)',
   },
   statusText: {
-    color: "#374151",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -1203,8 +1403,8 @@ function getStyles(theme: any): any {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.98)',
     zIndex: 9,
+    backgroundColor: isDark ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.98)',
   },
   cameraControlsBottom: {
     position: "absolute",
@@ -1220,7 +1420,7 @@ function getStyles(theme: any): any {
     paddingTop: 8,
     zIndex: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.04)'
+    borderTopColor: '#000000',
   },
   galleryButton: {
     width: 64,
@@ -1273,7 +1473,6 @@ function getStyles(theme: any): any {
     alignItems: 'center',
   },
   cameraControlLabel: {
-    color: '#6B7280',
     fontSize: 11,
     marginTop: 4,
     fontWeight: '600',
@@ -1421,22 +1620,34 @@ function getStyles(theme: any): any {
   },
   
   // Floating button and modal styles
-  floatingFormButton: {
+  modernFab: {
     position: "absolute",
-    bottom: 120,
+    bottom: 130,
     right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.1)',
     zIndex: 10,
+  },
+  modernFabActive: {
+    backgroundColor: '#EF4444',
+    shadowColor: '#EF4444',
+  },
+  fabTouchable: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalContainer: {
     flex: 1,

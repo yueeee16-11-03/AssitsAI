@@ -83,6 +83,83 @@ class FamilyMemberManagementService {
   }
 
   /**
+   * Mời thành viên mới qua email
+   */
+  async inviteMemberByEmail(familyId: string, email: string): Promise<void> {
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Kiểm tra quyền
+      const familyDoc = await firestore()
+        .collection('families')
+        .doc(familyId)
+        .get();
+
+      if (!familyDoc.exists) {
+        throw new Error('Family not found');
+      }
+
+      const familyData = familyDoc.data() as any;
+      const isOwner = familyData.ownerId === currentUser.uid;
+      const isAdmin = familyData.adminIds?.includes(currentUser.uid) || false;
+
+      if (!isOwner && !isAdmin) {
+        throw new Error('You do not have permission to invite members');
+      }
+
+      // Tìm user theo email
+      const usersSnapshot = await firestore()
+        .collection('users')
+        .where('email', '==', email)
+        .limit(1)
+        .get();
+
+      if (usersSnapshot.empty) {
+        throw new Error('Không tìm thấy người dùng với email này');
+      }
+
+      const userData = usersSnapshot.docs[0].data();
+      const targetUserId = usersSnapshot.docs[0].id;
+
+      // Kiểm tra xem user đã trong family chưa
+      const existingMember = await firestore()
+        .collection('family_members')
+        .doc(targetUserId)
+        .get();
+
+      if (existingMember.exists() && existingMember.data()?.familyId === familyId) {
+        throw new Error('Người dùng đã là thành viên của gia đình');
+      }
+
+      // Thêm thành viên mới
+      await firestore()
+        .collection('family_members')
+        .doc(targetUserId)
+        .set({
+          userId: targetUserId,
+          familyId: familyId,
+          name: userData.name || userData.displayName || 'Unknown',
+          email: email,
+          role: 'member',
+          color: this.getRandomColor(),
+          joinedAt: firestore.FieldValue.serverTimestamp(),
+        });
+
+      console.log('✅ [FamilyMemberManagementService] Member invited:', {
+        familyId,
+        email,
+        targetUserId,
+      });
+    } catch (error) {
+      console.error('❌ [FamilyMemberManagementService] Error inviting member:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Xóa thành viên khỏi gia đình
    */
   async removeFamilyMember(familyId: string, targetUserId: string): Promise<void> {
@@ -250,6 +327,25 @@ class FamilyMemberManagementService {
       member: '👤 Thành viên',
     };
     return roleDisplay[role] || '👤 Thành viên';
+  }
+
+  /**
+   * Tạo màu ngẫu nhiên cho avatar
+   */
+  private getRandomColor(): string {
+    const colors = [
+      '#FF6B6B',
+      '#4ECDC4',
+      '#45B7D1',
+      '#96CEB4',
+      '#FFEAA7',
+      '#DFE6E9',
+      '#74B9FF',
+      '#A29BFE',
+      '#FD79A8',
+      '#FDCB6E',
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
   }
 }
 

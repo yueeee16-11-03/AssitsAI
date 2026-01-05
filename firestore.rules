@@ -64,9 +64,11 @@ service cloud.firestore {
 
       // 2. TỰ ĐỘNG cho phép đọc/ghi TẤT CẢ subcollections bên trong
       // (Bao gồm: transactions, habits, checkIns, wallets, notifications, recurringTransactions...)
-      // Dùng cú pháp wildcard {document=**} để không cần liệt kê từng cái.
+      // ✅ CHO PHÉP tất cả signed-in users đọc transactions (cho Family Categories)
+      // Ghi chỉ cho phép chính user đó
       match /{document=**} {
-        allow read, write: if isUser(userId);
+        allow read: if isSignedIn();
+        allow write: if isUser(userId);
       }
     }
 
@@ -167,6 +169,33 @@ service cloud.firestore {
          // Delete: Chỉ owner có thể xóa (và không xóa default categories)
          allow delete: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data)
                        && !resource.data.isDefault;
+      }
+
+      // --- SUBCOLLECTION: Family Shared Wallets (Ví chung gia đình) ---
+      match /sharedWallets/{walletId} {
+         // Thành viên gia đình có thể xem ví chung
+         allow read: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
+         
+         // Owner có thể tạo và quản lý ví chung
+         allow create, update, delete: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data);
+
+         // --- NESTED SUBCOLLECTION: Transactions trong Shared Wallet ---
+         match /transactions/{transactionId} {
+            // Owner có thể xem tất cả transactions trong ví chung
+            allow read: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data);
+            
+            // Owner có thể tạo/sửa/xóa transactions
+            allow write: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data);
+         }
+      }
+
+      // --- SUBCOLLECTION: Family Settings (Cài đặt gia đình) ---
+      match /settings/{settingId} {
+         // Thành viên gia đình có thể xem settings
+         allow read: if isFamilyMember(get(/databases/$(database)/documents/families/$(familyId)).data);
+         
+         // Owner có thể tạo và quản lý settings
+         allow create, update, delete: if isFamilyOwner(get(/databases/$(database)/documents/families/$(familyId)).data);
       }
     }
 

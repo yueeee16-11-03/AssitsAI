@@ -9,6 +9,11 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
@@ -35,6 +40,44 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  
+  // Modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<FamilyTransaction | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Form states
+  const [formType, setFormType] = useState<'income' | 'expense'>('expense');
+  const [formAmount, setFormAmount] = useState('');
+  const [formCategory, setFormCategory] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formMemberId, setFormMemberId] = useState('');
+  const [formMemberName, setFormMemberName] = useState('');
+  
+  // Members list
+  const [familyMembers, setFamilyMembers] = useState<Array<{userId: string, name: string}>>([]);
+
+  // Fetch family members
+  const fetchFamilyMembers = React.useCallback(async () => {
+    try {
+      if (!currentFamily?.id) return;
+      
+      const memberSnapshots = await require('@react-native-firebase/firestore').default()
+        .collection('family_members')
+        .where('familyId', '==', currentFamily.id)
+        .get();
+      
+      const members = memberSnapshots.docs.map((doc: any) => ({
+        userId: doc.data().userId,
+        name: doc.data().name || 'Unknown',
+      }));
+      
+      setFamilyMembers(members);
+    } catch (err) {
+      console.error('Error fetching family members:', err);
+    }
+  }, [currentFamily?.id]);
 
   // Fetch transactions
   const fetchTransactions = React.useCallback(async () => {
@@ -88,7 +131,8 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
   // Initial load
   useEffect(() => {
     fetchTransactions();
-  }, [fetchTransactions]);
+    fetchFamilyMembers();
+  }, [fetchTransactions, fetchFamilyMembers]);
 
   // Fade animation
   useEffect(() => {
@@ -126,6 +170,126 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
   //   .filter((t) => t.type === 'expense')
   //   .reduce((sum, t) => sum + t.amount, 0);
 
+  // Reset form
+  const resetForm = () => {
+    setFormType('expense');
+    setFormAmount('');
+    setFormCategory('');
+    setFormDescription('');
+    setFormMemberId('');
+    setFormMemberName('');
+    setSelectedTransaction(null);
+  };
+
+  // Open add modal
+  const handleAddTransaction = () => {
+    resetForm();
+    setShowAddModal(true);
+  };
+
+  // Open edit modal
+  const handleEditTransaction = (transaction: FamilyTransaction) => {
+    setSelectedTransaction(transaction);
+    setFormType(transaction.type);
+    setFormAmount(transaction.amount.toString());
+    setFormCategory(transaction.category);
+    setFormDescription(transaction.description);
+    setFormMemberId(transaction.userId);
+    setFormMemberName(transaction.memberName);
+    setShowEditModal(true);
+  };
+
+  // Save transaction (add or edit)
+  const handleSaveTransaction = async () => {
+    if (!formAmount || !formCategory || !formMemberId) {
+      Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    const amount = parseFloat(formAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Lỗi', 'Số tiền không hợp lệ');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+
+      if (selectedTransaction) {
+        // Update existing transaction
+        await FamilyTransactionService.updateTransaction(
+          selectedTransaction.userId,
+          selectedTransaction.id,
+          {
+            type: formType,
+            amount,
+            category: formCategory,
+            description: formDescription,
+          }
+        );
+        Alert.alert('Thành công', 'Đã cập nhật giao dịch');
+      } else {
+        // Add new transaction
+        if (!currentFamily?.id) {
+          Alert.alert('Lỗi', 'Không tìm thấy gia đình');
+          return;
+        }
+        
+        await FamilyTransactionService.addTransaction(
+          currentFamily.id,
+          formMemberId,
+          {
+            userId: formMemberId,
+            memberName: formMemberName,
+            type: formType,
+            amount,
+            category: formCategory,
+            description: formDescription,
+            currency: 'VND',
+            date: require('@react-native-firebase/firestore').default.Timestamp.now(),
+          }
+        );
+        Alert.alert('Thành công', 'Đã thêm giao dịch mới');
+      }
+
+      setShowAddModal(false);
+      setShowEditModal(false);
+      resetForm();
+      await fetchTransactions();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể lưu giao dịch');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Delete transaction
+  const handleDeleteTransaction = (transaction: FamilyTransaction) => {
+    Alert.alert(
+      'Xóa giao dịch',
+      `Bạn có chắc muốn xóa giao dịch "${transaction.category}"?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await FamilyTransactionService.deleteTransaction(
+                transaction.userId,
+                transaction.id
+              );
+              Alert.alert('Thành công', 'Đã xóa giao dịch');
+              await fetchTransactions();
+            } catch (err: any) {
+              Alert.alert('Lỗi', err.message || 'Không thể xóa giao dịch');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Format date
   const formatDate = (date: any): string => {
     try {
@@ -137,15 +301,20 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
     }
   };
 
-  // Get transaction icon background color
+  // Get transaction icon background color - light transparent
   const getTransactionIconBg = (type: 'income' | 'expense'): string => {
     return type === 'income'
-      ? `${theme.colors.secondary}20`
-      : 'rgba(239, 68, 68, 0.2)';
+      ? theme.dark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0.5)'
+      : theme.dark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0.5)';
   };
 
   // Get transaction icon color
   const getTransactionIconColor = (type: 'income' | 'expense'): string => {
+    return type === 'income' ? theme.colors.secondary : '#EF4444';
+  };
+
+  // Get transaction icon border color
+  const getTransactionIconBorder = (type: 'income' | 'expense'): string => {
     return type === 'income' ? theme.colors.secondary : '#EF4444';
   };
 
@@ -160,7 +329,12 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
           <Text style={styles.backIcon}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle}>Giao dịch</Text>
-        <View style={styles.spacer} />
+        <Pressable
+          style={styles.addButton}
+          onPress={handleAddTransaction}
+        >
+          <Icon name="plus" size={24} color="#fff" />
+        </Pressable>
       </View>
 
       {/* Content */}
@@ -238,23 +412,16 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
                   color={theme.colors.onSurfaceVariant}
                   style={styles.searchIcon}
                 />
-                <Text
+                <TextInput
                   style={[styles.searchInput, {
                     color: searchQuery ? theme.colors.primary : theme.colors.onSurfaceVariant,
                   }]}
-                  onPress={() => Alert.prompt(
-                    'Tìm kiếm giao dịch',
-                    'Nhập tên, danh mục hoặc thành viên',
-                    [
-                      { text: 'Hủy', onPress: () => setSearchQuery(''), style: 'cancel' },
-                      { text: 'Tìm', onPress: (text: string = '') => setSearchQuery(text) }
-                    ],
-                    'plain-text',
-                    searchQuery
-                  )}
-                >
-                  {searchQuery || 'Tìm kiếm...'}
-                </Text>
+                  placeholder="Tìm kiếm giao dịch..."
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  returnKeyType="search"
+                />
                 {searchQuery ? (
                   <Pressable onPress={() => setSearchQuery('')}>
                     <Icon name="close" size={20} color={theme.colors.primary} />
@@ -367,20 +534,17 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
                 </View>
               ) : (
                 filteredTransactions.map((transaction) => (
-                  <Pressable
+                  <View
                     key={transaction.id}
                     style={styles.transactionCard}
-                    onPress={() =>
-                      Alert.alert(
-                        'Chi tiết giao dịch',
-                        `${transaction.description}\n\nThành viên: ${transaction.memberName}\nDanh mục: ${transaction.category}`
-                      )
-                    }
                   >
                     <View
                       style={[
                         styles.transactionIcon,
-                        { backgroundColor: getTransactionIconBg(transaction.type) },
+                        { 
+                          backgroundColor: getTransactionIconBg(transaction.type),
+                          borderColor: getTransactionIconBorder(transaction.type),
+                        },
                       ]}
                     >
                       <Icon
@@ -403,22 +567,266 @@ export default function FamilyTransactionsScreen({ navigation }: Props) {
                         {formatDate(transaction.date)}
                       </Text>
                     </View>
-                    <Text
-                      style={[
-                        styles.transactionAmount,
-                        { color: getTransactionIconColor(transaction.type) },
-                      ]}
-                    >
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {FamilyTransactionService.formatCurrency(transaction.amount)}
-                    </Text>
-                  </Pressable>
+                    <View style={styles.transactionRight}>
+                      <Text
+                        style={[
+                          styles.transactionAmount,
+                          { color: getTransactionIconColor(transaction.type) },
+                        ]}
+                      >
+                        {transaction.type === 'income' ? '+' : '-'}
+                        {FamilyTransactionService.formatCurrency(transaction.amount)}
+                      </Text>
+                      <View style={styles.transactionActions}>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.editBtn]}
+                          onPress={() => handleEditTransaction(transaction)}
+                        >
+                          <Icon name="pencil" size={16} color="#3498DB" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.deleteBtn]}
+                          onPress={() => handleDeleteTransaction(transaction)}
+                        >
+                          <Icon name="trash-can" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
                 ))
               )}
             </View>
           </Animated.View>
         )}
       </ScrollView>
+
+      {/* Add/Edit Transaction Modal */}
+      <Modal
+        visible={showAddModal || showEditModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowAddModal(false);
+          setShowEditModal(false);
+          resetForm();
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => {
+              if (!isProcessing) {
+                setShowAddModal(false);
+                setShowEditModal(false);
+                resetForm();
+              }
+            }}
+          />
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {selectedTransaction ? 'Sửa giao dịch' : 'Thêm giao dịch'}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setShowAddModal(false);
+                  setShowEditModal(false);
+                  resetForm();
+                }}
+                disabled={isProcessing}
+              >
+                <Icon name="close" size={24} color={theme.colors.onSurface} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Transaction Type */}
+              <Text style={styles.inputLabel}>Loại giao dịch</Text>
+              <View style={styles.typeButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    formType === 'income' && styles.typeButtonIncomeActive,
+                  ]}
+                  onPress={() => setFormType('income')}
+                  disabled={isProcessing}
+                >
+                  <Icon
+                    name="plus-circle"
+                    size={20}
+                    color={formType === 'income' ? '#fff' : theme.colors.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      formType === 'income' && styles.typeButtonTextActive,
+                      formType === 'income' ? styles.typeButtonIncomeTextActive : styles.typeButtonIncomeTextInactive,
+                    ]}
+                  >
+                    Thu nhập
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    formType === 'expense' && styles.typeButtonExpenseActive,
+                  ]}
+                  onPress={() => setFormType('expense')}
+                  disabled={isProcessing}
+                >
+                  <Icon
+                    name="minus-circle"
+                    size={20}
+                    color={formType === 'expense' ? '#fff' : '#EF4444'}
+                  />
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      formType === 'expense' && styles.typeButtonTextActive,
+                      formType === 'expense' ? styles.typeButtonExpenseTextActive : styles.typeButtonExpenseTextInactive,
+                    ]}
+                  >
+                    Chi tiêu
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Amount */}
+              <Text style={styles.inputLabel}>Số tiền</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="cash" size={20} color={theme.colors.onSurfaceVariant} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nhập số tiền..."
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
+                  value={formAmount}
+                  onChangeText={setFormAmount}
+                  keyboardType="numeric"
+                  editable={!isProcessing}
+                />
+                <Text style={styles.currencyText}>₫</Text>
+              </View>
+
+              {/* Category */}
+              <Text style={styles.inputLabel}>Danh mục</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="tag" size={20} color={theme.colors.onSurfaceVariant} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ví dụ: Ăn uống, Lương..."
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
+                  value={formCategory}
+                  onChangeText={setFormCategory}
+                  editable={!isProcessing}
+                />
+              </View>
+
+              {/* Description */}
+              <Text style={styles.inputLabel}>Mô tả</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="text" size={20} color={theme.colors.onSurfaceVariant} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Mô tả chi tiết..."
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
+                  value={formDescription}
+                  onChangeText={setFormDescription}
+                  editable={!isProcessing}
+                />
+              </View>
+
+              {/* Member Selection */}
+              <Text style={styles.inputLabel}>Thành viên</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.memberScroll}
+              >
+                {familyMembers.map((member) => (
+                  <TouchableOpacity
+                    key={member.userId}
+                    style={[
+                      styles.memberChip,
+                      formMemberId === member.userId && styles.memberChipActive,
+                      {
+                        backgroundColor:
+                          formMemberId === member.userId
+                            ? theme.colors.primary
+                            : theme.colors.surface,
+                        borderColor:
+                          formMemberId === member.userId
+                            ? theme.colors.primary
+                            : theme.colors.onSurfaceVariant,
+                      },
+                    ]}
+                    onPress={() => {
+                      setFormMemberId(member.userId);
+                      setFormMemberName(member.name);
+                    }}
+                    disabled={isProcessing}
+                  >
+                    <Icon
+                      name="account"
+                      size={16}
+                      color={
+                        formMemberId === member.userId
+                          ? '#fff'
+                          : theme.colors.primary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.memberChipText,
+                        formMemberId === member.userId
+                          ? styles.memberChipTextActive
+                          : styles.memberChipTextInactive,
+                      ]}
+                    >
+                      {member.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Action Buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowAddModal(false);
+                    setShowEditModal(false);
+                    resetForm();
+                  }}
+                  disabled={isProcessing}
+                >
+                  <Text style={styles.cancelButtonText}>Hủy</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.submitButton]}
+                  onPress={handleSaveTransaction}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Icon name="check" size={18} color="#fff" />
+                      <Text style={styles.submitButtonText}>
+                        {selectedTransaction ? 'Cập nhật' : 'Thêm'}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -434,7 +842,8 @@ const getStyles = (theme: any) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingBottom: 8,
+      paddingBottom: 12,
+      paddingTop: 8,
       borderBottomWidth: 1,
       borderBottomColor: theme.dark
         ? 'rgba(255,255,255,0.05)'
@@ -442,14 +851,27 @@ const getStyles = (theme: any) =>
       backgroundColor: theme.colors.surface,
     },
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       backgroundColor: theme.dark
         ? 'rgba(255,255,255,0.1)'
         : 'rgba(0, 137, 123, 0.08)',
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    addButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: theme.colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 4,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.4,
+      shadowRadius: 6,
     },
     backIcon: {
       fontSize: 20,
@@ -457,9 +879,10 @@ const getStyles = (theme: any) =>
       fontWeight: 'bold',
     },
     headerTitle: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '800',
       color: theme.colors.primary,
+      letterSpacing: 0.5,
     },
     spacer: {
       width: 40,
@@ -543,22 +966,28 @@ const getStyles = (theme: any) =>
       marginBottom: 20,
     },
     sectionTitle: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '800',
       color: theme.colors.primary,
-      marginBottom: 12,
+      marginBottom: 16,
+      letterSpacing: 0.3,
     },
     transactionCard: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 12,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 14,
       borderWidth: 1,
       borderColor: theme.dark
-        ? 'rgba(255,255,255,0.1)'
-        : 'rgba(0,0,0,0.05)',
+        ? 'rgba(255,255,255,0.08)'
+        : 'rgba(0,0,0,0.04)',
+      elevation: 3,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
     },
     transactionIcon: {
       width: 48,
@@ -567,15 +996,17 @@ const getStyles = (theme: any) =>
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 12,
+      borderWidth: 2,
     },
     transactionInfo: {
       flex: 1,
     },
     transactionCategory: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '700',
       color: theme.colors.primary,
-      marginBottom: 2,
+      marginBottom: 4,
+      letterSpacing: 0.2,
     },
     transactionMember: {
       fontSize: 12,
@@ -609,11 +1040,11 @@ const getStyles = (theme: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      marginBottom: 12,
-      borderWidth: 1,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: 16,
+      borderWidth: 1.5,
       borderColor: theme.dark
         ? 'rgba(255,255,255,0.1)'
         : 'rgba(0,0,0,0.05)',
@@ -634,15 +1065,23 @@ const getStyles = (theme: any) =>
     filterButton: {
       flex: 1,
       flexDirection: 'row',
-      paddingVertical: 8,
+      paddingVertical: 10,
       paddingHorizontal: 12,
-      borderRadius: 8,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1.5,
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
     },
     filterButtonActive: {
       borderWidth: 0,
+      elevation: 3,
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
     },
     filterButtonText: {
       fontSize: 12,
@@ -666,5 +1105,222 @@ const getStyles = (theme: any) =>
     },
     filterButtonExpenseTextInactive: {
       color: '#EF4444',
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    modalBackdrop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalContent: {
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      paddingBottom: 32,
+      maxHeight: '90%',
+      elevation: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+    },
+    modalTitle: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: theme.colors.primary,
+      letterSpacing: 0.5,
+    },
+    modalBody: {
+      padding: 20,
+    },
+    inputLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.onSurface,
+      marginBottom: 8,
+      marginTop: 12,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.02)',
+      borderRadius: 16,
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+      borderWidth: 1.5,
+      borderColor: theme.dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,137,123,0.12)',
+    },
+    input: {
+      flex: 1,
+      marginLeft: 12,
+      fontSize: 15,
+      color: theme.colors.onSurface,
+    },
+    currencyText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.onSurfaceVariant,
+    },
+    typeButtons: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    typeButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 2,
+      backgroundColor: theme.colors.surface,
+    },
+    typeButtonIncomeActive: {
+      backgroundColor: theme.colors.secondary,
+      borderColor: theme.colors.secondary,
+      elevation: 3,
+      shadowColor: theme.colors.secondary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    },
+    typeButtonExpenseActive: {
+      backgroundColor: '#EF4444',
+      borderColor: '#EF4444',
+      elevation: 3,
+      shadowColor: '#EF4444',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    },
+    typeButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    typeButtonTextActive: {
+      color: '#fff',
+    },
+    typeButtonIncomeTextActive: {
+      color: '#fff',
+    },
+    typeButtonIncomeTextInactive: {
+      color: theme.colors.secondary,
+    },
+    typeButtonExpenseTextActive: {
+      color: '#fff',
+    },
+    typeButtonExpenseTextInactive: {
+      color: '#EF4444',
+    },
+    memberScroll: {
+      marginBottom: 12,
+    },
+    memberChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      marginRight: 8,
+      borderWidth: 1.5,
+    },
+    memberChipActive: {
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+    },
+    memberChipText: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    memberChipTextActive: {
+      color: '#fff',
+    },
+    memberChipTextInactive: {
+      color: theme.colors.onSurface,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 24,
+    },
+    modalButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 12,
+    },
+    cancelButton: {
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+      borderWidth: 1,
+      borderColor: theme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+    },
+    cancelButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.onSurface,
+    },
+    submitButton: {
+      backgroundColor: theme.colors.primary,
+      elevation: 4,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.4,
+      shadowRadius: 6,
+    },
+    submitButtonText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    transactionRight: {
+      alignItems: 'flex-end',
+    },
+    transactionActions: {
+      flexDirection: 'row',
+      gap: 6,
+      marginTop: 6,
+    },
+    actionBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      elevation: 1,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+    },
+    editBtn: {
+      backgroundColor: '#3498DB20',
+      borderColor: '#3498DB60',
+    },
+    deleteBtn: {
+      backgroundColor: '#EF444420',
+      borderColor: '#EF444460',
     },
   });

@@ -14,6 +14,22 @@ interface ChatResponse {
   error?: string;
 }
 
+interface FinancialContext {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  categoryExpenses: { [key: string]: number };
+  monthlyBudget?: number;
+  transactions: Array<{
+    amount: number;
+    category: string;
+    type: 'income' | 'expense';
+    date: string;
+    description?: string;
+  }>;
+  topCategories: Array<{ category: string; amount: number; percentage: number }>;
+}
+
 // Lấy API key từ .env.local (qua config file)
 const GEMINI_API_KEY = ENV.GEMINI_API_KEY_CHAT;
 
@@ -32,7 +48,55 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
  */
 class ChatService {
   /**
-   * Gửi câu hỏi đến Gemini AI và lấy response
+   * Gửi câu hỏi với financial context đến Gemini AI
+   * @param userMessage - Câu hỏi từ người dùng
+   * @param context - Financial context từ Firebase
+   * @returns ChatResponse với message từ AI
+   */
+  async sendMessageWithContext(userMessage: string, context?: FinancialContext): Promise<ChatResponse> {
+    try {
+      if (!userMessage || userMessage.trim().length === 0) {
+        return {
+          success: false,
+          error: 'Vui lòng nhập câu hỏi',
+        };
+      }
+
+      console.log('[ChatService] Gọi Gemini API với context...', userMessage.substring(0, 50));
+
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const enhancedPrompt = context 
+        ? this.enhancePromptWithFinancialContext(userMessage, context)
+        : this.enhancePromptWithContext(userMessage);
+      
+      const result = await model.generateContent(enhancedPrompt);
+      const aiResponse = result.response.text();
+
+      const message: Message = {
+        id: (Date.now() + 1).toString(),
+        text: aiResponse,
+        isUser: false,
+        timestamp: new Date(),
+      };
+
+      console.log('[ChatService] AI response received with context');
+
+      return {
+        success: true,
+        message,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra';
+      console.error('[ChatService] Error:', errorMessage);
+      return {
+        success: false,
+        error: this.formatErrorMessage(errorMessage),
+      };
+    }
+  }
+
+  /**
+   * Gửi câu hỏi đến Gemini AI và lấy response (legacy method)
    * @param userMessage - Câu hỏi từ người dùng
    * @returns ChatResponse với message từ AI
    */
@@ -159,6 +223,63 @@ class ChatService {
 
     const lowerText = text.toLowerCase();
     return financialKeywords.some(keyword => lowerText.includes(keyword));
+  }
+
+  /**
+   * Tạo prompt với financial context từ Firebase
+   * @param userMessage - Câu hỏi từ user
+   * @param context - Financial context
+   * @returns Enhanced prompt với data thực tế
+   */
+  enhancePromptWithFinancialContext(userMessage: string, context: FinancialContext): string {
+    const currentMonth = new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+    
+    const contextText = `
+DỮ LIỆU TÀI CHÍNH THÁNG ${currentMonth.toUpperCase()}:
+
+📊 Tổng quan:
+- Tổng thu nhập: ${this.formatCurrency(context.totalIncome)}
+- Tổng chi tiêu: ${this.formatCurrency(context.totalExpense)}
+- Số dư hiện tại: ${this.formatCurrency(context.balance)}
+${context.monthlyBudget ? `- Ngân sách tháng: ${this.formatCurrency(context.monthlyBudget)}` : ''}
+${context.monthlyBudget ? `- Tỷ lệ chi tiêu: ${((context.totalExpense / context.monthlyBudget) * 100).toFixed(1)}%` : ''}
+
+📈 Chi tiêu theo danh mục:
+${context.topCategories.map(cat => `- ${cat.category}: ${this.formatCurrency(cat.amount)} (${cat.percentage.toFixed(1)}%)`).join('\n')}
+
+📝 Giao dịch gần đây (${context.transactions.length} giao dịch):
+${context.transactions.slice(0, 5).map(t => 
+  `- ${t.type === 'expense' ? '❌' : '✅'} ${this.formatCurrency(t.amount)} - ${t.category}${t.description ? ': ' + t.description : ''}`
+).join('\n')}`;
+
+    return `Bạn là AI tài chính thông minh của ứng dụng Assist. Bạn có quyền truy cập vào dữ liệu tài chính THỰC TẾ của người dùng.
+
+${contextText}
+
+HƯỚNG DẪN TRẢ LỜI:
+- Phân tích DỰA TRÊN DỮ LIỆU THỰC TẾ ở trên
+- Đưa ra con số CỤ THỂ, đừng chung chung
+- So sánh với ngân sách nếu có
+- Gợi ý cụ thể để cải thiện
+- Trả lời ngắn gọn, dễ hiểu (2-4 dòng)
+- Xưng "tôi", gọi người dùng là "bạn"
+- Dùng emoji phù hợp để sinh động
+
+Câu hỏi: ${userMessage}
+
+Trả lời:`;
+  }
+
+  /**
+   * Format currency for display
+   * @param amount - Amount to format
+   * @returns Formatted currency string
+   */
+  formatCurrency(amount: number): string {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)} triệu VNĐ`;
+    }
+    return `${amount.toLocaleString('vi-VN')} VNĐ`;
   }
 
   /**

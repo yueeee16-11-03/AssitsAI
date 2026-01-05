@@ -493,13 +493,13 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                           onPress={() => handleStartEdit(item.id, item.budget)}
                           style={styles.actionButton}
                         >
-                          <Icon name="pencil" size={16} color="#0f1724" />
+                          <Icon name="pencil" size={16} color={theme.colors.onSurface} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => handleDeleteBudget(item.id)}
                           style={styles.actionButton}
                         >
-                          <Icon name="trash-can-outline" size={16} color="#0f1724" />
+                          <Icon name="trash-can-outline" size={16} color={theme.colors.onSurface} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -609,7 +609,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                   onPress={() => setAddModalVisible(false)}
                   style={styles.modalCloseButton}
                 >
-                  <Icon name="close" size={18} color="#0f1724" style={styles.modalCloseIcon} />
+                  <Icon name="close" size={18} color={theme.colors.onSurface} style={styles.modalCloseIcon} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -620,7 +620,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Ví dụ: Ăn uống"
-                  placeholderTextColor="rgba(15,23,36,0.4)"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   value={newBudgetData.category}
                   onChangeText={(text) =>
                     setNewBudgetData({ ...newBudgetData, category: text })
@@ -633,7 +633,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Ví dụ: 1"
-                  placeholderTextColor="rgba(15,23,36,0.4)"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   value={newBudgetData.categoryId}
                   onChangeText={(text) =>
                     setNewBudgetData({ ...newBudgetData, categoryId: text })
@@ -646,7 +646,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Ví dụ: silverware-fork-knife"
-                  placeholderTextColor="rgba(15,23,36,0.4)"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   value={newBudgetData.icon}
                   onChangeText={(text) =>
                     setNewBudgetData({ ...newBudgetData, icon: text })
@@ -660,7 +660,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Ví dụ: 5000000"
-                  placeholderTextColor="rgba(15,23,36,0.4)"
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
                   keyboardType="numeric"
                   value={newBudgetData.budget.toString()}
                   onChangeText={(text) =>
@@ -680,12 +680,12 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                         disabled={modalSuggestionsLoading}
                       >
                         {modalSuggestionsLoading ? (
-                          <ActivityIndicator size="small" color={showModalSuggestionButtons ? '#ffffff' : '#0f1724'} />
+                          <ActivityIndicator size="small" color={showModalSuggestionButtons ? '#ffffff' : theme.colors.onSurface} />
                         ) : (
-                          <Icon name="robot" size={18} color={showModalSuggestionButtons ? '#ffffff' : '#0f1724'} />
+                          <Icon name="robot" size={18} color={showModalSuggestionButtons ? '#ffffff' : theme.colors.onSurface} />
                         )}
                       </TouchableOpacity>
-                    <Text style={styles.modalSuggestionsLabel}>
+                    <Text style={[styles.modalSuggestionsLabel, { color: theme.colors.onSurface }]}>
                       {modalSuggestionsLoading ? 'Đang phân tích...' : 'Gợi ý tạo ngân sách'}
                     </Text>
                   </View>
@@ -694,7 +694,7 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                       {modalSuggestions.map((s, i) => (
                         <TouchableOpacity
                           key={`${s.categoryId}-${s.amount}-${i}`}
-                          style={styles.modalSuggestionCard}
+                          style={[styles.modalSuggestionCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
                           onPress={() => {
                             setNewBudgetData({
                               category: s.category,
@@ -706,9 +706,9 @@ export default function BudgetPlannerScreen({ navigation }: Props) {
                             setShowModalSuggestionButtons(false);
                           }}
                         >
-                          <Icon name={s.icon} size={28} color="#0f1724" style={styles.modalSuggestionIcon} />
-                          <Text style={styles.modalSuggestionName} numberOfLines={1}>{s.category}</Text>
-                          <Text style={styles.modalSuggestionAmount}>{formatCurrency(s.amount)}</Text>
+                          <Icon name={s.icon} size={28} color={theme.colors.primary} style={styles.modalSuggestionIcon} />
+                          <Text style={[styles.modalSuggestionName, { color: theme.colors.onSurface }]} numberOfLines={1}>{s.category}</Text>
+                          <Text style={[styles.modalSuggestionAmount, { color: theme.colors.onSurface }]}>{formatCurrency(s.amount)}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -1188,15 +1188,15 @@ function getStyles(theme: any): any {
   iconTextRow: { flexDirection: 'row', alignItems: 'center' },
   iconSpacingSmall: { marginRight: 8 },
   modalSuggestionsWrap: { marginTop: 12 },
-  modalSuggestionsLabel: { fontSize: 13, fontWeight: '800', color: '#0f1724', marginBottom: 8 },
+  modalSuggestionsLabel: { fontSize: 13, fontWeight: '800', marginBottom: 8 },
   modalSuggestionsHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  modalAISmall: { width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(15,23,36,0.04)', alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  modalAISmall: { width: 36, height: 36, borderRadius: 8, backgroundColor: `${onSurface}0A`, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   modalAISmallActive: { backgroundColor: '#10B981' },
   modalSuggestionsScroll: { paddingLeft: 2 },
-  modalSuggestionCard: { width: 140, borderRadius: 12, padding: 12, backgroundColor: '#FFFFFF', marginRight: 12, borderWidth: 1, borderColor: '#10B981', alignItems: 'center' },
+  modalSuggestionCard: { width: 140, borderRadius: 12, padding: 12, marginRight: 12, borderWidth: 1, alignItems: 'center' },
   modalSuggestionIcon: { marginBottom: 8 },
-  modalSuggestionName: { fontSize: 13, fontWeight: '800', color: '#0f1724', marginBottom: 4 },
-  modalSuggestionAmount: { fontSize: 13, fontWeight: '700', color: '#0f1724' },
+  modalSuggestionName: { fontSize: 13, fontWeight: '800', marginBottom: 4 },
+  modalSuggestionAmount: { fontSize: 13, fontWeight: '700' },
 
   // small refresh spinner that sits above content
   refreshIndicatorWrap: {

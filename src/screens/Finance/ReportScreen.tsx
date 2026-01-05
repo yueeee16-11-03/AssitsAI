@@ -385,8 +385,11 @@ export default function ReportScreen({ navigation }: Props) {
 
     return (
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}><Icon name="format-list-bulleted" size={16} color={onSurface} />  Chi tiết theo danh mục</Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={[styles.sectionIconContainer, styles.sectionIconOrange]}>
+            <Icon name="format-list-bulleted" size={20} color="#FFFFFF" />
+          </View>
+          <Text style={[styles.sectionTitle, { color: onSurface }]}>Chi tiết theo danh mục</Text>
         </View>
         {/* Period buttons specific to category detail */}
         <View style={[styles.periodSelectorLight]} onLayout={(e) => setCategoryContainerWidth(e.nativeEvent.layout.width)}>
@@ -538,24 +541,48 @@ export default function ReportScreen({ navigation }: Props) {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}><Icon name="trending-up" size={16} color={onSurface} />  So sánh tháng</Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={[styles.sectionIconContainer, { backgroundColor: theme.colors.primary }]}>
+            <Icon name="trending-up" size={20} color="#FFFFFF" />
+          </View>
+          <Text style={[styles.sectionTitle, { color: onSurface }]}>So sánh tháng</Text>
+        </View>
 
         <View style={styles.monthList}>
           {monthsData.map(m => (
             <TouchableOpacity
               key={`${m.month}-${m.year}`}
-              style={[styles.monthRow, m.month === currentMonthIdx && m.year === now.getFullYear() ? styles.monthRowActive : {}]}
+              style={[
+                styles.monthRow,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline || 'rgba(0,0,0,0.06)', shadowColor: theme.dark ? '#000' : theme.colors.primary },
+                m.month === currentMonthIdx && m.year === now.getFullYear() ? [styles.monthRowActive, { backgroundColor: hexToRgba(theme.colors.primary, 0.08), borderColor: theme.colors.primary }] : {}
+              ]}
               onPress={() => navigation.navigate('CategoryTransactions', { category: '', startDate: m.start.toISOString(), endDate: m.end.toISOString() })}
+              activeOpacity={0.7}
             >
               <View style={styles.monthRowLeft}>
-                <Text style={styles.monthRowTitle}>{m.label}</Text>
-                <Text style={styles.monthRowCount}>{m.count} giao dịch</Text>
+                <View style={styles.monthTitleRow}>
+                  <View style={[styles.monthIconBadge, { backgroundColor: m.month === currentMonthIdx && m.year === now.getFullYear() ? theme.colors.primary : hexToRgba(theme.colors.primary, 0.12) }]}>
+                    <Icon name="calendar" size={16} color={m.month === currentMonthIdx && m.year === now.getFullYear() ? '#FFFFFF' : theme.colors.primary} />
+                  </View>
+                  <Text style={[styles.monthRowTitle, { color: onSurface }]}>{m.label}</Text>
+                </View>
+                <Text style={[styles.monthRowCount, { color: onSurfaceVariant }]}>{m.count} giao dịch</Text>
               </View>
 
               <View style={styles.monthRowRight}>
-                <Text style={[styles.monthRowValue, styles.incomeText]}>Thu: {formatVNDShort(m.income)}</Text>
-                <Text style={[styles.monthRowValue, styles.expenseText]}>Chi: {formatVNDShort(m.expense)}</Text>
-                <Text style={[styles.monthRowValue, m.balance >= 0 ? styles.balancePositive : styles.balanceNegative]}>Dư: {formatVNDShort(m.balance)}</Text>
+                <View style={styles.monthStatRow}>
+                  <Icon name="arrow-up" size={14} color="#10B981" />
+                  <Text style={[styles.monthRowValue, { color: '#10B981' }]}>{formatVNDShort(m.income)}</Text>
+                </View>
+                <View style={styles.monthStatRow}>
+                  <Icon name="arrow-down" size={14} color="#EF4444" />
+                  <Text style={[styles.monthRowValue, { color: '#EF4444' }]}>{formatVNDShort(m.expense)}</Text>
+                </View>
+                <View style={styles.monthStatRow}>
+                  <Icon name="wallet" size={14} color={m.balance >= 0 ? '#10B981' : '#EF4444'} />
+                  <Text style={[styles.monthRowValue, m.balance >= 0 ? { color: '#10B981' } : { color: '#EF4444' }]}>{formatVNDShort(m.balance)}</Text>
+                </View>
               </View>
             </TouchableOpacity>
           ))}
@@ -650,7 +677,12 @@ export default function ReportScreen({ navigation }: Props) {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}><Icon name="chart-line" size={16} color={onSurface} />  Xu hướng thu chi theo tuần</Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={[styles.sectionIconContainer, styles.sectionIconPurple]}>
+            <Icon name="chart-line" size={20} color="#FFFFFF" />
+          </View>
+          <Text style={[styles.sectionTitle, { color: onSurface }]}>Xu hướng thu chi theo tuần</Text>
+        </View>
         
 
         <View style={styles.cashSummaryRow}>
@@ -809,7 +841,12 @@ export default function ReportScreen({ navigation }: Props) {
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}><Icon name="calendar-today" size={16} color={onSurface} />  Xu hướng chi/thu theo ngày</Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={[styles.sectionIconContainer, styles.sectionIconCyan]}>
+            <Icon name="calendar-today" size={20} color="#FFFFFF" />
+          </View>
+          <Text style={[styles.sectionTitle, { color: onSurface }]}>Xu hướng chi/thu theo ngày</Text>
+        </View>
 
         <View style={styles.cashSummaryRow}>
           <View style={[styles.summaryCard, styles.smallSummaryCard]}> 
@@ -951,9 +988,16 @@ export default function ReportScreen({ navigation }: Props) {
 
     return (
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}><Icon name="receipt" size={16} color={onSurface} />  Chi tiết giao dịch</Text>
-          <Text style={styles.transactionCount}>{filteredTransactions.length} giao dịch</Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={[styles.sectionIconContainer, styles.sectionIconPink]}>
+            <Icon name="receipt" size={20} color="#FFFFFF" />
+          </View>
+          <View style={styles.sectionTitleWrapper}>
+            <Text style={[styles.sectionTitle, { color: onSurface }]}>Chi tiết giao dịch</Text>
+          </View>
+          <View style={[styles.transactionCountBadge, { backgroundColor: theme.colors.primary }]}>
+            <Text style={styles.transactionCountText}>{filteredTransactions.length}</Text>
+          </View>
         </View>
 
         <FlatList
@@ -1002,17 +1046,21 @@ export default function ReportScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={18} color={onSurface} style={styles.backButton} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}><Icon name="file-chart-outline" size={16} color={onSurface} />  Báo cáo chi thu</Text>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface, shadowColor: theme.dark ? '#000000' : theme.colors.primary }]}>
         <TouchableOpacity 
-          style={[styles.exportMainButton, styles.exportMainButtonOutline]}
-          onPress={() => setShowExportModal(true)}
+          style={[styles.headerButton, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
         >
-          <Icon name="file-export-outline" size={16} color={onSurface} style={styles.exportIcon} />
-          <Text style={styles.exportMainButtonTextSmall}>Xuất</Text>
+          <Icon name="arrow-left" size={22} color={onSurface} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: onSurface }]}>Báo cáo chi thu</Text>
+        <TouchableOpacity 
+          style={[styles.exportMainButton, { backgroundColor: theme.colors.primary }]}
+          onPress={() => setShowExportModal(true)}
+          activeOpacity={0.7}
+        >
+          <Icon name="file-export" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -1040,26 +1088,37 @@ export default function ReportScreen({ navigation }: Props) {
             ))}
           </View>
 
-          {/* New layout: balance top, income/expense below */}
+          {/* Balance Card */}
           <View style={styles.balanceTopContainer}>
-            <View style={[styles.summaryCard, styles.balanceLarge]}> 
-              <Text style={[styles.summaryLabel, styles.balanceLabel]}>Số dư</Text>
-              <Text style={[styles.balanceAmountText, styles.balanceAmountTextOnPrimary]}>{formatVND(displayBalance)}</Text>
+            <View style={[styles.balanceLarge, styles.balancePrimaryBg, { shadowColor: theme.colors.primary }]}> 
+              <View style={styles.balanceCardHeader}>
+                <View style={[styles.balanceIconWrapper, styles.balanceIconBg]}>
+                  <Icon name="wallet" size={24} color="#FFFFFF" />
+                </View>
+                <Text style={[styles.balanceLabel, styles.balanceLabelText]}>Số dư hiện tại</Text>
+              </View>
+              <Text style={[styles.balanceAmountText, styles.balanceAmountWhite]}>{formatVND(displayBalance)}</Text>
             </View>
 
             <View style={styles.incomeExpenseRow}>
-              <View style={[styles.summaryCard, styles.incomeSmallCard]}>
-                <Text style={[styles.summaryLabel, styles.incomeLabel]}>Thu nhập</Text>
-                  <Text style={[styles.summaryAmountSmall, styles.summaryAmountSmallBlack]} numberOfLines={1} ellipsizeMode="middle"> 
-                    {formatVNDShort(displayTotalIncome)}
-                  </Text>
+              <View style={[styles.summaryCard, styles.incomeSmallCard, styles.incomeCardBg]}>
+                <View style={styles.statIconWrapperSmall}>
+                  <Icon name="arrow-up" size={20} color="#10B981" />
+                  <Text style={[styles.summaryLabel, styles.incomeLabelColor]}>Thu nhập</Text>
+                </View>
+                <Text style={[styles.summaryAmountSmall, styles.incomeAmountColor]} numberOfLines={1} ellipsizeMode="middle"> 
+                  {formatVNDShort(displayTotalIncome)}
+                </Text>
               </View>
 
-              <View style={[styles.summaryCard, styles.expenseSmallCard]}>
-                <Text style={[styles.summaryLabel, styles.expenseLabel]}>Chi tiêu</Text>
-                  <Text style={[styles.summaryAmountSmall, styles.summaryAmountSmallBlack]} numberOfLines={1} ellipsizeMode="middle"> 
-                    {formatVNDShort(displayTotalExpense)}
-                  </Text>
+              <View style={[styles.summaryCard, styles.expenseSmallCard, styles.expenseCardBg]}>
+                <View style={styles.statIconWrapperSmall}>
+                  <Icon name="arrow-down" size={20} color="#DC2626" />
+                  <Text style={[styles.summaryLabel, styles.expenseLabelColor]}>Chi tiêu</Text>
+                </View>
+                <Text style={[styles.summaryAmountSmall, styles.expenseAmountColor]} numberOfLines={1} ellipsizeMode="middle"> 
+                  {formatVNDShort(displayTotalExpense)}
+                </Text>
               </View>
             </View>
           </View>
@@ -1339,53 +1398,95 @@ const getStyles = (theme: any) => {
   return StyleSheet.create({
   // Balance + Income/Expense layout
   balanceTopContainer: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   balanceLarge: {
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginBottom: 12,
-    backgroundColor: primary,
-    borderColor: primary,
-    borderWidth: 1.5,
-    shadowColor: primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 0,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  balancePrimaryBg: {
+    backgroundColor: 'rgba(99,102,241,0.85)',
+  },
+  balanceCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  balanceIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balanceIconBg: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   balanceLabel: {
-    fontSize: 13,
-    color: onPrimary,
-    fontWeight: '800',
-    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    flex: 1,
+  },
+  balanceLabelText: {
+    color: 'rgba(255,255,255,0.85)',
   },
   balanceAmountText: {
-    fontSize: 20,
+    fontSize: 32,
     fontWeight: '900',
-    color: onPrimary,
+    letterSpacing: 0.5,
   },
-  balanceAmountTextOnPrimary: {
-    color: onPrimary,
+  balanceAmountWhite: {
+    color: '#FFFFFF',
   },
   incomeSmallCard: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+  },
+  incomeCardBg: {
+  },
+  incomeLabelColor: {
+    color: '#047857',
+  },
+  incomeAmountColor: {
+    color: '#059669',
+  },
+  incomeValueColor: {
+    color: '#10B981',
   },
   expenseSmallCard: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
   },
-  incomeLabel: {
-    color: '#064e3b',
-    fontWeight: '800',
+  expenseCardBg: {
   },
-  expenseLabel: {
-    color: '#7f1d1d',
-    fontWeight: '800',
+  expenseLabelColor: {
+    color: '#991B1B',
+  },
+  expenseAmountColor: {
+    color: '#DC2626',
+  },
+  expenseValueColor: {
+    color: '#EF4444',
+  },
+  statIconWrapperSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  statIconSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   incomeExpenseRow: {
     flexDirection: 'row',
@@ -1409,56 +1510,38 @@ const getStyles = (theme: any) => {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 6,
-    backgroundColor: surface,
-    borderBottomWidth: 1,
-    borderBottomColor: onSurfaceVariant,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  backButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    marginTop: -4,
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '800',
-    color: onSurface,
     flex: 1,
     textAlign: 'center',
-    marginTop: -2,
+    letterSpacing: 0.3,
   },
   exportMainButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(15,23,36,0.06)',
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    gap: 6,
-  },
-  exportMainButtonOutline: {
-    backgroundColor: 'transparent',
-    borderColor: 'rgba(15,23,36,0.06)',
-    borderWidth: 1,
-  },
-  exportIcon: {
-    marginRight: 4,
-    marginTop: -3,
-  },
-  exportMainButtonText: {
-    color: onSurface,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  exportMainButtonTextSmall: {
-    color: onSurface,
-    fontWeight: '700',
-    fontSize: 11,
-    marginTop: -2,
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
   content: {
@@ -1469,11 +1552,42 @@ const getStyles = (theme: any) => {
     marginBottom: 28,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    color: onSurface,
+    letterSpacing: 0.4,
+    flex: 1,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
-    letterSpacing: 0.3,
+    gap: 12,
+  },
+  sectionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sectionIconOrange: {
+    backgroundColor: '#F59E0B',
+  },
+  sectionIconPurple: {
+    backgroundColor: '#8B5CF6',
+  },
+  sectionIconCyan: {
+    backgroundColor: '#06B6D4',
+  },
+  sectionIconPink: {
+    backgroundColor: '#EC4899',
+  },
+  sectionTitleWrapper: {
+    flex: 1,
   },
   searchHeaderBox: {
     flexDirection: 'row',
@@ -1491,6 +1605,19 @@ const getStyles = (theme: any) => {
     fontWeight: '800',
     color: onSurface,
     marginLeft: 8,
+  },
+  transactionCountBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transactionCountText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -2642,54 +2769,65 @@ const getStyles = (theme: any) => {
   },
   monthRow: {
     width: '100%',
-    backgroundColor: surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: onSurfaceVariant,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 12,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     overflow: 'hidden',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   monthRowActive: {
-    borderColor: primary,
-    borderWidth: 1.5,
-    backgroundColor: hexToRgba(primary, 0.08),
-    zIndex: 2,
-    elevation: 0,
-    shadowColor: 'transparent',
+    borderWidth: 2,
+    shadowOpacity: 0.15,
+    elevation: 5,
   },
-  monthRowLeft: {
-    flex: 1,
+  monthTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  monthIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   monthRowTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
-    color: onSurface,
-  },
-  monthRowTitleActive: {
-    color: primary,
+    letterSpacing: 0.3,
   },
   monthRowCount: {
     fontSize: 13,
-    color: onSurfaceVariant,
-    marginTop: 4,
-    fontWeight: '700',
+    fontWeight: '600',
+    marginLeft: 44,
+  },
+  monthStatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  monthRowValue: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  monthRowLeft: {
+    flex: 1,
   },
   monthRowRight: {
     alignItems: 'flex-end',
     justifyContent: 'center',
     marginLeft: 12,
-  },
-  monthRowValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: onSurface,
-    marginBottom: 2,
-    textAlign: 'right',
   },
   monthHeaderCell: {
     flex: 1,

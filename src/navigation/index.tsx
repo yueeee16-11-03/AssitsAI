@@ -63,6 +63,7 @@ import SharedWalletTransactionScreen from "../screens/Family/SharedWalletTransac
 import SharedBudgetScreen from "../screens/Family/SharedBudgetScreen";
 import InviteMemberScreen from "../screens/Family/InviteMemberScreen";
 import JoinFamilyScreen from "../screens/Family/JoinFamilyScreen";
+import NotesScreen from "../screens/Notes/NotesScreen";
 
 import BottomTabs from "./BottomTabs";
 
@@ -194,6 +195,7 @@ export default function AppNavigation() {
         <Stack.Screen name="SharedBudget" component={SharedBudgetScreen} />
         <Stack.Screen name="InviteMember" component={InviteMemberScreen} />
         <Stack.Screen name="JoinFamily" component={JoinFamilyScreen} />
+        <Stack.Screen name="Notes" component={NotesScreen} />
       </Stack.Navigator>
       {/* Global bottom tabs - visible across all stack screens */}
       <BottomTabs navigationRef={navigationRef} currentRouteName={currentRouteName} />

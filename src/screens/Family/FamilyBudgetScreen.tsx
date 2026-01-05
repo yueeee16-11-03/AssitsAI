@@ -26,6 +26,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import FamilyMemberService, { FamilyMember } from '../../services/FamilyMemberService';
 import FamilyBudgetManagementService from '../../services/admin/FamilyBudgetManagementService';
 
+// Type declaration for __DEV__
+declare const __DEV__: boolean;
+
 type Props = NativeStackScreenProps<RootStackParamList, 'FamilyPermissions'>;
 
 type BudgetData = {
@@ -92,7 +95,10 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
       console.log('🔵 [SCREEN] Fetching members for family:', fId);
       const fetchedMembers = await FamilyMemberService.getFamilyMembers(fId);
       setMembers(fetchedMembers);
-      console.log('✅ [SCREEN] Members fetched:', fetchedMembers.length);
+      console.log('✅ [SCREEN] Members fetched:', {
+        count: fetchedMembers.length,
+        members: fetchedMembers.map(m => ({ userId: m.userId, name: m.name, role: m.role }))
+      });
 
       // 3. Fetch budgets cá nhân cho mỗi member
       console.log('🔵 [SCREEN] Fetching personal budgets for each member');
@@ -178,7 +184,7 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
     setFormData({
       name: budget.name,
       limit: budget.limit.toString(),
-      period: budget.period as 'weekly' | 'monthly' | 'yearly',
+      period: budget.period || 'monthly',
       memberId: budget.memberId,
       memberName: budget.memberName,
     });
@@ -202,52 +208,58 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
         return;
       }
 
+      if (!_familyId) {
+        Alert.alert('Lỗi', 'Không tìm thấy thông tin gia đình');
+        return;
+      }
+
       setSubmitLoading(true);
 
       if (editingBudget) {
-        // Update budget
-        const updatedBudget: BudgetData = {
-          ...editingBudget,
-          name: formData.name,
-          limit: parseInt(formData.limit, 10),
-          period: formData.period,
-          memberId: formData.memberId,
-          memberName: formData.memberName,
-          updatedAt: new Date(),
-        };
-
-        // Update in local state (TODO: Call actual API when available)
-        setBudgets(budgets.map(b => b.id === editingBudget.id ? updatedBudget : b));
+        // ✏️ Update existing budget via API
+        console.log('🔵 [SCREEN] Updating budget:', editingBudget.id);
+        await FamilyBudgetManagementService.updateMemberPersonalBudget(
+          _familyId,
+          formData.memberId,
+          editingBudget.id,
+          {
+            category: formData.name,
+            allocatedAmount: parseInt(formData.limit, 10),
+            period: formData.period,
+          }
+        );
+        console.log('✅ [SCREEN] Budget updated successfully');
         Alert.alert('✅ Thành công', 'Cập nhật ngân sách');
       } else {
-        // Add new budget
-        const newBudget: BudgetData = {
-          id: `budget-${Date.now()}`,
-          name: formData.name,
-          limit: parseInt(formData.limit, 10),
-          spent: 0,
-          currency: 'VND',
-          period: formData.period,
-          memberId: formData.memberId,
-          memberName: formData.memberName,
-          memberRole: members.find(m => m.userId === formData.memberId)?.role,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        setBudgets([...budgets, newBudget]);
+        // ➕ Create new budget via API
+        console.log('🔵 [SCREEN] Creating new budget for member:', formData.memberId);
+        await FamilyBudgetManagementService.createMemberPersonalBudget(
+          _familyId,
+          formData.memberId,
+          {
+            category: formData.name,
+            allocatedAmount: parseInt(formData.limit, 10),
+            period: formData.period,
+            currency: 'VND',
+          }
+        );
+        console.log('✅ [SCREEN] Budget created successfully');
         Alert.alert('✅ Thành công', 'Thêm ngân sách mới');
       }
 
+      // Reload budgets from server
+      await fetchBudgets();
+
       setBudgetModalVisible(false);
       resetForm();
+      setEditingBudget(null);
     } catch (error) {
       console.error('❌ [SCREEN] Error saving budget:', error);
       Alert.alert('❌ Lỗi', (error as Error).message);
     } finally {
       setSubmitLoading(false);
     }
-  }, [formData, editingBudget, budgets, members]);
+  }, [formData, editingBudget, _familyId, fetchBudgets]);
 
   const handleDeleteBudget = useCallback((budget: BudgetData) => {
     Alert.alert('⚠️ Xác nhận', `Bạn chắc chắn muốn xóa ngân sách "${budget.name}"?`, [
@@ -255,14 +267,33 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
       {
         text: 'Xóa',
         style: 'destructive',
-        onPress: () => {
-          // Delete from local state (TODO: Call actual API when available)
-          setBudgets(budgets.filter(b => b.id !== budget.id));
-          Alert.alert('✅ Thành công', 'Xóa ngân sách');
+        onPress: async () => {
+          try {
+            if (!_familyId) {
+              Alert.alert('Lỗi', 'Không tìm thấy thông tin gia đình');
+              return;
+            }
+
+            console.log('🔵 [SCREEN] Deleting budget:', budget.id);
+            await FamilyBudgetManagementService.deleteMemberPersonalBudget(
+              _familyId,
+              budget.memberId,
+              budget.id
+            );
+            console.log('✅ [SCREEN] Budget deleted successfully');
+
+            // Reload budgets from server
+            await fetchBudgets();
+
+            Alert.alert('✅ Thành công', 'Xóa ngân sách');
+          } catch (error) {
+            console.error('❌ [SCREEN] Error deleting budget:', error);
+            Alert.alert('❌ Lỗi', (error as Error).message);
+          }
         },
       },
     ]);
-  }, [budgets]);
+  }, [_familyId, fetchBudgets]);
 
   const resetForm = () => {
     setFormData({
@@ -273,6 +304,42 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
       memberName: '',
     });
   };
+
+  const handleCancelModal = useCallback(() => {
+    setBudgetModalVisible(false);
+    resetForm();
+    setEditingBudget(null);
+  }, []);
+
+  // 🔧 DEV: Tạo budget test
+  const createTestBudget = useCallback(async (memberId: string, _memberName: string) => {
+    try {
+      if (!_familyId) {
+        Alert.alert('Lỗi', 'Không tìm thấy familyId');
+        return;
+      }
+
+      console.log('🧪 [TEST] Creating test budget for member:', memberId);
+      const result = await FamilyBudgetManagementService.createMemberPersonalBudget(
+        _familyId,
+        memberId,
+        {
+          category: `Test Budget ${Date.now()}`,
+          allocatedAmount: 1000000,
+          period: 'monthly',
+          currency: 'VND',
+        }
+      );
+      console.log('✅ [TEST] Test budget created:', result);
+      
+      // Reload
+      await fetchBudgets();
+      Alert.alert('✅ Thành công', 'Đã tạo budget test');
+    } catch (error) {
+      console.error('❌ [TEST] Error creating test budget:', error);
+      Alert.alert('❌ Lỗi', (error as Error).message);
+    }
+  }, [_familyId, fetchBudgets]);
 
   // ─────────────────────────────────────────────────────────────────
   // RENDER MEMBERS WITH BUDGETS
@@ -344,6 +411,17 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
                     {memberBudgets.length === 0 ? (
                       <View style={styles.noBudgetsContainer}>
                         <Text style={styles.noBudgetsText}>Chưa có ngân sách nào</Text>
+                        {__DEV__ && (
+                          <Pressable
+                            style={[styles.addBudgetBtn, styles.testBudgetBtn]}
+                            onPress={() => createTestBudget(member.userId, member.name)}
+                          >
+                            <Icon name="flask" size={14} color="#FFF" />
+                            <Text style={styles.testBudgetBtnText}>
+                              🧪 Tạo Budget Test
+                            </Text>
+                          </Pressable>
+                        )}
                       </View>
                     ) : (
                       memberBudgets.map((budget) => (
@@ -420,7 +498,7 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
       <Modal visible={budgetModalVisible} transparent animationType="slide">
         <SafeAreaView style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Pressable onPress={() => setBudgetModalVisible(false)}>
+            <Pressable onPress={handleCancelModal}>
               <Icon name="close" size={24} color={theme.colors.primary} />
             </Pressable>
             <View style={styles.headerCenter}>
@@ -521,7 +599,7 @@ export default function FamilyBudgetScreen({ navigation }: Props) {
             <View style={styles.formButtons}>
               <Pressable
                 style={[styles.formButton, styles.formButtonCancel]}
-                onPress={() => setBudgetModalVisible(false)}
+                onPress={handleCancelModal}
               >
                 <Icon name="close" size={20} color={theme.colors.primary} />
                 <Text style={styles.formButtonText}>Hủy</Text>
@@ -660,70 +738,77 @@ const getStyles = (theme: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+      backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.dark
-        ? 'rgba(255,255,255,0.05)'
-        : 'rgba(0,0,0,0.05)',
+        ? 'rgba(255,255,255,0.08)'
+        : 'rgba(0,0,0,0.06)',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
     },
 
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       backgroundColor: theme.dark
-        ? 'rgba(255,255,255,0.1)'
-        : 'rgba(0,137,123,0.08)',
+        ? 'rgba(255,255,255,0.12)'
+        : 'rgba(0,137,123,0.1)',
       alignItems: 'center',
       justifyContent: 'center',
     },
 
     headerTitle: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '900',
       color: theme.colors.primary,
-      letterSpacing: -0.3,
+      letterSpacing: -0.5,
     },
 
     sectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'flex-start',
-      gap: 10,
-      marginBottom: 14,
-      paddingHorizontal: 2,
+      gap: 12,
+      marginBottom: 20,
+      paddingHorizontal: 4,
     },
 
     bottomSpacer: {
-      height: 100,
+      height: 120,
     },
 
     scrollContentContainer: {
-      paddingBottom: 40,
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 60,
     },
 
     headerCenter: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 10,
     },
 
     headerRight: {
-      width: 0,
+      width: 44,
     },
 
     section: {
-      marginBottom: 20,
+      marginBottom: 24,
     },
 
     sectionTitle: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '900',
       color: theme.colors.primary,
-      marginBottom: 0,
-      letterSpacing: -0.3,
-      lineHeight: 20,
+      letterSpacing: -0.4,
+      lineHeight: 24,
     },
 
     centerContent: {
@@ -733,39 +818,54 @@ const getStyles = (theme: any) =>
     },
 
     emptyContainer: {
-      paddingVertical: 40,
+      paddingVertical: 60,
+      paddingHorizontal: 24,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      marginHorizontal: 4,
     },
 
     emptyText: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 17,
+      fontWeight: '700',
       color: theme.colors.primary,
-      marginTop: 16,
+      marginTop: 20,
+      textAlign: 'center',
     },
 
     emptySubText: {
-      fontSize: 12,
+      fontSize: 14,
       color: theme.colors.onSurfaceVariant,
       marginTop: 8,
+      textAlign: 'center',
+      lineHeight: 20,
     },
 
     memberSection: {
-      marginBottom: 12,
+      marginBottom: 16,
       backgroundColor: theme.colors.surface,
-      borderRadius: 14,
+      borderRadius: 16,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+      borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: theme.dark ? 0.2 : 0.08,
+      shadowRadius: 4,
     },
 
     memberHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      backgroundColor: theme.dark 
+        ? 'rgba(255,255,255,0.02)' 
+        : 'rgba(0,137,123,0.02)',
     },
 
     memberHeaderContent: {
@@ -775,12 +875,17 @@ const getStyles = (theme: any) =>
     },
 
     memberAvatar: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 12,
+      marginRight: 14,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
     },
 
     memberAvatarOwner: {
@@ -800,45 +905,59 @@ const getStyles = (theme: any) =>
     },
 
     memberName: {
-      fontSize: 14,
+      fontSize: 16,
       fontWeight: '800',
       color: theme.colors.primary,
+      letterSpacing: -0.3,
+      marginBottom: 2,
     },
 
     memberEmail: {
-      fontSize: 11,
+      fontSize: 13,
       color: theme.colors.onSurfaceVariant,
       marginTop: 2,
+      letterSpacing: -0.1,
     },
 
     memberBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
+      backgroundColor: theme.dark
+        ? 'rgba(0,137,123,0.15)'
+        : 'rgba(0,137,123,0.08)',
     },
 
     memberBudgetCount: {
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: 15,
+      fontWeight: '800',
       color: theme.colors.primary,
-      minWidth: 20,
+      minWidth: 24,
       textAlign: 'center',
     },
 
     budgetsContainer: {
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 12,
       borderTopWidth: 1,
-      borderTopColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+      borderTopColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      backgroundColor: theme.dark
+        ? 'rgba(0,0,0,0.2)'
+        : 'rgba(0,0,0,0.01)',
     },
 
     noBudgetsContainer: {
-      paddingVertical: 16,
+      paddingVertical: 24,
       alignItems: 'center',
     },
 
     noBudgetsText: {
-      fontSize: 12,
+      fontSize: 14,
+      fontWeight: '600',
       color: theme.colors.onSurfaceVariant,
     },
 
@@ -846,27 +965,41 @@ const getStyles = (theme: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 10,
-      marginTop: 8,
-      borderWidth: 1.5,
+      paddingVertical: 14,
+      marginTop: 12,
+      borderWidth: 2,
       borderColor: theme.colors.primary,
-      backgroundColor: theme.dark ? 'rgba(0,137,123,0.08)' : 'rgba(0,137,123,0.06)',
-      borderRadius: 8,
-      gap: 6,
+      backgroundColor: theme.dark ? 'rgba(0,137,123,0.1)' : 'rgba(0,137,123,0.06)',
+      borderRadius: 12,
+      gap: 8,
     },
 
     addBudgetBtnText: {
-      fontSize: 12,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '800',
       color: theme.colors.primary,
+      letterSpacing: -0.2,
+    },
+
+    testBudgetBtn: {
+      marginTop: 12,
+      backgroundColor: '#FF6B6B',
+      borderColor: '#FF6B6B',
+    },
+
+    testBudgetBtnText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#FFF',
+      letterSpacing: -0.2,
     },
 
     budgetCard: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 14,
+      borderRadius: 16,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+      borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
       overflow: 'hidden',
       elevation: 1,
       shadowColor: '#000',
@@ -876,16 +1009,16 @@ const getStyles = (theme: any) =>
     },
 
     budgetCardCompact: {
-      marginBottom: 8,
-      paddingVertical: 0,
+      marginBottom: 12,
     },
 
     budgetHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 14,
-      paddingVertical: 14,
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 12,
     },
 
     budgetInfo: {
@@ -895,19 +1028,22 @@ const getStyles = (theme: any) =>
     },
 
     budgetIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 12,
+      width: 52,
+      height: 52,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 12,
+      marginRight: 14,
+      backgroundColor: theme.dark
+        ? 'rgba(0,137,123,0.15)'
+        : 'rgba(0,137,123,0.1)',
     },
 
     budgetIconSmall: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      marginRight: 8,
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      marginRight: 12,
     },
 
     budgetDetails: {
@@ -915,41 +1051,44 @@ const getStyles = (theme: any) =>
     },
 
     budgetName: {
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: '800',
       color: theme.colors.primary,
-      marginBottom: 2,
+      marginBottom: 4,
+      letterSpacing: -0.3,
     },
 
     budgetNameCompact: {
-      fontSize: 13,
+      fontSize: 15,
       fontWeight: '800',
       color: theme.colors.primary,
+      letterSpacing: -0.2,
+      marginBottom: 2,
     },
 
     budgetMemberInfo: {
-      fontSize: 12,
+      fontSize: 13,
       color: theme.colors.onSurfaceVariant,
-      marginTop: 2,
+      marginTop: 4,
     },
 
     budgetDivider: {
       height: 1,
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     },
 
     budgetStats: {
       flexDirection: 'row',
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
       alignItems: 'center',
     },
 
     budgetStatsCompact: {
       flexDirection: 'row',
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 12,
       alignItems: 'center',
       justifyContent: 'space-between',
     },
@@ -961,13 +1100,13 @@ const getStyles = (theme: any) =>
     },
 
     statIconBox: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      width: 36,
+      height: 36,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.dark ? 'rgba(0,137,123,0.15)' : 'rgba(0,137,123,0.1)',
-      marginRight: 8,
+      marginRight: 10,
     },
 
     statTextContainer: {
@@ -975,99 +1114,109 @@ const getStyles = (theme: any) =>
     },
 
     statLabel: {
-      fontSize: 10,
+      fontSize: 11,
       color: theme.colors.onSurfaceVariant,
-      marginBottom: 2,
-      fontWeight: '500',
+      marginBottom: 3,
+      fontWeight: '600',
     },
 
     statValue: {
-      fontSize: 12,
-      fontWeight: '700',
+      fontSize: 13,
+      fontWeight: '800',
       color: theme.colors.primary,
     },
 
     statDivider: {
       width: 1,
-      height: 40,
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
-      marginHorizontal: 6,
+      height: 44,
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      marginHorizontal: 8,
     },
 
     budgetProgressContainer: {
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
     },
 
     budgetProgressBar: {
-      height: 6,
+      height: 8,
       backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-      borderRadius: 3,
+      borderRadius: 4,
       overflow: 'hidden',
-      marginBottom: 6,
     },
 
     budgetProgressFill: {
       height: '100%',
-      borderRadius: 3,
+      borderRadius: 4,
+    },
+
+    progressNormal: {
+      backgroundColor: theme.colors.primary,
+    },
+
+    progressDanger: {
+      backgroundColor: '#EF4444',
     },
 
     budgetPercentage: {
-      fontSize: 11,
+      fontSize: 12,
       color: theme.colors.onSurfaceVariant,
-      fontWeight: '500',
+      fontWeight: '600',
+      marginTop: 6,
     },
 
     budgetPeriod: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 14,
-      paddingVertical: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
       gap: 6,
     },
 
     budgetPeriodText: {
-      fontSize: 11,
+      fontSize: 12,
       color: theme.colors.onSurfaceVariant,
-      fontWeight: '500',
+      fontWeight: '600',
+      letterSpacing: -0.1,
     },
 
     budgetActions: {
       flexDirection: 'row',
       borderTopWidth: 1,
-      borderTopColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+      borderTopColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     },
 
     actionBtn: {
       flex: 1,
       flexDirection: 'row',
-      paddingVertical: 11,
+      paddingVertical: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+      gap: 8,
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
     },
 
     actionBtnText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
       color: theme.colors.primary,
     },
 
     actionBtnTextSmall: {
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: '700',
       color: '#FFFFFF',
+      letterSpacing: -0.1,
     },
 
     actionBtnEdit: {
       borderRightWidth: 1,
-      borderRightColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-      backgroundColor: theme.dark ? 'rgba(0,137,123,0.25)' : 'rgba(0,137,123,0.03)',
+      borderRightColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      backgroundColor: theme.dark ? 'rgba(0,137,123,0.25)' : 'rgba(0,137,123,0.05)',
     },
 
     actionBtnDelete: {
-      backgroundColor: theme.dark ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.03)',
+      backgroundColor: theme.dark ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.05)',
     },
 
     deleteText: {
@@ -1080,19 +1229,19 @@ const getStyles = (theme: any) =>
 
     floatingButton: {
       position: 'absolute',
-      bottom: 20,
-      right: 16,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
+      bottom: 24,
+      right: 20,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
       backgroundColor: theme.colors.secondary,
       alignItems: 'center',
       justifyContent: 'center',
-      elevation: 10,
+      elevation: 12,
       shadowColor: theme.colors.secondary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
     },
 
     modal: {
@@ -1104,75 +1253,83 @@ const getStyles = (theme: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 16,
+      paddingHorizontal: 20,
+      paddingVertical: 20,
       borderBottomWidth: 1,
       borderBottomColor: theme.dark
-        ? 'rgba(255,255,255,0.05)'
-        : 'rgba(0,0,0,0.05)',
+        ? 'rgba(255,255,255,0.08)'
+        : 'rgba(0,0,0,0.06)',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
     },
 
     modalTitle: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '900',
       color: theme.colors.primary,
-      letterSpacing: -0.3,
+      letterSpacing: -0.4,
     },
 
     modalContent: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: 20,
+      paddingTop: 24,
+      paddingBottom: 16,
     },
 
     formGroup: {
-      marginBottom: 16,
+      marginBottom: 24,
     },
 
     formLabel: {
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '800',
       color: theme.colors.primary,
-      marginBottom: 8,
+      marginBottom: 10,
       letterSpacing: -0.2,
     },
 
     formInput: {
-      borderWidth: 1,
-      borderColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 15,
+      borderWidth: 1.5,
+      borderColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: 16,
       color: theme.colors.onSurface,
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.8)',
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)',
+      fontWeight: '600',
     },
 
     periodSelector: {
       flexDirection: 'row',
-      gap: 8,
+      gap: 10,
     },
 
     periodOption: {
       flex: 1,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
       borderWidth: 1.5,
-      borderColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
-      borderRadius: 8,
+      borderColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+      borderRadius: 10,
       alignItems: 'center',
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.5)',
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.6)',
     },
 
     periodOptionActive: {
       borderColor: theme.colors.primary,
-      backgroundColor: theme.dark ? 'rgba(0,137,123,0.15)' : 'rgba(0,137,123,0.08)',
+      backgroundColor: theme.dark ? 'rgba(0,137,123,0.2)' : 'rgba(0,137,123,0.1)',
       borderWidth: 2,
     },
 
     periodOptionText: {
-      fontSize: 12,
-      fontWeight: '700',
+      fontSize: 13,
+      fontWeight: '800',
       color: theme.colors.onSurfaceVariant,
+      letterSpacing: -0.2,
     },
 
     periodOptionTextActive: {
@@ -1180,31 +1337,31 @@ const getStyles = (theme: any) =>
     },
 
     memberSelector: {
-      borderWidth: 1,
-      borderColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
-      borderRadius: 10,
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.5)',
+      borderWidth: 1.5,
+      borderColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+      borderRadius: 12,
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.6)',
       overflow: 'hidden',
     },
 
     memberOption: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
       borderBottomWidth: 1,
-      borderBottomColor: theme.dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-      gap: 10,
+      borderBottomColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      gap: 12,
     },
 
     memberOptionActive: {
-      backgroundColor: theme.dark ? 'rgba(0,137,123,0.1)' : 'rgba(0,137,123,0.05)',
+      backgroundColor: theme.dark ? 'rgba(0,137,123,0.15)' : 'rgba(0,137,123,0.08)',
     },
 
     memberOptionAvatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1214,9 +1371,10 @@ const getStyles = (theme: any) =>
     },
 
     memberOptionText: {
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '800',
       color: theme.colors.onSurface,
+      letterSpacing: -0.2,
     },
 
     memberOptionTextActive: {
@@ -1224,28 +1382,32 @@ const getStyles = (theme: any) =>
     },
 
     memberOptionSubText: {
-      fontSize: 11,
+      fontSize: 12,
       color: theme.colors.onSurfaceVariant,
-      marginTop: 2,
+      marginTop: 3,
+      letterSpacing: -0.1,
     },
 
     statItemCompact: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
+      paddingVertical: 4,
     },
 
     statLabelCompact: {
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: 12,
+      fontWeight: '700',
       color: theme.dark ? '#E0E0E0' : theme.colors.onSurfaceVariant,
-      marginBottom: 4,
+      marginBottom: 6,
+      letterSpacing: -0.1,
     },
 
     statValueCompact: {
-      fontSize: 13,
-      fontWeight: '800',
+      fontSize: 14,
+      fontWeight: '900',
       color: theme.dark ? '#FFFFFF' : theme.colors.primary,
+      letterSpacing: -0.3,
     },
 
     statValueDanger: {
@@ -1258,40 +1420,41 @@ const getStyles = (theme: any) =>
 
     formButtons: {
       flexDirection: 'row',
-      gap: 12,
-      marginTop: 28,
-      marginBottom: 32,
+      gap: 14,
+      marginTop: 32,
+      marginBottom: 40,
     },
 
     formButton: {
       flex: 1,
       flexDirection: 'row',
-      paddingVertical: 14,
-      borderRadius: 10,
+      paddingVertical: 16,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
+      gap: 10,
     },
 
     formButtonCancel: {
-      backgroundColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+      backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
       borderWidth: 1.5,
-      borderColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+      borderColor: theme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)',
     },
 
     formButtonSubmit: {
       backgroundColor: theme.colors.secondary,
-      elevation: 4,
+      elevation: 6,
       shadowColor: theme.colors.secondary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.35,
+      shadowRadius: 5,
     },
 
     formButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 15,
+      fontWeight: '800',
       color: theme.colors.onSurface,
+      letterSpacing: -0.2,
     },
 
     submitLoading: {
@@ -1300,7 +1463,7 @@ const getStyles = (theme: any) =>
 
     submitButtonText: {
       color: '#FFF',
-      fontWeight: '700',
+      fontWeight: '800',
     },
   });
 
